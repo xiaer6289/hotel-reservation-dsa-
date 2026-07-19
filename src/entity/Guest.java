@@ -4,14 +4,22 @@
  */
 package entity;
 
+import java.io.Serializable;
+
 /**
  *
  * @author Lee Cheng Xuan
  */
-public class Guest {
+public class Guest implements Serializable{
     private String guestId;
     private String name;
     private Long phoneNo;
+
+    public Guest(String guestId, String name, Long phoneNo) {
+        this.guestId = guestId;
+        this.name = name;
+        this.phoneNo = phoneNo;
+    }
 
     public String getGuestId() {
         return guestId;

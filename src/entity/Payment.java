@@ -4,17 +4,25 @@
  */
 package entity;
 
+import java.io.Serializable;
 import java.time.LocalDateTime;
 
 /**
  *
  * @author Lee Cheng Xuan
  */
-public class Payment {
+public class Payment implements Serializable{
     private String paymentId;
     private double amount;
     private LocalDateTime dateTime;
     private char status;
+
+    public Payment(String paymentId, double amount, LocalDateTime dateTime, char status) {
+        this.paymentId = paymentId;
+        this.amount = amount;
+        this.dateTime = dateTime;
+        this.status = status;
+    }
 
     public String getPaymentId() {
         return paymentId;

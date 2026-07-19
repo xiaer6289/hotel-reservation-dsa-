@@ -4,15 +4,24 @@
  */
 package entity;
 
+import java.io.Serializable;
+
 /**
  *
  * @author Lee Cheng Xuan
  */
-public class Booking {
+public class Booking implements Serializable{
     private String confirmationNo;
     private Guest guest;
     private Room room;
     private Payment payment;
+
+    public Booking(String confirmationNo, Guest guest, Room room, Payment payment) {
+        this.confirmationNo = confirmationNo;
+        this.guest = guest;
+        this.room = room;
+        this.payment = payment;
+    }
 
     public String getConfirmationNo() {
         return confirmationNo;
