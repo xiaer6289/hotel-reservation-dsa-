@@ -7,8 +7,6 @@ package control;
 import adt.bst.BstInterface;
 import dao.FrontDeskDao;
 import entity.Booking;
-import java.time.LocalDateTime;
-import utility.Utility;
 
 /**
  *
@@ -21,6 +19,7 @@ public class FrontDeskControl {
     public FrontDeskControl() {
         dao = new FrontDeskDao();
         bookingBst = dao.loadOrSeed();
+        System.out.println("loaded size: " + bookingBst.size());
     }
     
     public Booking searchBookingByConfirmationNo(String confirmationNo) {

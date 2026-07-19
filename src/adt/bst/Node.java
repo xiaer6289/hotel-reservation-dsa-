@@ -4,11 +4,13 @@
  */
 package adt.bst;
 
+import java.io.Serializable;
+
 /**
  *
  * @author Lee Cheng Xuan
  */
-public class Node<K extends Comparable<K>, T> {
+public class Node<K extends Comparable<K>, T> implements Serializable{
     private K key;
     private T data;
     private Node<K, T> left;

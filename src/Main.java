@@ -6,6 +6,7 @@
 
 import boundary.FrontDeskUI;
 import java.util.Scanner;
+import utility.Utility;
 
 /**
  *
@@ -32,12 +33,23 @@ public class Main {
             }
 
             switch (choice) {
-                case 1: new FrontDeskUI().run();
+                case 1: 
+                    new FrontDeskUI().run();
+                    break;
                 case 2: {} //todo 
                 case 3: {} //todo
                 case 4: {} //todo
-                case 0: System.out.println("Exiting system...");
-                default: System.out.println("Invalid choice, try again.");
+                case 0: 
+                    System.out.println("Exiting system...");
+                    break;
+                default: 
+                    System.out.println("Invalid choice, try again.");
+                    break;
+            }
+            
+            if (choice >= 1 || choice <= 4) {
+                Utility.pauseScreen();
+                Utility.clearScreen();
             }
         } while (choice != 0);
     }

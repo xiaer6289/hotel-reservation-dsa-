@@ -23,16 +23,22 @@ public class FrontDeskUI {
             displayMenu();
             choice = getMenuChoice();
             switch (choice) {
-                case 1: searchBooking();
-                case 2: viewAllBooking();
-                case 3: checkRoomAvailability();
-                case 4: {
+                case 1: 
+                    searchBooking();
+                    break;
+                case 2: 
+                    viewAllBooking();
+                    break;
+                case 3: 
+                    checkRoomAvailability();
+                    break;
+                case 4: 
                     control.save();
                     Utility.printSuccess("Data saved.");
                     Utility.pauseScreen();
                     Utility.clearScreen();
-                }
-                default: Utility.printError("Invalid option, try again");
+                default: 
+                    Utility.printError("Invalid option, try again");
             }
             if (choice != 4) Utility.pauseScreen();
         } while (choice != 4);
@@ -45,7 +51,7 @@ public class FrontDeskUI {
         System.out.println("2. View All Booking");
         System.out.println("3. Check Room Availability");
         System.out.println("4. Save and Exit");
-        System.out.println("Enter choice: ");
+        System.out.print("Enter choice: ");
     }
     
     private int getMenuChoice() {
@@ -57,7 +63,7 @@ public class FrontDeskUI {
     }
     
     private void searchBooking() {
-        System.out.println("Enter Confirmation Number (8 digits): ");
+        System.out.print("Enter Confirmation Number (8 digits): ");
         String confirmationNo = scanner.nextLine().toLowerCase().trim();
         
         if (!Utility.isValidConfirmationNo(confirmationNo)) {
@@ -84,7 +90,7 @@ public class FrontDeskUI {
     }
     
     private void checkRoomAvailability() {
-        System.out.print("Enter Room Numbee: ");
+        System.out.print("Enter Room Number: ");
         String roomNo = scanner.nextLine().trim();
         if (control.isRoomAvailable(roomNo)) {
             Utility.printSuccess("Room " + roomNo + " is available.");

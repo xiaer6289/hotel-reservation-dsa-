@@ -4,12 +4,14 @@
  */
 package adt.bst;
 
+import java.io.Serializable;
+
 
 /**
  *
  * @author Lee Cheng Xuan
  */
-public class Bst<K extends Comparable<K>, T> implements BstInterface<K, T>{ // binary search tree
+public class Bst<K extends Comparable<K>, T> implements BstInterface<K, T>, Serializable{ // binary search tree
     private Node<K, T> root;
     private int size;
     
