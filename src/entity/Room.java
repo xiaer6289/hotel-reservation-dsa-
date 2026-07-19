@@ -22,11 +22,15 @@ public class Room implements Serializable{
     private LocalDateTime checkOutDateTime;
     private char status;
 
-    public Room(String roomNumber, String roomType, String floor, boolean availability, char status) {
+    public Room(String roomNumber, String roomType, String floor, boolean availability, int noOfGuest, LocalDateTime bookingDate, LocalDateTime checkInDateTime, LocalDateTime checkOutDateTime, char status) {
         this.roomNumber = roomNumber;
         this.roomType = roomType;
         this.floor = floor;
         this.availability = availability;
+        this.noOfGuest = noOfGuest;
+        this.bookingDate = bookingDate;
+        this.checkInDateTime = checkInDateTime;
+        this.checkOutDateTime = checkOutDateTime;
         this.status = status;
     }
 
