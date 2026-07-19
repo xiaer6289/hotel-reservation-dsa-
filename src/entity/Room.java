@@ -21,7 +21,7 @@ public class Room {
     private LocalDateTime bookingDate;
     private LocalDateTime checkInDateTime;
     private LocalDateTime checkOutDateTime;
-    private char status;
+    private String status;
 
     public String getRoomNumber() {
         return roomNumber;
@@ -87,11 +87,11 @@ public class Room {
         this.checkOutDateTime = checkOutDateTime;
     }
 
-    public char getStatus() {
+    public String getStatus() {
         return status;
     }
 
-    public void setStatus(char status) {
+    public void setStatus(String status) {
         this.status = status;
     }
 }
