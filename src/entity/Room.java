@@ -4,15 +4,14 @@
  */
 package entity;
 
-import java.time.LocalDate;
+import java.io.Serializable;
 import java.time.LocalDateTime;
-import java.time.LocalTime;
 
 /**
  *
  * @author Lee Cheng Xuan
  */
-public class Room {
+public class Room implements Serializable{
     private String roomNumber;
     private String roomType;
     private String floor;
@@ -22,6 +21,14 @@ public class Room {
     private LocalDateTime checkInDateTime;
     private LocalDateTime checkOutDateTime;
     private char status;
+
+    public Room(String roomNumber, String roomType, String floor, boolean availability, char status) {
+        this.roomNumber = roomNumber;
+        this.roomType = roomType;
+        this.floor = floor;
+        this.availability = availability;
+        this.status = status;
+    }
 
     public String getRoomNumber() {
         return roomNumber;
