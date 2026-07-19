@@ -33,7 +33,7 @@ public class HousekeepingController {
     public void updateTaskStatus(String taskId, String newStatus) {
         for (int i = 0; i < taskLog.size(); i++) {
             TaskLogEntry task = taskLog.get(i);
-            if (task.getTaskId().equals(taskId)) {
+            if (taskId != null && taskId.equals(task.getTaskId())) {
                 taskLog.removeAt(i);
                 task.setStatus(newStatus);
                 taskLog.addAt(i, task);
@@ -48,7 +48,7 @@ public class HousekeepingController {
     public void rollbackTask(String taskId) {
         for (int i = 0; i < taskLog.size(); i++) {
             TaskLogEntry task = taskLog.get(i);
-            if (task.getTaskId().equals(taskId)) {
+            if (taskId != null && taskId.equals(task.getTaskId())) {
                 String previousStatus = previousStatus(task.getStatus());
                 taskLog.removeAt(i);
 

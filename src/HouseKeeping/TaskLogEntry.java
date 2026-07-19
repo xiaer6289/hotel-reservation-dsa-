@@ -16,8 +16,14 @@ public class TaskLogEntry {
     private String notes;
 
     public TaskLogEntry(String taskId, Room room, String status, String staffId) {
+        if (taskId == null || taskId.trim().isEmpty()) {
+            throw new IllegalArgumentException("taskId cannot be null or empty");
+        }
         if (room == null) {
             throw new IllegalArgumentException("room cannot be null");
+        }
+        if (staffId == null || staffId.trim().isEmpty()) {
+            throw new IllegalArgumentException("staffId cannot be null or empty");
         }
         this.taskId = taskId;
         this.room = room;
@@ -31,6 +37,9 @@ public class TaskLogEntry {
     }
 
     public void setTaskId(String taskId) {
+        if (taskId == null || taskId.trim().isEmpty()) {
+            throw new IllegalArgumentException("taskId cannot be null or empty");
+        }
         this.taskId = taskId;
     }
 
@@ -39,9 +48,12 @@ public class TaskLogEntry {
     }
 
     public void setRoom(Room room) {
+        if (room == null) {
+            throw new IllegalArgumentException("room cannot be null");
+        }
         String currentStatus = getStatus();
         this.room = room;
-        if (this.room != null && currentStatus != null) {
+        if (currentStatus != null) {
             this.room.setStatus(currentStatus);
         }
     }
