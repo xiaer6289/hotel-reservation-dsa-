@@ -20,7 +20,7 @@ public class Room implements Serializable{
     private LocalDateTime bookingDate;
     private LocalDateTime checkInDateTime;
     private LocalDateTime checkOutDateTime;
-    private char status;
+    private String status;
 
     public Room(String roomNumber, String roomType, String floor, boolean availability, char status) {
         this.roomNumber = roomNumber;
@@ -94,11 +94,11 @@ public class Room implements Serializable{
         this.checkOutDateTime = checkOutDateTime;
     }
 
-    public char getStatus() {
+    public String getStatus() {
         return status;
     }
 
-    public void setStatus(char status) {
+    public void setStatus(String status) {
         this.status = status;
     }
 }
