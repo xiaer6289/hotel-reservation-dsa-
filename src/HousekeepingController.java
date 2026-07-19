@@ -1,5 +1,3 @@
-
-
 import HouseKeeping.TaskLogEntry;
 import entity.Room;
 
@@ -9,7 +7,7 @@ import entity.Room;
  */
 
 public class HousekeepingController {
-    private LinearADT<TaskLogEntry> taskLog;   // Your team's ADT
+    private LinearADT<TaskLogEntry> taskLog;   // Using DoublyLinkedList to store TaskLogEntry objects
 
     public HousekeepingController() {
         taskLog = new DoublyLinkedList<>();
