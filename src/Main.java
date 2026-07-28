@@ -5,6 +5,8 @@
 
 
 import boundary.FrontDeskUI;
+import boundary.VipAllocationUI;
+
 import java.util.Scanner;
 import utility.Utility;
 
@@ -37,7 +39,10 @@ public class Main {
                     new FrontDeskUI().run();
                     break;
                 case 2: {} //todo 
-                case 3: {} //todo
+                case 3:
+                    VipAllocationUI vipUI = new VipAllocationUI();
+                    vipUI.run();
+                    break;
                 case 4: {} //todo
                 case 0: 
                     System.out.println("Exiting system...");
