@@ -1,0 +1,90 @@
+/*
+ * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
+ * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
+ */
+package dao;
+
+import entity.Room;
+import entity.RoomType;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.time.LocalDateTime;
+
+/**
+ *
+ * @author Lee Cheng Xuan
+ */
+public class RoomDao {
+    private String fileName = "room.dat";
+    
+    public void saveToFile(Room[] room) {
+        File file = new File(fileName);
+        System.out.println("saving to: " + file.getAbsolutePath());
+        try {
+            ObjectOutputStream ooStream = new ObjectOutputStream(new FileOutputStream(file));
+            ooStream.writeObject(room);
+            ooStream.close();
+        } catch (FileNotFoundException ex) {
+            System.out.println("\n" + fileName + " not found");
+            ex.printStackTrace();
+        } catch (IOException ex) {
+            System.out.println("\ncannot save to " + fileName);
+            ex.printStackTrace();
+        }
+    }
+    
+    public Room[] retrieveFromFile() {
+        File file = new File(fileName);
+        Room[] rooms = new Room[0];
+        try {
+            ObjectInputStream oiStream = new ObjectInputStream(new FileInputStream(file));
+            rooms = (Room[]) (oiStream.readObject());
+            oiStream.close();
+        } catch (FileNotFoundException ex) {
+            System.out.println("\n" + fileName + " not found");
+            ex.printStackTrace();
+        } catch (IOException ex) {
+            System.out.println("\nCannot read from " + fileName);
+            ex.printStackTrace();
+        } catch (ClassNotFoundException ex) {
+            System.out.println("\nclass not found");
+            ex.printStackTrace();
+        } finally {
+            return rooms;
+        }
+    }
+    
+    public Room[] loadOrSeed() {
+        File file = new File(fileName);
+        if (file.exists()) {
+            Room[] loaded = retrieveFromFile();
+            if (loaded.length > 0) return loaded;
+        }
+        return seedSampleData();
+    }
+    
+    public Room[] seedSampleData() {
+        return new Room[] {
+            new Room("101", RoomType.DELUXE.name(), "1", false, 2,
+                LocalDateTime.now().minusDays(1), LocalDateTime.now().minusDays(1),
+                LocalDateTime.now().plusDays(2), 'R'),
+            new Room("102", RoomType.DELUXE_TWIN.name(), "1", true, 1,
+                LocalDateTime.now().minusDays(3), LocalDateTime.now().minusDays(3),
+                LocalDateTime.now().minusDays(1), 'R'),
+            new Room("103", RoomType.DELUXE_TWIN.name(), "1", true, 2,
+                LocalDateTime.now().minusDays(5), LocalDateTime.now().minusDays(5),
+                LocalDateTime.now().minusDays(2), 'R'),
+            new Room("104", RoomType.SUPERIOR.name(), "1", false, 2,
+                LocalDateTime.now(), LocalDateTime.now(),
+                LocalDateTime.now().plusDays(3), 'C'),
+            new Room("105", RoomType.SUPERIOR_TWIN.name(), "1", false, 3,
+                LocalDateTime.now(), LocalDateTime.now(),
+                LocalDateTime.now().plusDays(1), 'I')
+        };
+    }
+}

@@ -4,9 +4,16 @@
  */
 package control;
 
+import adt.bst.Bst;
 import adt.bst.BstInterface;
-import dao.FrontDeskDao;
+import dao.BookingDao;
+import dao.GuestDao;
+import dao.PaymentDao;
+import dao.RoomDao;
 import entity.Booking;
+import entity.Guest;
+import entity.Payment;
+import entity.Room;
 
 /**
  *
@@ -14,12 +21,25 @@ import entity.Booking;
  */
 public class FrontDeskControl {
     private BstInterface<String, Booking> bookingBst;
-    private FrontDeskDao dao;
+    private BookingDao bookingDao;
     
     public FrontDeskControl() {
-        dao = new FrontDeskDao();
-        bookingBst = dao.loadOrSeed();
-        System.out.println("loaded size: " + bookingBst.size());
+        GuestDao guestDao = new GuestDao();
+        RoomDao roomDao = new RoomDao();
+        PaymentDao paymentDao = new PaymentDao();
+        BookingDao bookingDao = new BookingDao();
+
+        Guest[] guests = guestDao.loadOrSeed();
+        Room[] rooms = roomDao.loadOrSeed();
+        Payment[] payments = paymentDao.loadOrSeed();
+        Booking[] bookings = bookingDao.loadOrSeed(guests, rooms, payments);
+
+        bookingBst = new Bst<>();
+        for (Booking booking : bookings) {
+            if (booking != null) {
+            bookingBst.insert(booking.getConfirmationNo(), booking);
+            }
+        }
     }
     
     public Booking searchBookingByConfirmationNo(String confirmationNo) {
@@ -47,7 +67,8 @@ public class FrontDeskControl {
         return result;
     }
     
-    public void save() {
-        dao.saveToFile(bookingBst);
+    public boolean save() {
+        bookingDao.saveToFile(sortBooking());
+        return true;
     }
 }
