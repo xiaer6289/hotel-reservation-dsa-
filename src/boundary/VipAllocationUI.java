@@ -3,11 +3,6 @@ package boundary;
 import control.VipPriorityController;
 import java.util.Scanner;
 
-/**
- *
- * @author Low Enn Toong
- */
-
 public class VipAllocationUI {
 
     private VipPriorityController controller;
@@ -21,9 +16,9 @@ public class VipAllocationUI {
     public void run() {
         int choice;
         do {
-            System.out.println("\n========================================");
-            System.out.println(" VIP & LOYALTY TIER PRIORITY ALLOCATION ");
-            System.out.println("========================================");
+            System.out.println("\n=========================================");
+            System.out.println("   VIP & LOYALTY TIER PRIORITY ALLOCATION");
+            System.out.println("=========================================");
             System.out.println("1. Add VIP / Loyalty Member");
             System.out.println("2. Allocate Room to Next Highest Priority");
             System.out.println("3. View Priority Queue");
@@ -40,20 +35,31 @@ public class VipAllocationUI {
             }
 
             switch (choice) {
-                case 1 -> addMember();
-                case 2 -> controller.allocateNextVipRoom();
-                case 3 -> controller.displayPriorityQueue();
-                case 4 -> controller.displayRooms();
-                case 5 -> {
+                case 1:
+                    addMember();
+                    break;
+                case 2:
+                    controller.allocateNextVipRoom();
+                    break;
+                case 3:
+                    controller.displayPriorityQueue();
+                    break;
+                case 4:
+                    controller.displayRooms();
+                    break;
+                case 5:
                     System.out.print("Enter Room Number: ");
                     controller.markRoomDirty(scanner.nextLine().trim());
-                }
-                case 6 -> {
+                    break;
+                case 6:
                     System.out.print("Enter Room Number: ");
                     controller.markRoomReady(scanner.nextLine().trim());
-                }
-                case 0 -> System.out.println("Returning to Main Menu...");
-                default -> System.out.println("Invalid choice! Please try again.");
+                    break;
+                case 0:
+                    System.out.println("Returning to Main Menu...");
+                    break;
+                default:
+                    System.out.println("Invalid choice! Please try again.");
             }
         } while (choice != 0);
     }

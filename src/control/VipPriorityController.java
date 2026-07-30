@@ -100,14 +100,27 @@ public class VipPriorityController {
         System.out.println("\n=== CURRENT ROOM STATUS ===");
         System.out.printf("%-8s %-12s %-8s %-12s%n", "Room", "Type", "Floor", "Status");
         System.out.println("----------------------------------------");
+        
         for (Room r : rooms) {
-            String statusText = switch (r.getStatus()) {
-                case 'A' -> "Available";
-                case 'O' -> "Occupied";
-                case 'D' -> "Dirty";
-                case 'R' -> "Ready";
-                default -> "Unknown";
-            };
+            String statusText;
+            
+            switch (r.getStatus()) {
+                case 'A':
+                    statusText = "Available";
+                    break;
+                case 'O':
+                    statusText = "Occupied";
+                    break;
+                case 'D':
+                    statusText = "Dirty";
+                    break;
+                case 'R':
+                    statusText = "Ready";
+                    break;
+                default:
+                    statusText = "Unknown";
+            }
+            
             System.out.printf("%-8s %-12s %-8s %-12s%n",
                     r.getRoomNumber(), r.getRoomType(), r.getFloor(), statusText);
         }
