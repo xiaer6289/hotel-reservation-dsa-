@@ -1,3 +1,4 @@
+package boundary;
 
 /**
  *
@@ -5,6 +6,8 @@
  */
 
 import java.util.Scanner;
+
+import control.HousekeepingController;
 
 public class HousekeepingUI {
 

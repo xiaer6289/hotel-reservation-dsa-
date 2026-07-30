@@ -1,3 +1,4 @@
+package adt.linear;
 /**
  *
  * @author team members

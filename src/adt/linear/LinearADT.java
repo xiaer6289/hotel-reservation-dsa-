@@ -1,4 +1,8 @@
-//
+package adt.linear;
+/**
+ *
+ * @author team members
+ */
 public interface LinearADT<T> {
     void addFirst(T data);
     void addLast(T data);
@@ -14,4 +18,3 @@ public interface LinearADT<T> {
     void clear();
     void display();                     // helper for debugging/reports
 }
-

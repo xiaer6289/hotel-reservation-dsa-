@@ -1,7 +1,4 @@
-package HouseKeeping;
-
-
-import entity.Room;
+package entity;
 
 /**
  *

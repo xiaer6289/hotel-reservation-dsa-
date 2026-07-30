@@ -1,7 +1,7 @@
 package control;
 
-import adt.bst.QueueInterface;
-import adt.bst.RegistrationQueue;
+import adt.linear.QueueInterface;
+import adt.linear.RegistrationQueue;
 import entity.WalkInRegistration;
 
 /**

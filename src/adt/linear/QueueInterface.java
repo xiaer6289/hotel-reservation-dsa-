@@ -1,4 +1,4 @@
-package adt.bst;
+package adt.linear;
 
 /**
  *

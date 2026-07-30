@@ -4,6 +4,7 @@ package entity;
  *
  * @author Low Enn Toong
  */
+
 public enum LoyaltyTier {
     ELITE(1),
     DIAMOND(2),
