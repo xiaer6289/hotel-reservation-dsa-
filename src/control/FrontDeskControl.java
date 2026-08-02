@@ -22,12 +22,15 @@ import entity.Room;
 public class FrontDeskControl {
     private BstInterface<String, Booking> bookingBst;
     private BookingDao bookingDao;
+    private RoomDao roomDao;
+    private PaymentDao paymentDao;
+    private GuestDao guestDao;
     
     public FrontDeskControl() {
-        GuestDao guestDao = new GuestDao();
-        RoomDao roomDao = new RoomDao();
-        PaymentDao paymentDao = new PaymentDao();
-        BookingDao bookingDao = new BookingDao();
+        guestDao = new GuestDao();
+        roomDao = new RoomDao();
+        paymentDao = new PaymentDao();
+        bookingDao = new BookingDao();
 
         Guest[] guests = guestDao.loadOrSeed();
         Room[] rooms = roomDao.loadOrSeed();
@@ -68,7 +71,21 @@ public class FrontDeskControl {
     }
     
     public boolean save() {
-        bookingDao.saveToFile(sortBooking());
+        Booking[] bookings = sortBooking();
+        Guest[] guests = new Guest[bookings.length];
+        Room[] rooms = new Room[bookings.length];
+        Payment[] payments = new Payment[bookings.length];
+        
+        for (int i = 0; i < bookings.length; i++) {
+            guests[i] = bookings[i].getGuest();
+            rooms[i] = bookings[i].getRoom();
+            payments[i] = bookings[i].getPayment();
+        }
+        
+        guestDao.saveToFile(guests);
+        roomDao.saveToFile(rooms);
+        paymentDao.saveToFile(payments);
+        bookingDao.saveToFile(bookings);
         return true;
     }
 }
