@@ -11,5 +11,5 @@ package entity;
 public enum RoomStatus {
     AVAILABLE,
     RESERVED,
-    BOOKED
+    OCCUPIED
 }
