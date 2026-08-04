@@ -2,6 +2,7 @@ package entity;
 
 import java.io.Serializable;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 
 /**
  *
@@ -10,6 +11,8 @@ import java.time.LocalDateTime;
 public class WalkInRegistration implements Serializable {
 
     private static final long serialVersionUID = 1L;
+
+    private static final DateTimeFormatter DATE_TIME_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
 
     private String registrationId;
     private Guest guest;
@@ -74,7 +77,9 @@ public class WalkInRegistration implements Serializable {
         return registrationTime;
     }
 
-    public void setRegistrationTime(LocalDateTime registrationTime) {
+    public void setRegistrationTime(
+            LocalDateTime registrationTime) {
+
         this.registrationTime = registrationTime;
     }
 
@@ -82,7 +87,9 @@ public class WalkInRegistration implements Serializable {
         return checkInDateTime;
     }
 
-    public void setCheckInDateTime(LocalDateTime checkInDateTime) {
+    public void setCheckInDateTime(
+            LocalDateTime checkInDateTime) {
+
         this.checkInDateTime = checkInDateTime;
     }
 
@@ -90,7 +97,9 @@ public class WalkInRegistration implements Serializable {
         return checkOutDateTime;
     }
 
-    public void setCheckOutDateTime(LocalDateTime checkOutDateTime) {
+    public void setCheckOutDateTime(
+            LocalDateTime checkOutDateTime) {
+
         this.checkOutDateTime = checkOutDateTime;
     }
 
@@ -108,11 +117,19 @@ public class WalkInRegistration implements Serializable {
                 + "\nGuest ID: " + guest.getGuestId()
                 + "\nGuest Name: " + guest.getName()
                 + "\nPhone Number: " + guest.getPhoneNo()
-                + "\nRequested Room Type: " + requestedRoomType
-                + "\nNumber of Guests: " + numberOfGuests
-                + "\nRegistration Time: " + registrationTime
-                + "\nCheck-In Date Time: " + checkInDateTime
-                + "\nCheck-Out Date Time: " + checkOutDateTime
+                + "\nRequested Room Type: "
+                + requestedRoomType
+                + "\nNumber of Guests: "
+                + numberOfGuests
+                + "\nRegistration Time: "
+                + registrationTime.format(
+                        DATE_TIME_FORMAT)
+                + "\nCheck-In Date Time: "
+                + checkInDateTime.format(
+                        DATE_TIME_FORMAT)
+                + "\nCheck-Out Date Time: "
+                + checkOutDateTime.format(
+                        DATE_TIME_FORMAT)
                 + "\nStatus: " + status;
     }
 }

@@ -1,5 +1,6 @@
 package boundary;
 
+import utility.Utility;
 import control.RegistrationController;
 import entity.Guest;
 import entity.RoomType;
@@ -48,6 +49,14 @@ public class RegistrationUI {
                                         processNextRegistration();
                                         break;
 
+                                case 5:
+                                        searchRegistration();
+                                        break;
+
+                                case 6:
+                                        cancelRegistration();
+                                        break;
+
                                 case 0:
                                         System.out.println(
                                                         "Returning to Main Menu...");
@@ -75,6 +84,8 @@ public class RegistrationUI {
                 System.out.println("2. View Waiting Queue");
                 System.out.println("3. View Next Registration");
                 System.out.println("4. Process Next Registration");
+                System.out.println("5. Search Registration by ID");
+                System.out.println("6. Cancel Registration");
                 System.out.println("0. Return to Main Menu");
         }
 
@@ -85,17 +96,67 @@ public class RegistrationUI {
                 String guestId = readNonEmptyString(
                                 "Enter Guest ID: ");
 
-                String guestName = readNonEmptyString(
-                                "Enter Guest Name: ");
+                /*
+                 * Search existing Guest from guest.dat through Controller.
+                 */
+                Guest guest = controller.searchGuestById(guestId);
 
-                Long phoneNumber = readPhoneNumber();
+                if (guest != null) {
+                        System.out.println(
+                                        "\nExisting guest found.");
+                        System.out.println(
+                                        "Guest ID: " + guest.getGuestId());
+                        System.out.println(
+                                        "Guest Name: " + guest.getName());
+                        System.out.println(
+                                        "Phone Number: " + guest.getPhoneNo());
+
+                } else {
+                        System.out.println(
+                                        "\nGuest not found.");
+                        System.out.println(
+                                        "Registering a new guest.");
+
+                        String guestName = readAlphabeticString(
+                                        "Enter Guest Name: ");
+
+                        Long phoneNumber = readPhoneNumber();
+
+                        guest = controller.addNewGuest(
+                                        guestId,
+                                        guestName,
+                                        phoneNumber);
+
+                        if (guest == null) {
+                                System.out.println(
+                                                "Unable to register new guest.");
+                                return;
+                        }
+
+                        System.out.println(
+                                        "New guest saved successfully.");
+                }
 
                 String roomType = readRoomType();
 
                 int numberOfGuests = readPositiveInteger(
                                 "Enter Number of Guests: ");
 
-                LocalDateTime checkInDateTime = readDateTimeParts("Check-In");
+                LocalDateTime checkInDateTime;
+
+                while (true) {
+                        checkInDateTime = readDateTimeParts("Check-In");
+
+                        if (checkInDateTime.isAfter(
+                                        LocalDateTime.now())) {
+
+                                break;
+                        }
+
+                        System.out.println(
+                                        "Check-in date and time must be "
+                                                        + "in the future.");
+                }
 
                 LocalDateTime checkOutDateTime;
 
@@ -114,11 +175,6 @@ public class RegistrationUI {
                                 checkInDateTime));
 
                 String registrationId = generateRegistrationId();
-
-                Guest guest = new Guest(
-                                guestId,
-                                guestName,
-                                phoneNumber);
 
                 WalkInRegistration registration = new WalkInRegistration(
                                 registrationId,
@@ -195,8 +251,6 @@ public class RegistrationUI {
                         return;
                 }
 
-                registration.setStatus("PROCESSED");
-
                 System.out.println(
                                 "Registration processed successfully.");
                 System.out.println();
@@ -205,6 +259,49 @@ public class RegistrationUI {
                 System.out.println(
                                 "\nRemaining Waiting Registrations: "
                                                 + controller.getWaitingCount());
+        }
+
+        private void searchRegistration() {
+                System.out.println(
+                                "\n===== SEARCH REGISTRATION =====");
+
+                String registrationId = readNonEmptyString(
+                                "Enter Registration ID: ");
+
+                WalkInRegistration registration = controller.searchRegistrationById(
+                                registrationId);
+
+                if (registration == null) {
+                        System.out.println(
+                                        "Registration not found.");
+                        return;
+                }
+
+                System.out.println(
+                                "\nRegistration found:");
+                System.out.println(registration);
+        }
+
+        private void cancelRegistration() {
+                System.out.println(
+                                "\n===== CANCEL REGISTRATION =====");
+
+                String registrationId = readNonEmptyString(
+                                "Enter Registration ID: ");
+
+                WalkInRegistration registration = controller.cancelRegistrationById(
+                                registrationId);
+
+                if (registration == null) {
+                        System.out.println(
+                                        "Waiting registration not found.");
+                        return;
+                }
+
+                System.out.println(
+                                "Registration cancelled successfully.");
+                System.out.println();
+                System.out.println(registration);
         }
 
         private String generateRegistrationId() {
@@ -234,6 +331,24 @@ public class RegistrationUI {
                 } while (input.isEmpty());
 
                 return input;
+        }
+
+        private String readAlphabeticString(
+                        String message) {
+
+                while (true) {
+                        String input = readNonEmptyString(message);
+
+                        if (input.matches(
+                                        "[A-Za-z]+(?: [A-Za-z]+)*")) {
+
+                                return input;
+                        }
+
+                        System.out.println(
+                                        "Guest name can contain "
+                                                        + "letters and spaces only.");
+                }
         }
 
         private int readInteger(String message) {
@@ -275,10 +390,10 @@ public class RegistrationUI {
                         String input = readNonEmptyString(
                                         "Enter Phone Number: ");
 
-                        if (!input.matches("\\d+")) {
+                        if (!Utility.isValidPhoneNo(input)) {
                                 System.out.println(
-                                                "Phone number must contain "
-                                                                + "digits only.");
+                                                "Invalid phone number. Please enter "
+                                                                + "10 or 11 digits starting with 01.");
                                 continue;
                         }
 
