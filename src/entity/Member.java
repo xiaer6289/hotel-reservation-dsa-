@@ -4,48 +4,46 @@ package entity;
  *
  * @author Low Enn Toong
  */
-
 public class Member implements Comparable<Member> {
-
     private String memberId;
-    private String name;
-    private String tier;          // Platinum, Gold, Silver, Regular
-    private int priorityScore;
-    private String roomPreference; // Standard, Deluxe, Suite
-
-    public Member(String memberId, String name, String tier, String roomPreference) {
+    // Reuse the existing Guest entity.
+    private Guest guest;
+    // Reuse the existing LoyaltyTier enum.
+    private LoyaltyTier tier;
+    public Member(String memberId, Guest guest, LoyaltyTier tier) {
         this.memberId = memberId;
-        this.name = name;
+        this.guest = guest;
         this.tier = tier;
-        this.roomPreference = roomPreference;
-        this.priorityScore = calculatePriority(tier);
-    }
-
-    private int calculatePriority(String tier) {
-        switch (tier.toUpperCase()) {
-            case "PLATINUM": return 4;
-            case "GOLD":     return 3;
-            case "SILVER":   return 2;
-            default:         return 1; // Regular
-        }
     }
 
     @Override
     public int compareTo(Member other) {
-        // Higher priorityScore comes first
-        return Integer.compare(this.priorityScore, other.priorityScore);
+        // A higher tier priority becomes the MaxHeap root.
+        return Integer.compare(this.tier.getPriority(), other.tier.getPriority());
     }
 
-    // Getters
-    public String getMemberId() { return memberId; }
-    public String getName() { return name; }
-    public String getTier() { return tier; }
-    public int getPriorityScore() { return priorityScore; }
-    public String getRoomPreference() { return roomPreference; }
+    public String getMemberId() {
+        return memberId;
+    }
+
+    public Guest getGuest() {
+        return guest;
+    }
+
+    public String getName() {
+        return guest.getName();
+    }
+
+    public LoyaltyTier getTier() {
+        return tier;
+    }
+
+    public int getPriorityScore() {
+        return tier.getPriority();
+    }
 
     @Override
     public String toString() {
-        return String.format("%-8s | %-18s | %-10s | Priority: %d | Pref: %s",
-                memberId, name, tier, priorityScore, roomPreference);
+        return String.format("%-8s | Guest ID: %-5s | %-18s | " + "%-10s | Priority: %d", memberId, guest.getGuestId(), guest.getName(), tier, tier.getPriority());
     }
 }

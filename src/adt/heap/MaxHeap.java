@@ -6,24 +6,27 @@ package adt.heap;
  */
 
 public class MaxHeap<T extends Comparable<T>> implements PriorityQueueADT<T> {
-
     private T[] heap;
     private int size;
     private static final int DEFAULT_CAPACITY = 20;
 
     @SuppressWarnings("unchecked")
     public MaxHeap() {
-        heap = (T[]) new Comparable[DEFAULT_CAPACITY];
+        heap = (T[]) new Comparable[DEFAULT_CAPACITY + 1];
         size = 0;
     }
 
     @Override
     public void enqueue(T data) {
+        if (data == null) {
+            throw new IllegalArgumentException("Heap entry cannot be null.");
+        }
         if (size == heap.length - 1) {
             expandCapacity();
         }
         size++;
         heap[size] = data;
+        // Automatically reorganise the heap.
         reheapUp(size);
     }
 
@@ -65,15 +68,13 @@ public class MaxHeap<T extends Comparable<T>> implements PriorityQueueADT<T> {
     }
 
     @Override
-    public void display() {
-        if (isEmpty()) {
-            System.out.println("Priority Queue is empty.");
-            return;
-        }
-        System.out.println("=== Priority Queue (Highest Priority First) ===");
-        for (int i = 1; i <= size; i++) {
-            System.out.println(heap[i]);
-        }
+    @SuppressWarnings("unchecked")
+    public PriorityQueueADT<T> copy() {
+        MaxHeap<T> copiedHeap = new MaxHeap<>();
+        copiedHeap.heap = (T[]) new Comparable[this.heap.length];
+        System.arraycopy(this.heap, 1, copiedHeap.heap, 1, this.size);
+        copiedHeap.size = this.size;
+        return copiedHeap;
     }
 
     // ===== Helper methods =====
@@ -94,11 +95,9 @@ public class MaxHeap<T extends Comparable<T>> implements PriorityQueueADT<T> {
             int left = index * 2;
             int right = left + 1;
             int largerChild = left;
-
             if (right <= size && heap[right].compareTo(heap[left]) > 0) {
                 largerChild = right;
             }
-
             if (heap[largerChild].compareTo(heap[index]) > 0) {
                 swap(index, largerChild);
                 index = largerChild;

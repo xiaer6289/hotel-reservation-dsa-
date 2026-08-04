@@ -4,7 +4,6 @@ package adt.heap;
  *
  * @author Low Enn Toong
  */
-
 public interface PriorityQueueADT<T> {
     void enqueue(T data);
     T dequeue();
@@ -12,5 +11,5 @@ public interface PriorityQueueADT<T> {
     boolean isEmpty();
     int size();
     void clear();
-    void display();
+    PriorityQueueADT<T> copy();
 }

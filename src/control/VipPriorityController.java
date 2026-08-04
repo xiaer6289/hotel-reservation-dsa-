@@ -2,151 +2,165 @@ package control;
 
 import adt.heap.MaxHeap;
 import adt.heap.PriorityQueueADT;
+import dao.GuestDao;
+import dao.RoomDao;
+import entity.Guest;
+import entity.LoyaltyTier;
 import entity.Member;
 import entity.Room;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  *
  * @author Low Enn Toong
  */
-
 public class VipPriorityController {
-
-    private PriorityQueueADT<Member> priorityQueue;
-    private List<Room> rooms;
+    public static final int ADD_SUCCESS = 1;
+    public static final int INVALID_INPUT = -1;
+    public static final int GUEST_NOT_FOUND = -2;
+    public static final int DUPLICATE_MEMBER_ID = -3;
+    public static final int GUEST_ALREADY_QUEUED = -4;
+    private final PriorityQueueADT<Member> priorityQueue;
+    // Reuse existing Guest entities.
+    private final Guest[] guests;
+    // Reuse existing Room entities.
+    private final Room[] rooms;
+    private final RoomDao roomDao;
 
     public VipPriorityController() {
         priorityQueue = new MaxHeap<>();
-        rooms = new ArrayList<>();
-        loadSampleData();
+        GuestDao guestDao = new GuestDao();
+        roomDao = new RoomDao();
+        guests = guestDao.loadOrSeed();
+        rooms = roomDao.loadOrSeed();
     }
 
-    private void loadSampleData() {
-        // Sample VIP / Loyalty members
-        priorityQueue.enqueue(new Member("M001", "Alice Tan", "Platinum", "Suite"));
-        priorityQueue.enqueue(new Member("M002", "Bob Lee", "Gold", "Deluxe"));
-        priorityQueue.enqueue(new Member("M003", "Carol Wong", "Silver", "Standard"));
-        priorityQueue.enqueue(new Member("M004", "David Lim", "Platinum", "Suite"));
-        priorityQueue.enqueue(new Member("M005", "Emily Ng", "Gold", "Deluxe"));
-
-        // Sample Rooms (using your existing Room constructor)
-        // status: 'A' = Available, 'O' = Occupied, 'D' = Dirty, 'R' = Ready
-        rooms.add(new Room("101", "Standard", "1", true, 0, null, null, null, 'A'));
-        rooms.add(new Room("205", "Deluxe", "2", true, 0, null, null, null, 'A'));
-        rooms.add(new Room("308", "Suite", "3", true, 0, null, null, null, 'A'));
-        rooms.add(new Room("412", "Deluxe", "4", true, 0, null, null, null, 'A'));
-        rooms.add(new Room("501", "Suite", "5", true, 0, null, null, null, 'A'));
-        rooms.add(new Room("102", "Standard", "1", true, 0, null, null, null, 'A'));
-    }
-
-    public void addVipMember(String id, String name, String tier, String preference) {
-        Member member = new Member(id, name, tier, preference);
+    public int addVipMember(String memberId, String guestId, LoyaltyTier tier) {
+        if (memberId == null || memberId.isBlank() || guestId == null || guestId.isBlank() || tier == null) {
+            return INVALID_INPUT;
+        }
+        Guest guest = findGuestById(guestId);
+        if (guest == null) {
+            return GUEST_NOT_FOUND;
+        }
+        if (memberIdExists(memberId)) {
+            return DUPLICATE_MEMBER_ID;
+        }
+        if (guestAlreadyQueued(guestId)) {
+            return GUEST_ALREADY_QUEUED;
+        }
+        Member member = new Member(memberId.trim(), guest, tier);
+        /*
+         * enqueue() automatically uses reheapUp().
+         * The highest loyalty tier moves towards the root.
+         */
         priorityQueue.enqueue(member);
-        System.out.println("Member added to priority queue: " + member.getName());
+        return ADD_SUCCESS;
     }
 
-    public void allocateNextVipRoom() {
-        if (priorityQueue.isEmpty()) {
-            System.out.println("No VIP members waiting in the queue.");
-            return;
-        }
-
-        Member nextVip = priorityQueue.dequeue();
-        Room allocatedRoom = findAvailableRoom(nextVip.getRoomPreference());
-
-        if (allocatedRoom != null) {
-            allocatedRoom.setAvailability(false);
-            allocatedRoom.setStatus('O'); // Occupied
-            allocatedRoom.setCheckInDateTime(LocalDateTime.now());
-
-            System.out.println("\n========== ROOM ALLOCATED SUCCESSFULLY ==========");
-            System.out.println("Guest Name     : " + nextVip.getName());
-            System.out.println("Membership Tier: " + nextVip.getTier());
-            System.out.println("Room Number    : " + allocatedRoom.getRoomNumber());
-            System.out.println("Room Type      : " + allocatedRoom.getRoomType());
-            System.out.println("Status         : Occupied");
-            System.out.println("=================================================");
-        } else {
-            System.out.println("No available room matching preference: " + nextVip.getRoomPreference());
-            // Put the member back into the queue
-            priorityQueue.enqueue(nextVip);
-        }
+    public Member peekNextVip() {
+        // Returns the highest-tier member.
+        return priorityQueue.peek();
     }
 
-    private Room findAvailableRoom(String preferredType) {
-        // First try preferred type
-        for (Room r : rooms) {
-            if (r.isAvailability() && r.getRoomType().equalsIgnoreCase(preferredType)) {
-                return r;
+    public Room allocateNextVipRoom() {
+        /*
+         * Peek first.
+         * Do not remove the member before confirming
+         * that a vacant room exists.
+         */
+        Member nextVip = priorityQueue.peek();
+        if (nextVip == null) {
+            return null;
+        }
+        Room vacantRoom = findVacantRoom();
+        if (vacantRoom == null) {
+            /*
+             * The member remains at the front
+             * because no room is available.
+             */
+            return null;
+        }
+        /*
+         * Remove the highest-tier member only after
+         * a vacant room has been found.
+         */
+        priorityQueue.dequeue();
+        vacantRoom.setAvailability(false);
+        vacantRoom.setStatus('O');
+        vacantRoom.setCheckInDateTime(LocalDateTime.now());
+        roomDao.saveToFile(rooms);
+        return vacantRoom;
+    }
+
+    public Member[] getMembersByPriority() {
+        PriorityQueueADT<Member> copiedQueue = priorityQueue.copy();
+        Member[] members = new Member[copiedQueue.size()];
+        /*
+         * Dequeue from the copy.
+         * Result: highest tier to lowest tier.
+         */
+        for (int i = 0; i < members.length; i++) {
+            members[i] = copiedQueue.dequeue();
+        }
+        return members;
+    }
+
+    public Room[] getVacantRooms() {
+        int vacantCount = 0;
+        for (Room room : rooms) {
+            if (room != null && room.isAvailability()) {
+                vacantCount++;
             }
         }
-        // Fallback: any available room
-        for (Room r : rooms) {
-            if (r.isAvailability()) {
-                return r;
+        Room[] vacantRooms = new Room[vacantCount];
+        int index = 0;
+        for (Room room : rooms) {
+            if (room != null && room.isAvailability()) {
+                vacantRooms[index] = room;
+                index++;
+            }
+        }
+        return vacantRooms;
+    }
+
+    private Guest findGuestById(String guestId) {
+        for (Guest guest : guests) {
+            if (guest != null && guest.getGuestId().equalsIgnoreCase(guestId.trim())) {
+                return guest;
             }
         }
         return null;
     }
 
-    public void displayPriorityQueue() {
-        priorityQueue.display();
-    }
-
-    public void displayRooms() {
-        System.out.println("\n=== CURRENT ROOM STATUS ===");
-        System.out.printf("%-8s %-12s %-8s %-12s%n", "Room", "Type", "Floor", "Status");
-        System.out.println("----------------------------------------");
-        
-        for (Room r : rooms) {
-            String statusText;
-            
-            switch (r.getStatus()) {
-                case 'A':
-                    statusText = "Available";
-                    break;
-                case 'O':
-                    statusText = "Occupied";
-                    break;
-                case 'D':
-                    statusText = "Dirty";
-                    break;
-                case 'R':
-                    statusText = "Ready";
-                    break;
-                default:
-                    statusText = "Unknown";
-            }
-            
-            System.out.printf("%-8s %-12s %-8s %-12s%n",
-                    r.getRoomNumber(), r.getRoomType(), r.getFloor(), statusText);
-        }
-    }
-
-    public void markRoomDirty(String roomNumber) {
-        for (Room r : rooms) {
-            if (r.getRoomNumber().equals(roomNumber)) {
-                r.setStatus('D');
-                r.setAvailability(false);
-                System.out.println("Room " + roomNumber + " marked as Dirty.");
-                return;
+    private boolean memberIdExists(String memberId) {
+        PriorityQueueADT<Member> copiedQueue = priorityQueue.copy();
+        while (!copiedQueue.isEmpty()) {
+            Member member = copiedQueue.dequeue();
+            if (member.getMemberId().equalsIgnoreCase(memberId.trim())) {
+                return true;
             }
         }
-        System.out.println("Room not found.");
+        return false;
     }
 
-    public void markRoomReady(String roomNumber) {
-        for (Room r : rooms) {
-            if (r.getRoomNumber().equals(roomNumber)) {
-                r.setStatus('A');
-                r.setAvailability(true);
-                System.out.println("Room " + roomNumber + " is now Available / Ready.");
-                return;
+    private boolean guestAlreadyQueued(String guestId) {
+        PriorityQueueADT<Member> copiedQueue = priorityQueue.copy();
+        while (!copiedQueue.isEmpty()) {
+            Member member = copiedQueue.dequeue();
+            if (member.getGuest().getGuestId().equalsIgnoreCase(guestId.trim())) {
+                return true;
             }
         }
-        System.out.println("Room not found.");
+        return false;
+    }
+
+    private Room findVacantRoom() {
+        for (Room room : rooms) {
+            if (room != null && room.isAvailability()) {
+                return room;
+            }
+        }
+        return null;
     }
 }
