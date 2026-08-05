@@ -2,7 +2,9 @@ package boundary;
 
 import utility.Utility;
 import control.RegistrationController;
+import control.VipPriorityController;
 import entity.Guest;
+import entity.LoyaltyTier;
 import entity.RoomType;
 import entity.WalkInRegistration;
 import java.time.DateTimeException;
@@ -21,8 +23,19 @@ public class RegistrationUI {
         private int nextRegistrationNumber = 1;
 
         public RegistrationUI() {
-                controller = new RegistrationController();
-                scanner = new Scanner(System.in);
+                this(new RegistrationController(), new Scanner(System.in));
+        }
+
+        public RegistrationUI(RegistrationController controller) {
+                this(controller, new Scanner(System.in));
+        }
+
+        public RegistrationUI(
+                        RegistrationController controller,
+                        Scanner scanner) {
+
+                this.controller = controller;
+                this.scanner = scanner;
         }
 
         public void run() {
@@ -81,9 +94,9 @@ public class RegistrationUI {
                 System.out.println(
                                 "==========================================");
                 System.out.println("1. Add Walk-In Registration");
-                System.out.println("2. View Waiting Queue");
-                System.out.println("3. View Next Registration");
-                System.out.println("4. Process Next Registration");
+                System.out.println("2. View Standard Waiting Queue");
+                System.out.println("3. View Next Standard Registration");
+                System.out.println("4. Process Next Standard Registration");
                 System.out.println("5. Search Registration by ID");
                 System.out.println("6. Cancel Registration");
                 System.out.println("0. Return to Main Menu");
@@ -184,22 +197,57 @@ public class RegistrationUI {
                                 checkInDateTime,
                                 checkOutDateTime);
 
-                controller.addRegistration(registration);
+                boolean isVip = readYesNo(
+                                "Is this guest a VIP / Loyalty member? (Y/N): ");
 
-                System.out.println(
-                                "\nRegistration added successfully.");
-                System.out.println(
-                                "Registration ID: " + registrationId);
-                System.out.println(
-                                "Queue Position: "
-                                                + controller.getWaitingCount());
-                System.out.println(
-                                "Status: " + registration.getStatus());
+                if (isVip) {
+                        String memberId = readNonEmptyString(
+                                        "Enter Member ID: ");
+
+                        LoyaltyTier tier = readLoyaltyTier();
+
+                        int result = controller.addVipRegistration(
+                                        registration,
+                                        memberId,
+                                        tier);
+
+                        if (result != VipPriorityController.ADD_SUCCESS) {
+                                displayVipAddError(result);
+                                return;
+                        }
+
+                        Utility.printSuccess(
+                                        "Registration added to the VIP priority heap.");
+                        System.out.println(
+                                        "Registration ID: " + registrationId);
+                        System.out.println(
+                                        "Member ID: " + memberId);
+                        System.out.println(
+                                        "Loyalty Tier: " + tier);
+                        System.out.println(
+                                        "VIP Members Waiting: "
+                                                        + controller.getVipWaitingCount());
+                        System.out.println(
+                                        "Status: " + registration.getStatus());
+
+                } else {
+                        controller.addStandardRegistration(registration);
+
+                        Utility.printSuccess(
+                                        "Registration added to the standard queue.");
+                        System.out.println(
+                                        "Registration ID: " + registrationId);
+                        System.out.println(
+                                        "Standard Queue Position: "
+                                                        + controller.getWaitingCount());
+                        System.out.println(
+                                        "Status: " + registration.getStatus());
+                }
         }
 
         private void viewWaitingQueue() {
                 System.out.println(
-                                "\n===== WAITING REGISTRATION QUEUE =====");
+                                "\n===== STANDARD WAITING REGISTRATION QUEUE =====");
 
                 int waitingCount = controller.getWaitingCount();
 
@@ -226,7 +274,7 @@ public class RegistrationUI {
 
         private void viewNextRegistration() {
                 System.out.println(
-                                "\n===== NEXT REGISTRATION =====");
+                                "\n===== NEXT STANDARD REGISTRATION =====");
 
                 WalkInRegistration registration = controller.getNextRegistration();
 
@@ -241,7 +289,13 @@ public class RegistrationUI {
 
         private void processNextRegistration() {
                 System.out.println(
-                                "\n===== PROCESS NEXT REGISTRATION =====");
+                                "\n===== PROCESS NEXT STANDARD REGISTRATION =====");
+
+                if (controller.hasWaitingVip()) {
+                        Utility.printError(
+                                        "VIP members are waiting. Allocate the highest-priority VIP first.");
+                        return;
+                }
 
                 WalkInRegistration registration = controller.processNextRegistration();
 
@@ -302,6 +356,68 @@ public class RegistrationUI {
                                 "Registration cancelled successfully.");
                 System.out.println();
                 System.out.println(registration);
+        }
+
+        private boolean readYesNo(String message) {
+                while (true) {
+                        System.out.print(message);
+                        String input = scanner.nextLine().trim();
+
+                        if (input.equalsIgnoreCase("Y")) {
+                                return true;
+                        }
+
+                        if (input.equalsIgnoreCase("N")) {
+                                return false;
+                        }
+
+                        Utility.printError("Please enter Y or N.");
+                }
+        }
+
+        private LoyaltyTier readLoyaltyTier() {
+                LoyaltyTier[] tiers = LoyaltyTier.values();
+
+                while (true) {
+                        System.out.println("\nSelect Loyalty Tier:");
+
+                        for (int i = 0; i < tiers.length; i++) {
+                                System.out.println(
+                                                (i + 1) + ". " + tiers[i]);
+                        }
+
+                        int choice = readInteger("Choice: ");
+
+                        if (choice >= 1 && choice <= tiers.length) {
+                                return tiers[choice - 1];
+                        }
+
+                        Utility.printError("Invalid loyalty tier.");
+                }
+        }
+
+        private void displayVipAddError(int result) {
+                switch (result) {
+                        case VipPriorityController.DUPLICATE_MEMBER_ID:
+                                Utility.printError(
+                                                "Member ID already exists in the VIP heap.");
+                                break;
+
+                        case VipPriorityController.REGISTRATION_ALREADY_QUEUED:
+                                Utility.printError(
+                                                "This registration is already in the VIP heap.");
+                                break;
+
+                        case VipPriorityController.GUEST_ALREADY_QUEUED:
+                                Utility.printError(
+                                                "This guest is already waiting in the VIP heap.");
+                                break;
+
+                        default:
+                                Utility.printError(
+                                                "Unable to add the VIP registration. Check all fields.");
+                                break;
+                }
         }
 
         private String generateRegistrationId() {

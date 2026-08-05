@@ -4,27 +4,40 @@ import adt.linear.DoublyLinkedList;
 import adt.linear.LinearADT;
 import dao.GuestDao;
 import entity.Guest;
+import entity.LoyaltyTier;
 import entity.WalkInRegistration;
 
 /**
+ * Controls walk-in registrations and routes them to either the standard FIFO
+ * queue or the VIP MaxHeap.
  *
  * @author Lai Jen Feng
  */
 public class RegistrationController {
 
-    // 只保存正在等待的 registrations
+    /* Standard guests waiting in chronological FIFO order. */
     private final LinearADT<WalkInRegistration> registrationQueue;
 
-    // 保存全部 registrations，包括 WAITING、PROCESSED 和 CANCELLED
+    /* All registrations, including standard and VIP records. */
     private final LinearADT<WalkInRegistration> registrationRecords;
 
-    // 使用 teammate 已经建立的 GuestDao 和 guest.dat
     private final GuestDao guestDao;
     private Guest[] guests;
 
+    /* Shared with VipAllocationUI through Main. */
+    private final VipPriorityController vipPriorityController;
+
     public RegistrationController() {
+        this(new VipPriorityController());
+    }
+
+    public RegistrationController(
+            VipPriorityController vipPriorityController) {
+
         registrationQueue = new DoublyLinkedList<>();
         registrationRecords = new DoublyLinkedList<>();
+
+        this.vipPriorityController = vipPriorityController;
 
         guestDao = new GuestDao();
         guests = guestDao.loadOrSeed();
@@ -34,12 +47,6 @@ public class RegistrationController {
         }
     }
 
-    /**
-     * 根据 Guest ID 搜索 guest.dat 中的 Guest。
-     *
-     * @param guestId Guest ID
-     * @return 找到的 Guest，找不到则返回 null
-     */
     public Guest searchGuestById(String guestId) {
         if (guestId == null) {
             return null;
@@ -48,7 +55,7 @@ public class RegistrationController {
         for (Guest guest : guests) {
             if (guest != null
                     && guest.getGuestId()
-                            .equalsIgnoreCase(guestId)) {
+                            .equalsIgnoreCase(guestId.trim())) {
 
                 return guest;
             }
@@ -57,20 +64,11 @@ public class RegistrationController {
         return null;
     }
 
-    /**
-     * 建立新的 Guest，并保存进 guest.dat。
-     *
-     * @param guestId Guest ID
-     * @param guestName Guest Name
-     * @param phoneNumber Phone Number
-     * @return 新 Guest；ID 已存在则返回 null
-     */
     public Guest addNewGuest(
             String guestId,
             String guestName,
             Long phoneNumber) {
 
-        // 防止重复 Guest ID
         if (searchGuestById(guestId) != null) {
             return null;
         }
@@ -80,42 +78,73 @@ public class RegistrationController {
                 guestName,
                 phoneNumber);
 
-        // 创建长度多一个的新 array
-        Guest[] updatedGuests
-                = new Guest[guests.length + 1];
+        Guest[] updatedGuests = new Guest[guests.length + 1];
 
-        // 复制原本所有 Guest
         for (int i = 0; i < guests.length; i++) {
             updatedGuests[i] = guests[i];
         }
 
-        // 把新 Guest 放在最后
         updatedGuests[guests.length] = newGuest;
-
-        // 更新 Controller 里的 Guest array
         guests = updatedGuests;
 
-        // 保存完整 Guest array，避免覆盖后只剩一个 Guest
         guestDao.saveToFile(guests);
-
         return newGuest;
     }
 
+    /**
+     * Adds a normal guest to the standard DoublyLinkedList queue.
+     */
+    public void addStandardRegistration(
+            WalkInRegistration registration) {
+
+        registration.setStatus("WAITING");
+        registrationQueue.addLast(registration);
+        registrationRecords.addLast(registration);
+    }
+
+    /**
+     * Kept as an alias for existing code that treats a registration as standard.
+     */
     public void addRegistration(
             WalkInRegistration registration) {
 
-        registrationQueue.addLast(registration);
-        registrationRecords.addLast(registration);
+        addStandardRegistration(registration);
+    }
+
+    /**
+     * Routes a completed registration into the shared VIP MaxHeap.
+     */
+    public int addVipRegistration(
+            WalkInRegistration registration,
+            String memberId,
+            LoyaltyTier tier) {
+
+        int result = vipPriorityController.addVipRegistration(
+                memberId,
+                registration,
+                tier);
+
+        if (result == VipPriorityController.ADD_SUCCESS) {
+            registrationRecords.addLast(registration);
+        }
+
+        return result;
     }
 
     public int getWaitingCount() {
         return registrationQueue.size();
     }
 
-    public WalkInRegistration getRegistrationAt(int index) {
-        if (index < 0
-                || index >= registrationQueue.size()) {
+    public int getVipWaitingCount() {
+        return vipPriorityController.getWaitingCount();
+    }
 
+    public boolean hasWaitingVip() {
+        return vipPriorityController.hasWaitingVip();
+    }
+
+    public WalkInRegistration getRegistrationAt(int index) {
+        if (index < 0 || index >= registrationQueue.size()) {
             return null;
         }
 
@@ -139,17 +168,13 @@ public class RegistrationController {
                 = registrationQueue.removeFirst();
 
         registration.setStatus("PROCESSED");
-
         return registration;
     }
 
     public WalkInRegistration searchRegistrationById(
             String registrationId) {
 
-        for (int i = 0;
-                i < registrationRecords.size();
-                i++) {
-
+        for (int i = 0; i < registrationRecords.size(); i++) {
             WalkInRegistration registration
                     = registrationRecords.get(i);
 
@@ -168,22 +193,21 @@ public class RegistrationController {
     }
 
     public WalkInRegistration getRecordAt(int index) {
-        if (index < 0
-                || index >= registrationRecords.size()) {
-
+        if (index < 0 || index >= registrationRecords.size()) {
             return null;
         }
 
         return registrationRecords.get(index);
     }
 
+    /**
+     * Cancels from the standard queue first; if it is not there, checks the VIP
+     * MaxHeap through VipPriorityController.
+     */
     public WalkInRegistration cancelRegistrationById(
             String registrationId) {
 
-        for (int i = 0;
-                i < registrationQueue.size();
-                i++) {
-
+        for (int i = 0; i < registrationQueue.size(); i++) {
             WalkInRegistration registration
                     = registrationQueue.get(i);
 
@@ -192,11 +216,11 @@ public class RegistrationController {
 
                 registrationQueue.removeAt(i);
                 registration.setStatus("CANCELLED");
-
                 return registration;
             }
         }
 
-        return null;
+        return vipPriorityController
+                .cancelVipRegistrationById(registrationId);
     }
 }
