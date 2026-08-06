@@ -4,79 +4,92 @@ package entity;
  *
  * @author Low Wei Shin
  */
+import java.io.Serializable;
+import java.time.Duration;
+import java.time.LocalDateTime;
 
-public class TaskLogEntry {
+public class TaskLogEntry implements Serializable {
 
+    private static final long serialVersionUID = 1L;
     private String taskId;
-    private Room room;
-    private String status; // Dirty, Cleaning In Progress, Inspected, Ready
+    private String roomNumber;
+    private String status;          // Dirty, Cleaning In Progress, Inspected, Ready
     private String staffId;
-    private String timestamp;
-    private String notes;
+    private String remarks;
+    private LocalDateTime createdTime;
+    private LocalDateTime lastUpdatedTime;
+    private int estimatedMinutes;   // remaining estimated time
 
-    public TaskLogEntry(String taskId, Room room, String status, String staffId) {
+    public TaskLogEntry(String taskId, String roomNumber, String status, String staffId) {
+        this(taskId, roomNumber, status, staffId, null);
+    }
+
+    public TaskLogEntry(String taskId, String roomNumber, String status, String staffId, String remarks) {
         this.taskId = taskId;
-        this.room = room;
+        this.roomNumber = roomNumber;
         this.status = status;
         this.staffId = staffId;
-        this.timestamp = java.time.LocalDateTime.now().toString();
+        this.remarks = remarks;
+        this.createdTime = LocalDateTime.now();
+        this.lastUpdatedTime = LocalDateTime.now();
+        this.estimatedMinutes = calculateEstimatedMinutes(status);
     }
 
-    public TaskLogEntry(String taskId2, String string, String status2, String staffId2) {
-        //TODO Auto-generated constructor stub
+    private int calculateEstimatedMinutes(String status) {
+        switch (status) {
+            case "Dirty": return 35;
+            case "Cleaning In Progress": return 15;
+            case "Inspected": return 10;
+            case "Ready": return 0;
+            default: return 0;
+        }
     }
 
-    public String getTaskId() {
-        return taskId;
-    }
+    // Getters
+    public String getTaskId() { return taskId; }
+    public String getRoomNumber() { return roomNumber; }
+    public String getStatus() { return status; }
+    public String getStaffId() { return staffId; }
+    public String getRemarks() { return remarks; }
+    public LocalDateTime getCreatedTime() { return createdTime; }
+    public LocalDateTime getLastUpdatedTime() { return lastUpdatedTime; }
+    public int getEstimatedMinutes() { return estimatedMinutes; }
 
-    public void setTaskId(String taskId) {
-        this.taskId = taskId;
-    }
-
-    public Room getRoom() {
-        return room;
-    }
-
-    public void setRoom(Room room) {
-        this.room = room;
-    }
-
-    public String getStatus() {
-        return status;
-    }
-
+    // Setters
     public void setStatus(String status) {
         this.status = status;
+        this.lastUpdatedTime = LocalDateTime.now();
+        this.estimatedMinutes = calculateEstimatedMinutes(status);
     }
 
-    public String getStaffId() {
-        return staffId;
+    public void setRemarks(String remarks) {
+        this.remarks = remarks;
     }
 
-    public void setStaffId(String staffId) {
-        this.staffId = staffId;
+    public long getMinutesSpent() {
+        return Duration.between(createdTime, LocalDateTime.now()).toMinutes();
     }
 
-    public String getTimestamp() {
-        return timestamp;
-    }
+    public String getTimeSpentLabel() {
+        long totalMinutes = getMinutesSpent();
+        long hours = totalMinutes / 60;
+        long minutes = totalMinutes % 60;
 
-    public void setTimestamp(String timestamp) {
-        this.timestamp = timestamp;
-    }
+        if (hours <= 0) {
+            return minutes + " min";
+        }
 
-    public String getNotes() {
-        return notes;
-    }
-
-    public void setNotes(String notes) {
-        this.notes = notes;
+        return hours + " hr " + minutes + " min";
     }
 
     @Override
     public String toString() {
-        String roomNumber = room == null ? "N/A" : room.getRoomNumber();
-        return taskId + " | Room " + roomNumber + " | " + status + " | " + staffId;
+        return String.format("%-6s | Room %-4s | %-22s | Staff: %-5s | Spent: %s%s",
+            taskId,
+            roomNumber,
+            status,
+            staffId,
+                getTimeSpentLabel(),
+            remarks == null || remarks.isBlank() ? "" : " | Note: " + remarks);
     }
 }

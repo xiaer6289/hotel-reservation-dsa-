@@ -1,6 +1,14 @@
 package adt.linear;
 /**
+ * DoublyLinkedList is a dynamic linear data structure implementation of LinearADT.
+ * Unlike arrays, it doesn't have a fixed capacity and can grow dynamically.
+ * By maintaining both 'head' and 'tail' pointers, it ensures O(1) time complexity 
+ * for insertions at both the front and end of the list.
+ * 
+ * It is highly efficient for the Housekeeping Task Log because appending tasks 
+ * (addLast) is extremely fast, and tasks can be iterated sequentially.
  *
+ * @param <T> the type of elements held in this list
  * @author team members
  */
 public class DoublyLinkedList<T> implements LinearADT<T> {
@@ -9,6 +17,11 @@ public class DoublyLinkedList<T> implements LinearADT<T> {
     private Node<T> tail;
     private int size;
 
+    /**
+     * Inner Node class stores the actual data and two pointers (prev, next).
+     * The 'prev' pointer allows backward traversal which is unique to 
+     * Doubly Linked Lists compared to Singly Linked Lists.
+     */
     private static class Node<T> {
         T data;
         Node<T> prev;
