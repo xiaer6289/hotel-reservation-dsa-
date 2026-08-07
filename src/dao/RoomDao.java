@@ -5,6 +5,7 @@
 package dao;
 
 import entity.Room;
+import entity.RoomStatus;
 import entity.RoomType;
 import java.io.File;
 import java.io.FileInputStream;
@@ -21,6 +22,7 @@ import java.time.LocalDateTime;
  */
 public class RoomDao {
     private String fileName = "room.dat";
+    private static Room[] cachedRooms;
     
     public void saveToFile(Room[] room) {
         File file = new File(fileName);
@@ -55,11 +57,16 @@ public class RoomDao {
             System.out.println("\nclass not found");
             ex.printStackTrace();
         } finally {
+            cachedRooms = rooms;
             return rooms;
         }
     }
     
     public Room[] loadOrSeed() {
+        if (cachedRooms != null && cachedRooms.length > 0) {
+            return cachedRooms;
+        }
+        
         File file = new File(fileName);
         if (file.exists()) {
             Room[] loaded = retrieveFromFile();
@@ -86,5 +93,21 @@ public class RoomDao {
                 LocalDateTime.now(), LocalDateTime.now(),
                 LocalDateTime.now().plusDays(1), 'I')
         };
+    }
+    
+    public Room[] resetToDefaultReadyRooms() {
+        Room[] rooms = seedSampleData();
+        for (Room room : rooms) {
+            if (room != null) {
+                room.setRoomStatus(RoomStatus.READY);
+                room.setBookingDate(null);
+                room.setCheckInDateTime(null);
+                room.setCheckOutDateTime(null);
+            }
+        }
+
+        cachedRooms = rooms;
+        saveToFile(cachedRooms);
+        return cachedRooms;
     }
 }

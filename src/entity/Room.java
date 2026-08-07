@@ -33,6 +33,11 @@ public class Room implements Serializable{
         this.checkOutDateTime = checkOutDateTime;
         this.status = status;
     }
+    
+    public Room(String roomNumber, String roomType, String floor, boolean availability, int noOfGuest, LocalDateTime bookingDate, LocalDateTime checkInDateTime, LocalDateTime checkOutDateTime, RoomStatus status) {
+        this(roomNumber, roomType, floor, availability, noOfGuest, bookingDate, checkInDateTime, checkOutDateTime, status == null ? RoomStatus.AVAILABLE.getCode() : status.getCode());
+        syncAvailabilityWithStatus();
+    }
 
     public String getRoomNumber() {
         return roomNumber;
@@ -104,5 +109,26 @@ public class Room implements Serializable{
 
     public void setStatus(char status) {
         this.status = status;
+    }
+    
+    public RoomStatus getRoomStatus() {
+        return RoomStatus.fromCode(status);
+    }
+
+    public void setRoomStatus(RoomStatus roomStatus) {
+        this.status = roomStatus == null ? RoomStatus.AVAILABLE.getCode() : roomStatus.getCode();
+        syncAvailabilityWithStatus();
+    }
+
+    public String getStatusLabel() {
+        return getRoomStatus().getDisplayName();
+    }
+
+    public boolean isAssignable() {
+        return getRoomStatus().isAssignable();
+    }
+
+    private void syncAvailabilityWithStatus() {
+        this.availability = getRoomStatus().isAssignable();
     }
 }

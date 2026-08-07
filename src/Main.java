@@ -5,6 +5,8 @@
 
 
 import boundary.FrontDeskUI;
+import boundary.HousekeepingUI;
+import boundary.RegistrationUI;
 import boundary.VipAllocationUI;
 import java.util.Scanner;
 import utility.Utility;
@@ -38,12 +40,14 @@ public class Main {
                     new FrontDeskUI().run();
                     break;
                 case 2: 
-//                    new RegistrationUI().run();
-//                    break;
+                    new RegistrationUI().run();
+                    break;
                 case 3: 
                     new VipAllocationUI().run();
                     break;
-                case 4: {} //todo
+                case 4: 
+                    new HousekeepingUI().showMenu();
+                    break;
                 case 0: 
                     System.out.println("Exiting system...");
                     break;

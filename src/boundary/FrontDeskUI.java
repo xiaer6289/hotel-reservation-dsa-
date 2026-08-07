@@ -8,6 +8,7 @@ import control.FrontDeskControl;
 import control.report.BillSummaryRP;
 import control.report.RoomOccupancyRP;
 import entity.Booking;
+import entity.Room;
 import entity.RoomType;
 import java.util.Scanner;
 import utility.Utility;
@@ -38,11 +39,18 @@ public class FrontDeskUI {
                     checkRoomAvailability();
                     break;
                 case 4:
-                    roomOccupancyRP();
+                    processCheckout();
                     break;
                 case 5:
+                    roomOccupancyRP();
+                    break;
+                case 6:
                     billingSummaryRP();
-                case 6: 
+                    break;
+                case 7:
+                    viewReadyRoomNotifications();
+                    break;
+                case 8: 
                     control.save();
                     Utility.printSuccess("Data saved.");
                     Utility.pauseScreen();
@@ -51,8 +59,8 @@ public class FrontDeskUI {
                 default: 
                     Utility.printError("Invalid option, try again");
             }
-            if (choice != 4) Utility.pauseScreen();
-        } while (choice != 4);
+            if (choice != 8) Utility.pauseScreen();
+        } while (choice != 8);
     }
     
     private void displayMenu() {
@@ -61,9 +69,11 @@ public class FrontDeskUI {
         System.out.println("1. Search Booking");
         System.out.println("2. View All Booking");
         System.out.println("3. Check Room Availability");
-        System.out.println("4. Room Occupancy Report");
-        System.out.println("5. Billing Summary Report");
-        System.out.println("6. Save and Exit");
+        System.out.println("4. Process Guest Check Out");
+        System.out.println("5. Room Occupancy Report");
+        System.out.println("6. Billing Summary Report");
+        System.out.println("7. View Ready Room Notifications");
+        System.out.println("8. Save and Exit");
         System.out.print("Enter choice: ");
     }
     
@@ -109,6 +119,53 @@ public class FrontDeskUI {
             Utility.printSuccess("Room " + roomNo + " is available.");
         } else {
             Utility.printError("Room " + roomNo + " is not available.");
+        }
+    }
+    
+    private void processCheckout() {
+        System.out.print("Enter Confirmation Number: ");
+        String confirmationNo = scanner.nextLine().trim();
+        System.out.print("Enter Staff ID: ");
+        String staffId = scanner.nextLine().trim();
+        System.out.println("Select checkout reason: 1. Standard  2. Late Check-Out  3. Special Request");
+        System.out.print("Enter choice: ");
+        String reasonChoice = scanner.nextLine().trim();
+        String remarks = null;
+
+        switch (reasonChoice) {
+            case "2":
+                remarks = "Late check-out";
+                break;
+            case "3":
+                System.out.print("Enter special request details: ");
+                remarks = "Special request - " + scanner.nextLine().trim();
+                break;
+            default:
+                remarks = null;
+                break;
+        }
+
+        entity.TaskLogEntry task = control.processCheckout(confirmationNo, staffId, remarks);
+        if (task == null) {
+            Utility.printError("Unable to process check-out.");
+            return;
+        }
+
+        Utility.printSuccess("Check-out completed. Housekeeping task created: " + task.getTaskId());
+    }
+
+    private void viewReadyRoomNotifications() {
+        Room[] rooms = control.getNotifiedReadyRooms();
+        if (rooms.length == 0) {
+            Utility.printError("No ready-room notifications yet.");
+            return;
+        }
+
+        System.out.println("--- READY ROOMS FOR FRONT DESK ---");
+        for (Room room : rooms) {
+            if (room != null) {
+                System.out.println("Room " + room.getRoomNumber() + " | " + room.getStatusLabel());
+            }
         }
     }
     
