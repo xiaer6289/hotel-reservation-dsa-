@@ -118,6 +118,119 @@ public class RegistrationController {
     }
 
     /**
+     * Refreshes loyalty qualification using completed past stays.
+     *
+     * This keeps the loyalty feature intentionally simple: 3 completed stays
+     * qualify for ELITE, 6 for PLATINUM and 10 for DIAMOND. A guest below the
+     * first threshold remains a Standard guest and has no VIP profile yet.
+     */
+    public LoyaltyProfile refreshLoyaltyProfileByGuestId(String guestId) {
+        if (guestId == null || guestId.isBlank()) {
+            return null;
+        }
+
+        LoyaltyProfile existingProfile
+                = searchLoyaltyProfileByGuestId(guestId);
+
+        int completedStays = getCompletedStayCount(guestId);
+
+        if (existingProfile != null) {
+            int before = existingProfile.getCompletedStays();
+            LoyaltyTier beforeTier = existingProfile.getTier();
+
+            existingProfile.updateCompletedStays(completedStays);
+
+            if (before != existingProfile.getCompletedStays()
+                    || beforeTier != existingProfile.getTier()) {
+                loyaltyProfileDao.saveToFile(loyaltyProfiles);
+            }
+
+            return existingProfile;
+        }
+
+        LoyaltyTier qualifiedTier
+                = LoyaltyProfile.determineTier(completedStays);
+
+        if (qualifiedTier == null) {
+            return null;
+        }
+
+        LoyaltyProfile newProfile = new LoyaltyProfile(
+                generateNextMemberId(),
+                guestId.trim(),
+                completedStays);
+
+        LoyaltyProfile[] updatedProfiles
+                = new LoyaltyProfile[loyaltyProfiles.length + 1];
+
+        System.arraycopy(
+                loyaltyProfiles,
+                0,
+                updatedProfiles,
+                0,
+                loyaltyProfiles.length);
+
+        updatedProfiles[loyaltyProfiles.length] = newProfile;
+        loyaltyProfiles = updatedProfiles;
+        loyaltyProfileDao.saveToFile(loyaltyProfiles);
+
+        return newProfile;
+    }
+
+    /**
+     * Counts past registrations that have reached their expected checkout
+     * time. Only CHECKED_IN records are counted; waiting/cancelled records do
+     * not earn loyalty credit. Existing stored loyalty progress is kept if it
+     * is already higher, so stay totals never decrease.
+     */
+    public int getCompletedStayCount(String guestId) {
+        if (guestId == null || guestId.isBlank()) {
+            return 0;
+        }
+
+        String normalizedGuestId = guestId.trim();
+        LocalDateTime now = LocalDateTime.now();
+        int historicalCount = 0;
+
+        for (int i = 0; i < registrationRecords.size(); i++) {
+            WalkInRegistration registration = registrationRecords.get(i);
+
+            if (registration == null
+                    || registration.getGuest() == null
+                    || registration.getCheckOutDateTime() == null) {
+                continue;
+            }
+
+            boolean sameGuest = registration.getGuest().getGuestId()
+                    .equalsIgnoreCase(normalizedGuestId);
+
+            boolean stayReachedCheckout
+                    = registration.getStatus() == RegistrationStatus.CHECKED_IN
+                    && !registration.getCheckOutDateTime().isAfter(now);
+
+            if (sameGuest && stayReachedCheckout) {
+                historicalCount++;
+            }
+        }
+
+        LoyaltyProfile profile
+                = searchLoyaltyProfileByGuestId(normalizedGuestId);
+
+        int storedCount = profile == null
+                ? 0
+                : profile.getCompletedStays();
+
+        return Math.max(historicalCount, storedCount);
+    }
+
+    public int getStaysNeededForElite(String guestId) {
+        return Math.max(
+                0,
+                LoyaltyProfile.ELITE_MIN_STAYS
+                - getCompletedStayCount(guestId));
+    }
+
+    /**
      * Prevents duplicate active registrations and duplicate concurrent stays.
      */
     public boolean hasActiveRegistrationOrStay(String guestId) {
@@ -537,6 +650,28 @@ public class RegistrationController {
         }
 
         return null;
+    }
+
+    private String generateNextMemberId() {
+        int highestNumber = 0;
+
+        for (LoyaltyProfile profile : loyaltyProfiles) {
+            if (profile == null || profile.getMemberId() == null) {
+                continue;
+            }
+
+            String memberId = profile.getMemberId().trim();
+            if (!memberId.matches("(?i)M\\d{4}")) {
+                continue;
+            }
+
+            int number = Integer.parseInt(memberId.substring(1));
+            if (number > highestNumber) {
+                highestNumber = number;
+            }
+        }
+
+        return String.format("M%04d", highestNumber + 1);
     }
 
     private String generateUniqueConfirmationNo() {

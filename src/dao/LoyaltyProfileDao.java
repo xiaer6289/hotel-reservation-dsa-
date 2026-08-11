@@ -1,7 +1,6 @@
 package dao;
 
 import entity.LoyaltyProfile;
-import entity.LoyaltyTier;
 import java.io.EOFException;
 import java.io.File;
 import java.io.FileInputStream;
@@ -13,9 +12,8 @@ import java.io.ObjectOutputStream;
 /**
  * Persists hotel loyalty membership profiles.
  *
- * The loyalty profile is long-lived master data. It is intentionally separate
- * from MemberDao, which stores VIP guests that are currently waiting in the
- * priority MaxHeap.
+ * LoyaltyProfile is long-lived master data. MemberDao remains separate and is
+ * only for VIP guests currently waiting inside the MaxHeap.
  *
  * @author Low Enn Toong
  */
@@ -64,6 +62,19 @@ public class LoyaltyProfileDao {
         if (file.exists()) {
             LoyaltyProfile[] loaded = retrieveFromFile();
             if (loaded.length > 0) {
+                boolean changed = false;
+
+                for (LoyaltyProfile profile : loaded) {
+                    if (profile != null
+                            && profile.normalizeLegacyCompletedStays()) {
+                        changed = true;
+                    }
+                }
+
+                if (changed) {
+                    saveToFile(loaded);
+                }
+
                 return loaded;
             }
         }
@@ -74,14 +85,15 @@ public class LoyaltyProfileDao {
     }
 
     /**
-     * Sample existing memberships for the seeded guests in GuestDao.
-     * New walk-in guests are not automatically given a loyalty tier.
+     * Sample profiles match the simple completed-stay thresholds. These are
+     * seed/demo records only; future guests qualify automatically from their
+     * completed stay history.
      */
     public LoyaltyProfile[] seedSampleData() {
         return new LoyaltyProfile[] {
-            new LoyaltyProfile("M0001", "1", LoyaltyTier.DIAMOND),
-            new LoyaltyProfile("M0002", "2", LoyaltyTier.PLATINUM),
-            new LoyaltyProfile("M0003", "3", LoyaltyTier.ELITE)
+            new LoyaltyProfile("M0001", "1", 10),
+            new LoyaltyProfile("M0002", "2", 6),
+            new LoyaltyProfile("M0003", "3", 3)
         };
     }
 }

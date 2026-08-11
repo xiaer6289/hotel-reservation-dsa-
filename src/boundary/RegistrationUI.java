@@ -17,8 +17,8 @@ import utility.Utility;
  * Handles walk-in registration, Standard FIFO viewing and Standard room
  * assignment/check-in.
  *
- * Existing loyalty membership is read automatically from the stored loyalty
- * profile. Front-desk staff do not manually assign VIP tiers during check-in.
+ * Loyalty qualification is refreshed automatically from completed past stays.
+ * Staff do not manually assign Diamond/Platinum/Elite during registration.
  *
  * @author Lai Jen Feng
  */
@@ -147,24 +147,61 @@ public class RegistrationUI {
             Utility.printSuccess("New guest saved successfully.");
         }
 
-        LoyaltyProfile loyaltyProfile
+        /*
+         * Refresh loyalty from past completed stays before deciding whether
+         * this visit belongs to the Standard FIFO or VIP MaxHeap.
+         */
+        LoyaltyProfile profileBeforeRefresh
                 = controller.searchLoyaltyProfileByGuestId(
                         guest.getGuestId());
 
+        LoyaltyProfile loyaltyProfile
+                = controller.refreshLoyaltyProfileByGuestId(
+                        guest.getGuestId());
+
+        int completedStays
+                = controller.getCompletedStayCount(guest.getGuestId());
+
         if (loyaltyProfile != null) {
-            System.out.println("\nExisting loyalty membership detected.");
+            if (profileBeforeRefresh == null) {
+                Utility.printSuccess(
+                        "Loyalty requirement achieved. VIP membership "
+                        + "activated automatically.");
+            } else {
+                System.out.println("\nExisting loyalty membership detected.");
+            }
+
             System.out.println(
                     "Member ID: " + loyaltyProfile.getMemberId());
+            System.out.println(
+                    "Completed Stays: "
+                    + loyaltyProfile.getCompletedStays());
             System.out.println(
                     "Loyalty Tier: " + loyaltyProfile.getTier());
             System.out.println(
                     "VIP Priority: "
                     + loyaltyProfile.getTier().getPriority());
+
+            if (loyaltyProfile.getStaysUntilNextTier() > 0) {
+                System.out.println(
+                        "Next Tier: "
+                        + loyaltyProfile.getNextTierName());
+                System.out.println(
+                        "More Stays Needed: "
+                        + loyaltyProfile.getStaysUntilNextTier());
+            } else {
+                System.out.println("Tier Progress: Highest loyalty tier reached.");
+            }
         } else {
-            System.out.println("\nLoyalty Status: STANDARD / NON-MEMBER");
+            int staysNeeded
+                    = controller.getStaysNeededForElite(guest.getGuestId());
+
+            System.out.println("\nLoyalty Status: STANDARD / NON-VIP");
+            System.out.println("Completed Stays: " + completedStays);
             System.out.println(
-                    "No existing loyalty tier was found. "
-                    + "This registration will use the standard queue.");
+                    "Stays Needed for ELITE: " + staysNeeded);
+            System.out.println(
+                    "This registration will use the standard FIFO queue.");
         }
 
         String roomType = readRoomType();
