@@ -271,8 +271,9 @@ public class RegistrationController {
     }
 
     /**
-     * Returns rooms that are clean/ready, of the requested type, and large
-     * enough for the first Standard guest.
+     * Returns rooms that are clean/ready, of the requested type, large enough
+     * for the first Standard guest, and not currently needed by a waiting VIP
+     * who can use that specific room.
      */
     public Room[] getSuitableRoomsForNextStandard() {
         WalkInRegistration registration = getNextRegistration();
@@ -285,7 +286,9 @@ public class RegistrationController {
         int suitableCount = 0;
 
         for (Room room : rooms) {
-            if (isSuitableRoom(room, registration)) {
+            if (isSuitableRoom(room, registration)
+                    && !vipPriorityController
+                            .hasWaitingVipEligibleForRoom(room)) {
                 suitableCount++;
             }
         }
@@ -294,7 +297,9 @@ public class RegistrationController {
         int index = 0;
 
         for (Room room : rooms) {
-            if (isSuitableRoom(room, registration)) {
+            if (isSuitableRoom(room, registration)
+                    && !vipPriorityController
+                            .hasWaitingVipEligibleForRoom(room)) {
                 suitableRooms[index++] = room;
             }
         }
@@ -312,11 +317,6 @@ public class RegistrationController {
             return null;
         }
 
-        /* Assignment requirement: waiting VIPs get room-allocation priority. */
-        if (vipPriorityController.hasWaitingVip()) {
-            return null;
-        }
-
         WalkInRegistration registration = registrationQueue.get(0);
         rooms = roomDao.loadOrSeed();
         bookings = loadExistingBookings();
@@ -326,6 +326,15 @@ public class RegistrationController {
                 registration);
 
         if (selectedRoom == null) {
+            return null;
+        }
+
+        /*
+         * VIP priority is room-specific. A Standard guest is blocked only
+         * when a waiting VIP can actually use this selected vacant room.
+         */
+        if (vipPriorityController
+                .hasWaitingVipEligibleForRoom(selectedRoom)) {
             return null;
         }
 

@@ -116,27 +116,96 @@ public class VipPriorityController {
     }
 
     /**
+     * Returns true only when at least one waiting VIP can actually use the
+     * specified vacant room. This prevents unrelated VIP requests from
+     * blocking Standard guests who need a different room type/capacity.
+     */
+    public boolean hasWaitingVipEligibleForRoom(Room room) {
+        if (room == null || !room.isAssignable()) {
+            return false;
+        }
+
+        PriorityQueueADT<Member> copiedQueue = PRIORITY_QUEUE.copy();
+
+        while (!copiedQueue.isEmpty()) {
+            Member member = copiedQueue.dequeue();
+
+            if (isRoomSuitableForRegistration(
+                    room,
+                    member.getRegistration())) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Finds the highest-priority VIP who can currently be assigned a room.
+     * A higher-priority VIP who needs a different unavailable room remains in
+     * the heap and does not prevent another VIP from using a suitable room.
+     */
+    public Member peekNextAllocatableVip() {
+        rooms = roomDao.loadOrSeed();
+        PriorityQueueADT<Member> copiedQueue = PRIORITY_QUEUE.copy();
+
+        while (!copiedQueue.isEmpty()) {
+            Member member = copiedQueue.dequeue();
+
+            if (findSuitableVacantRoom(member.getRegistration()) != null) {
+                return member;
+            }
+        }
+
+        return null;
+    }
+
+    /**
      * Allocates a clean/ready suitable room to the highest-priority VIP and
      * creates a Booking so the same guest can later be checked out by Front
      * Desk using a confirmation number.
      */
     public Booking allocateNextVipBooking() {
-        Member nextVip = PRIORITY_QUEUE.peek();
-
-        if (nextVip == null) {
+        if (PRIORITY_QUEUE.isEmpty()) {
             return null;
         }
 
-        WalkInRegistration registration = nextVip.getRegistration();
         rooms = roomDao.loadOrSeed();
         bookings = loadExistingBookings();
 
-        Room suitableRoom = findSuitableVacantRoom(registration);
+        PriorityQueueADT<Member> retainedMembers = new MaxHeap<>();
+        Member selectedMember = null;
+        Room suitableRoom = null;
 
-        if (suitableRoom == null) {
-            /* No dequeue: the highest-priority VIP keeps the front position. */
+        /*
+         * Dequeue in MaxHeap priority order until the highest-priority VIP
+         * who can use a currently vacant room is found. Higher-priority VIPs
+         * without a suitable room are temporarily retained and reinserted.
+         */
+        while (!PRIORITY_QUEUE.isEmpty()) {
+            Member candidate = PRIORITY_QUEUE.dequeue();
+            Room candidateRoom = findSuitableVacantRoom(
+                    candidate.getRegistration());
+
+            if (candidateRoom != null) {
+                selectedMember = candidate;
+                suitableRoom = candidateRoom;
+                break;
+            }
+
+            retainedMembers.enqueue(candidate);
+        }
+
+        while (!retainedMembers.isEmpty()) {
+            PRIORITY_QUEUE.enqueue(retainedMembers.dequeue());
+        }
+
+        if (selectedMember == null) {
+            saveWaitingMembers();
             return null;
         }
+
+        WalkInRegistration registration = selectedMember.getRegistration();
 
         LocalDateTime actualCheckInTime = LocalDateTime.now()
                 .withSecond(0)
@@ -162,8 +231,7 @@ public class VipPriorityController {
         bookingDao.saveToFile(bookings);
         registrationDao.upsert(registration);
 
-        /* Remove only after room, booking and registration are successfully updated. */
-        PRIORITY_QUEUE.dequeue();
+        /* selectedMember has already been removed from the heap above. */
         saveWaitingMembers();
 
         return booking;
@@ -327,23 +395,31 @@ public class VipPriorityController {
             WalkInRegistration registration) {
 
         for (Room room : rooms) {
-            if (room == null || !room.isAssignable()) {
-                continue;
-            }
-
-            boolean matchingRoomType = room.getRoomType()
-                    .equalsIgnoreCase(
-                            registration.getRequestedRoomType());
-
-            boolean enoughCapacity = room.getNoOfGuest()
-                    >= registration.getNumberOfGuests();
-
-            if (matchingRoomType && enoughCapacity) {
+            if (isRoomSuitableForRegistration(room, registration)) {
                 return room;
             }
         }
 
         return null;
+    }
+
+    private boolean isRoomSuitableForRegistration(
+            Room room,
+            WalkInRegistration registration) {
+
+        if (room == null
+                || registration == null
+                || !room.isAssignable()) {
+            return false;
+        }
+
+        boolean matchingRoomType = room.getRoomType()
+                .equalsIgnoreCase(registration.getRequestedRoomType());
+
+        boolean enoughCapacity = room.getNoOfGuest()
+                >= registration.getNumberOfGuests();
+
+        return matchingRoomType && enoughCapacity;
     }
 
     private void updateAllocatedRoom(

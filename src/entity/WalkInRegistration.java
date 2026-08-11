@@ -108,6 +108,10 @@ public class WalkInRegistration implements Serializable {
 
     @Override
     public String toString() {
+        String checkInText = checkInDateTime == null
+                ? "Pending room assignment"
+                : checkInDateTime.format(DATE_TIME_FORMAT);
+
         return "Registration ID: " + registrationId
                 + "\nGuest ID: " + guest.getGuestId()
                 + "\nGuest Name: " + guest.getName()
@@ -117,7 +121,7 @@ public class WalkInRegistration implements Serializable {
                 + "\nRegistration Time: "
                 + registrationTime.format(DATE_TIME_FORMAT)
                 + "\nCheck-In Date Time: "
-                + checkInDateTime.format(DATE_TIME_FORMAT)
+                + checkInText
                 + "\nCheck-Out Date Time: "
                 + checkOutDateTime.format(DATE_TIME_FORMAT)
                 + "\nStatus: " + status;

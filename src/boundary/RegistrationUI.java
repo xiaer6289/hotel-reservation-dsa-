@@ -172,26 +172,26 @@ public class RegistrationUI {
                 "Enter Number of Guests: ");
 
         /*
-         * This menu is specifically for WALK-IN registration. In real hotel
-         * operations, the guest is already physically at the hotel, so the
-         * requested check-in time starts now. The actual room check-in time is
-         * updated again when a room is successfully assigned.
+         * The guest has arrived at the hotel, so this is the registration / 
+         * arrival time only. The actual check-in time stays pending until a
+         * suitable room is successfully assigned.
          */
-        LocalDateTime checkInDateTime = LocalDateTime.now()
+        LocalDateTime arrivalTime = LocalDateTime.now()
                 .withSecond(0)
                 .withNano(0);
 
-        System.out.println("Check-In Time: " + checkInDateTime);
+        System.out.println("Registration / Arrival Time: " + arrivalTime);
+        System.out.println("Actual Check-In Time: Pending room assignment");
 
         LocalDateTime checkOutDateTime;
         do {
             checkOutDateTime = readDateTimeParts("Expected Check-Out");
 
-            if (!checkOutDateTime.isAfter(checkInDateTime)) {
+            if (!checkOutDateTime.isAfter(arrivalTime)) {
                 Utility.printError(
-                        "Check-out date and time must be after check-in date and time.");
+                        "Check-out date and time must be after the guest's arrival time.");
             }
-        } while (!checkOutDateTime.isAfter(checkInDateTime));
+        } while (!checkOutDateTime.isAfter(arrivalTime));
 
         String registrationId = controller.generateRegistrationId();
 
@@ -200,8 +200,11 @@ public class RegistrationUI {
                 guest,
                 roomType,
                 numberOfGuests,
-                checkInDateTime,
+                null,
                 checkOutDateTime);
+
+        /* Preserve the guest's actual arrival/registration time captured above. */
+        registration.setRegistrationTime(arrivalTime);
 
         if (loyaltyProfile != null) {
             int result = controller.addVipRegistration(
@@ -279,17 +282,6 @@ public class RegistrationUI {
         System.out.println(
                 "\n===== STANDARD ROOM ASSIGNMENT & CHECK-IN =====");
 
-        /*
-         * Assignment rule: VIP guests bypass the Standard room-allocation
-         * queue, so Standard allocation pauses while a VIP is waiting.
-         */
-        if (controller.hasWaitingVip()) {
-            Utility.printError(
-                    "VIP members are waiting. Allocate the highest-priority "
-                    + "VIP first.");
-            return;
-        }
-
         WalkInRegistration registration
                 = controller.getNextRegistration();
 
@@ -306,8 +298,10 @@ public class RegistrationUI {
 
         if (suitableRooms.length == 0) {
             Utility.printError(
-                    "No clean/ready room currently matches the requested "
-                    + "room type and capacity.");
+                    "No clean/ready room is currently available for this "
+                    + "Standard guest. A matching room may be unavailable "
+                    + "or temporarily reserved for a waiting VIP who can "
+                    + "use that room.");
             System.out.println(
                     "The registration remains in the FIFO queue.");
             return;
@@ -357,7 +351,8 @@ public class RegistrationUI {
         if (booking == null) {
             Utility.printError(
                     "Unable to assign the selected room. It may no longer be "
-                    + "ready, or a VIP may now have allocation priority.");
+                    + "ready, or a waiting VIP may now have priority for "
+                    + "that specific room.");
             System.out.println(
                     "The registration remains in the FIFO queue.");
             return;

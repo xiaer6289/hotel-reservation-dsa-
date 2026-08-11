@@ -105,28 +105,27 @@ public class VipAllocationUI {
     }
 
     private void allocateRoom() {
-        Member nextMember = controller.peekNextVip();
+        if (!controller.hasWaitingVip()) {
+            Utility.printError("No VIP registrations are waiting.");
+            return;
+        }
+
+        Member nextMember = controller.peekNextAllocatableVip();
 
         if (nextMember == null) {
-            Utility.printError("No VIP registrations are waiting.");
+            Utility.printError(
+                    "VIP registrations are waiting, but none currently has "
+                    + "a clean/ready room matching the requested room type "
+                    + "and capacity. All VIPs remain in the heap.");
             return;
         }
 
         Booking booking = controller.allocateNextVipBooking();
 
         if (booking == null) {
-            WalkInRegistration registration
-                    = nextMember.getRegistration();
-
             Utility.printError(
-                    "No clean/ready room matches the requested room type "
-                    + "and capacity. The VIP remains in the heap.");
-            System.out.println(
-                    "Requested Room Type : "
-                    + registration.getRequestedRoomType());
-            System.out.println(
-                    "Number of Guests    : "
-                    + registration.getNumberOfGuests());
+                    "Unable to complete VIP allocation. The waiting VIPs "
+                    + "remain in the heap.");
             return;
         }
 
