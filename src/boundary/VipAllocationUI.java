@@ -1,9 +1,12 @@
 package boundary;
 
 import control.VipPriorityController;
-import entity.Booking;
+import control.report.VipPriorityQueueRP;
+import control.report.VipRoomReadinessRP;
+import entity.LoyaltyTier;
 import entity.Member;
 import entity.Room;
+import entity.RoomType;
 import entity.WalkInRegistration;
 import java.util.Scanner;
 import utility.Utility;
@@ -11,8 +14,9 @@ import utility.Utility;
 /**
  * Boundary for VIP & Loyalty Tier Priority Room Allocation.
  *
- * VIP registrations are added through RegistrationUI. This UI focuses only on
- * viewing the MaxHeap and allocating a suitable room to its root member.
+ * VIP registrations are added through RegistrationUI. This UI focuses on
+ * viewing the MaxHeap, allocating a suitable room to its root member and
+ * generating VIP management reports.
  *
  * @author Low Enn Toong
  */
@@ -20,6 +24,8 @@ public class VipAllocationUI {
 
     private final VipPriorityController controller;
     private final Scanner scanner;
+    private final VipPriorityQueueRP priorityQueueReport;
+    private final VipRoomReadinessRP roomReadinessReport;
 
     public VipAllocationUI() {
         this(new VipPriorityController(), new Scanner(System.in));
@@ -35,6 +41,8 @@ public class VipAllocationUI {
 
         this.controller = controller;
         this.scanner = scanner;
+        this.priorityQueueReport = new VipPriorityQueueRP();
+        this.roomReadinessReport = new VipRoomReadinessRP();
     }
 
     public void run() {
@@ -56,6 +64,14 @@ public class VipAllocationUI {
 
                 case 3:
                     displayVacantRooms();
+                    break;
+
+                case 4:
+                    generatePriorityQueueReport();
+                    break;
+
+                case 5:
+                    generateRoomReadinessReport();
                     break;
 
                 case 0:
@@ -82,6 +98,8 @@ public class VipAllocationUI {
         System.out.println("1. Allocate Room to Highest-Priority VIP");
         System.out.println("2. View VIP Heap in Priority Order");
         System.out.println("3. View Vacant Rooms");
+        System.out.println("4. VIP Priority Queue Analysis Report");
+        System.out.println("5. VIP Room Allocation Readiness Report");
         System.out.println("0. Return to Main Menu");
     }
 
@@ -100,8 +118,8 @@ public class VipAllocationUI {
                     = nextMember.getRegistration();
 
             Utility.printError(
-                    "No suitable vacant room matches the requested room type and capacity."
-                    + " The VIP remains in the heap.");
+                    "No suitable vacant room matches the requested room "
+                    + "type and capacity. The VIP remains in the heap.");
             System.out.println(
                     "Requested Room Type : "
                     + registration.getRequestedRoomType());
@@ -113,46 +131,35 @@ public class VipAllocationUI {
 
         WalkInRegistration registration
                 = nextMember.getRegistration();
-        Booking booking = controller.getLastCreatedBooking();
 
         Utility.printSuccess("VIP room allocated successfully.");
         System.out.println(
-                "Registration ID   : "
+                "Registration ID    : "
                 + registration.getRegistrationId());
         System.out.println(
-                "Member ID         : "
+                "Member ID          : "
                 + nextMember.getMemberId());
         System.out.println(
-                "Guest ID          : "
+                "Guest ID           : "
                 + nextMember.getGuest().getGuestId());
         System.out.println(
-                "Guest Name        : "
+                "Guest Name         : "
                 + nextMember.getName());
         System.out.println(
-                "Loyalty Tier      : "
+                "Loyalty Tier       : "
                 + nextMember.getTier());
         System.out.println(
-                "Requested Type    : "
+                "Requested Type     : "
                 + registration.getRequestedRoomType());
         System.out.println(
-                "Allocated Room    : "
+                "Allocated Room     : "
                 + allocatedRoom.getRoomNumber());
         System.out.println(
-                "Allocated Type    : "
+                "Allocated Type     : "
                 + allocatedRoom.getRoomType());
         System.out.println(
                 "Registration Status: "
                 + registration.getStatus());
-
-        if (booking != null) {
-            System.out.println(
-                    "Confirmation No. : "
-                    + booking.getConfirmationNo());
-            System.out.printf(
-                    "Pending Payment  : RM %.2f%n",
-                    booking.getPayment().getAmount());
-        }
-
         System.out.println(
                 "VIP Members Waiting: "
                 + controller.getWaitingCount());
@@ -200,6 +207,153 @@ public class VipAllocationUI {
         }
     }
 
+    private void generatePriorityQueueReport() {
+        Member[] members = controller.getMembersByPriority();
+
+        if (members.length == 0) {
+            Utility.printError(
+                    "No VIP registrations are waiting. Report cannot be generated.");
+            return;
+        }
+
+        System.out.println("\n=== VIP PRIORITY QUEUE REPORT FILTERS ===");
+        String keyword = readOptionalString(
+                "Search Member ID / Registration ID / Guest ID / Name "
+                + "(Enter for ALL): ");
+        LoyaltyTier tierFilter = readTierFilter();
+        String roomTypeFilter = readRoomTypeFilter();
+        int minimumGuests = readNonNegativeInteger(
+                "Minimum number of guests (0 for ALL): ");
+
+        priorityQueueReport.generateReport(
+                members,
+                keyword,
+                tierFilter,
+                roomTypeFilter,
+                minimumGuests);
+    }
+
+    private void generateRoomReadinessReport() {
+        Member[] members = controller.getMembersByPriority();
+
+        if (members.length == 0) {
+            Utility.printError(
+                    "No VIP registrations are waiting. Report cannot be generated.");
+            return;
+        }
+
+        System.out.println("\n=== VIP ROOM READINESS REPORT FILTERS ===");
+        String keyword = readOptionalString(
+                "Search Member ID / Registration ID / Guest ID / Name "
+                + "(Enter for ALL): ");
+        LoyaltyTier tierFilter = readTierFilter();
+        String roomTypeFilter = readRoomTypeFilter();
+        String readinessFilter = readReadinessFilter();
+        int minimumGuests = readNonNegativeInteger(
+                "Minimum number of guests (0 for ALL): ");
+
+        roomReadinessReport.generateReport(
+                members,
+                controller.getVacantRooms(),
+                keyword,
+                tierFilter,
+                roomTypeFilter,
+                readinessFilter,
+                minimumGuests);
+    }
+
+    private LoyaltyTier readTierFilter() {
+        LoyaltyTier[] tiers = LoyaltyTier.values();
+
+        while (true) {
+            System.out.println("\nFilter by Loyalty Tier:");
+            System.out.println("0. ALL");
+
+            for (int i = 0; i < tiers.length; i++) {
+                System.out.println((i + 1) + ". " + tiers[i]);
+            }
+
+            int choice = readInteger("Choice: ");
+
+            if (choice == 0) {
+                return null;
+            }
+
+            if (choice >= 1 && choice <= tiers.length) {
+                return tiers[choice - 1];
+            }
+
+            Utility.printError("Invalid loyalty tier filter.");
+        }
+    }
+
+    private String readRoomTypeFilter() {
+        RoomType[] roomTypes = RoomType.values();
+
+        while (true) {
+            System.out.println("\nFilter by Requested Room Type:");
+            System.out.println("0. ALL");
+
+            for (int i = 0; i < roomTypes.length; i++) {
+                System.out.println(
+                        (i + 1) + ". "
+                        + formatRoomType(roomTypes[i].name()));
+            }
+
+            int choice = readInteger("Choice: ");
+
+            if (choice == 0) {
+                return null;
+            }
+
+            if (choice >= 1 && choice <= roomTypes.length) {
+                return roomTypes[choice - 1].name();
+            }
+
+            Utility.printError("Invalid room type filter.");
+        }
+    }
+
+    private String readReadinessFilter() {
+        while (true) {
+            System.out.println("\nFilter by Allocation Readiness:");
+            System.out.println("0. ALL");
+            System.out.println("1. MATCHED - suitable room is available");
+            System.out.println("2. UNMATCHED - no suitable room is available");
+
+            int choice = readInteger("Choice: ");
+
+            switch (choice) {
+                case 0:
+                    return "ALL";
+                case 1:
+                    return "MATCHED";
+                case 2:
+                    return "UNMATCHED";
+                default:
+                    Utility.printError("Invalid readiness filter.");
+                    break;
+            }
+        }
+    }
+
+    private String readOptionalString(String message) {
+        System.out.print(message);
+        return scanner.nextLine().trim();
+    }
+
+    private int readNonNegativeInteger(String message) {
+        while (true) {
+            int value = readInteger(message);
+
+            if (value >= 0) {
+                return value;
+            }
+
+            Utility.printError("Please enter 0 or a positive whole number.");
+        }
+    }
+
     private int readInteger(String message) {
         System.out.print(message);
 
@@ -208,5 +362,9 @@ public class VipAllocationUI {
         } catch (NumberFormatException exception) {
             return -1;
         }
+    }
+
+    private String formatRoomType(String roomType) {
+        return roomType.replace('_', ' ');
     }
 }

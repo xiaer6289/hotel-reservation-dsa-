@@ -1,6 +1,11 @@
 package adt.heap;
 
 /**
+ * Array-based MaxHeap ADT implementation.
+ *
+ * This heap uses an array, so a separate HeapNode class is not required.
+ * Parent and child positions are calculated by index:
+ * parent = index / 2, left = index * 2, right = index * 2 + 1.
  *
  * @author Low Enn Toong
  */

@@ -4,12 +4,22 @@ import adt.linear.DoublyLinkedList;
 import adt.linear.LinearADT;
 import dao.BookingDao;
 import dao.GuestDao;
+<<<<<<< HEAD
 import dao.RoomDao;
 import dao.WalkInRegistrationDao;
 import entity.Booking;
+=======
+import dao.LoyaltyProfileDao;
+import dao.WalkInRegistrationDao;
+>>>>>>> 573bc92e6bf34aedc6401f512d2c31e28eb0aaf1
 import entity.Guest;
+import entity.LoyaltyProfile;
 import entity.LoyaltyTier;
+<<<<<<< HEAD
 import entity.Room;
+=======
+import entity.RegistrationStatus;
+>>>>>>> 573bc92e6bf34aedc6401f512d2c31e28eb0aaf1
 import entity.WalkInRegistration;
 import java.io.File;
 import java.time.LocalDateTime;
@@ -23,15 +33,16 @@ import utility.Utility;
  */
 public class RegistrationController {
 
-    /* Standard guests waiting in chronological FIFO order. */
     private final LinearADT<WalkInRegistration> registrationQueue;
-
-    /* All registrations, including standard and VIP records. */
     private final LinearADT<WalkInRegistration> registrationRecords;
 
     private final GuestDao guestDao;
+    private final WalkInRegistrationDao registrationDao;
+    private final LoyaltyProfileDao loyaltyProfileDao;
     private Guest[] guests;
+    private LoyaltyProfile[] loyaltyProfiles;
 
+<<<<<<< HEAD
     /*
      * Saves and retrieves Walk-In Registration records.
      */
@@ -44,6 +55,8 @@ public class RegistrationController {
     private Booking[] bookings;
 
     /* Shared with VipAllocationUI through Main. */
+=======
+>>>>>>> 573bc92e6bf34aedc6401f512d2c31e28eb0aaf1
     private final VipPriorityController vipPriorityController;
 
     public RegistrationController() {
@@ -96,17 +109,28 @@ public class RegistrationController {
         }
 
         guestDao = new GuestDao();
+        registrationDao = new WalkInRegistrationDao();
+        loyaltyProfileDao = new LoyaltyProfileDao();
         guests = guestDao.loadOrSeed();
+        loyaltyProfiles = loyaltyProfileDao.loadOrSeed();
 
         if (guests == null) {
             guests = new Guest[0];
         }
 
+<<<<<<< HEAD
         roomDao = new RoomDao();
         bookingDao = new BookingDao();
 
         rooms = roomDao.loadOrSeed();
         bookings = loadExistingBookings();
+=======
+        if (loyaltyProfiles == null) {
+            loyaltyProfiles = new LoyaltyProfile[0];
+        }
+
+        loadSavedRegistrations();
+>>>>>>> 573bc92e6bf34aedc6401f512d2c31e28eb0aaf1
     }
 
     /**
@@ -134,6 +158,7 @@ public class RegistrationController {
     }
 
     /**
+<<<<<<< HEAD
      * Checks whether the guest already has a waiting
      * registration or is currently staying in the hotel.
      */
@@ -211,6 +236,28 @@ public class RegistrationController {
     /**
      * Creates and saves a new Guest.
      */
+=======
+     * Looks up the guest's existing loyalty membership. Registration staff do
+     * not manually choose a VIP tier during check-in.
+     */
+    public LoyaltyProfile searchLoyaltyProfileByGuestId(String guestId) {
+        if (guestId == null) {
+            return null;
+        }
+
+        for (LoyaltyProfile profile : loyaltyProfiles) {
+            if (profile != null
+                    && profile.getGuestId()
+                            .equalsIgnoreCase(guestId.trim())) {
+
+                return profile;
+            }
+        }
+
+        return null;
+    }
+
+>>>>>>> 573bc92e6bf34aedc6401f512d2c31e28eb0aaf1
     public Guest addNewGuest(
             String guestId,
             String guestName,
@@ -228,11 +275,15 @@ public class RegistrationController {
                 phoneNumber);
 
         Guest[] updatedGuests = new Guest[guests.length + 1];
+<<<<<<< HEAD
 
         for (int i = 0; i < guests.length; i++) {
 
             updatedGuests[i] = guests[i];
         }
+=======
+        System.arraycopy(guests, 0, updatedGuests, 0, guests.length);
+>>>>>>> 573bc92e6bf34aedc6401f512d2c31e28eb0aaf1
 
         updatedGuests[guests.length] = newGuest;
 
@@ -255,6 +306,7 @@ public class RegistrationController {
             return;
         }
 
+<<<<<<< HEAD
         registration.setStatus(
                 "WAITING");
 
@@ -280,6 +332,16 @@ public class RegistrationController {
     /**
      * Alias retained for existing code that treats
      * a registration as Standard.
+=======
+        registration.setStatus(RegistrationStatus.WAITING);
+        registrationQueue.addLast(registration);
+        addRecordIfAbsent(registration);
+        registrationDao.upsert(registration);
+    }
+
+    /**
+     * Alias retained for existing registration code.
+>>>>>>> 573bc92e6bf34aedc6401f512d2c31e28eb0aaf1
      */
     public void addRegistration(
             WalkInRegistration registration) {
@@ -294,6 +356,20 @@ public class RegistrationController {
      */
     public int addVipRegistration(
             WalkInRegistration registration,
+            LoyaltyProfile loyaltyProfile) {
+
+        if (loyaltyProfile == null) {
+            return VipPriorityController.INVALID_INPUT;
+        }
+
+        return addVipRegistration(
+                registration,
+                loyaltyProfile.getMemberId(),
+                loyaltyProfile.getTier());
+    }
+
+    public int addVipRegistration(
+            WalkInRegistration registration,
             String memberId,
             LoyaltyTier tier) {
 
@@ -304,6 +380,7 @@ public class RegistrationController {
                         tier);
 
         if (result == VipPriorityController.ADD_SUCCESS) {
+<<<<<<< HEAD
 
             /*
              * Keep VIP registration in the
@@ -313,6 +390,9 @@ public class RegistrationController {
                     registration);
 
             saveRegistrationRecords();
+=======
+            addRecordIfAbsent(registration);
+>>>>>>> 573bc92e6bf34aedc6401f512d2c31e28eb0aaf1
         }
 
         return result;
@@ -502,6 +582,7 @@ public class RegistrationController {
         if (vipPriorityController
                 .hasWaitingVip()) {
 
+<<<<<<< HEAD
             return null;
         }
 
@@ -613,6 +694,12 @@ public class RegistrationController {
         saveRegistrationRecords();
 
         return booking;
+=======
+        registration.setStatus(RegistrationStatus.PROCESSED);
+        registrationDao.upsert(registration);
+
+        return registration;
+>>>>>>> 573bc92e6bf34aedc6401f512d2c31e28eb0aaf1
     }
 
     /**
@@ -635,6 +722,7 @@ public class RegistrationController {
         if (registrationId == null) {
             return null;
         }
+<<<<<<< HEAD
 
         for (int i = 0; i < registrationRecords.size(); i++) {
 
@@ -646,6 +734,15 @@ public class RegistrationController {
                             .equalsIgnoreCase(
                                     registrationId
                                             .trim())) {
+=======
+
+        for (int i = 0; i < registrationRecords.size(); i++) {
+            WalkInRegistration registration
+                    = registrationRecords.get(i);
+
+            if (registration.getRegistrationId()
+                    .equalsIgnoreCase(registrationId.trim())) {
+>>>>>>> 573bc92e6bf34aedc6401f512d2c31e28eb0aaf1
 
                 return registration;
             }
@@ -679,12 +776,15 @@ public class RegistrationController {
                 index);
     }
 
+<<<<<<< HEAD
     /**
      * Cancels a waiting Standard registration.
      *
      * If it is not in the Standard FIFO queue,
      * the shared VIP MaxHeap is checked.
      */
+=======
+>>>>>>> 573bc92e6bf34aedc6401f512d2c31e28eb0aaf1
     public WalkInRegistration cancelRegistrationById(
             String registrationId) {
 
@@ -692,11 +792,15 @@ public class RegistrationController {
             return null;
         }
 
+<<<<<<< HEAD
         /*
          * Search Standard FIFO queue first.
          */
+=======
+>>>>>>> 573bc92e6bf34aedc6401f512d2c31e28eb0aaf1
         for (int i = 0; i < registrationQueue.size(); i++) {
 
+<<<<<<< HEAD
             WalkInRegistration registration = registrationQueue.get(i);
 
             if (registration
@@ -716,6 +820,14 @@ public class RegistrationController {
                  */
                 saveRegistrationRecords();
 
+=======
+            if (registration.getRegistrationId()
+                    .equalsIgnoreCase(registrationId.trim())) {
+
+                registrationQueue.removeAt(i);
+                registration.setStatus(RegistrationStatus.CANCELLED);
+                registrationDao.upsert(registration);
+>>>>>>> 573bc92e6bf34aedc6401f512d2c31e28eb0aaf1
                 return registration;
             }
         }
@@ -911,5 +1023,55 @@ public class RegistrationController {
 
         registrationDao.saveToFile(
                 registrations);
+    }
+
+    /**
+     * Generates the next ID from saved records, so reopening RegistrationUI does
+     * not restart from R0001.
+     */
+    public String generateNextRegistrationId() {
+        int highestNumber = 0;
+
+        for (int i = 0; i < registrationRecords.size(); i++) {
+            String registrationId
+                    = registrationRecords.get(i).getRegistrationId();
+
+            if (registrationId == null
+                    || !registrationId.matches("(?i)R\\d{4}")) {
+                continue;
+            }
+
+            int number = Integer.parseInt(registrationId.substring(1));
+            if (number > highestNumber) {
+                highestNumber = number;
+            }
+        }
+
+        return String.format("R%04d", highestNumber + 1);
+    }
+
+    private void loadSavedRegistrations() {
+        WalkInRegistration[] savedRegistrations
+                = registrationDao.retrieveFromFile();
+
+        for (WalkInRegistration registration : savedRegistrations) {
+            if (registration == null) {
+                continue;
+            }
+
+            registrationRecords.addLast(registration);
+
+            if (registration.getStatus() == RegistrationStatus.WAITING) {
+                registrationQueue.addLast(registration);
+            }
+        }
+    }
+
+    private void addRecordIfAbsent(
+            WalkInRegistration registration) {
+
+        if (searchRegistrationById(registration.getRegistrationId()) == null) {
+            registrationRecords.addLast(registration);
+        }
     }
 }

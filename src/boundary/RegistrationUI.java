@@ -4,8 +4,12 @@ import control.RegistrationController;
 import control.VipPriorityController;
 import entity.Booking;
 import entity.Guest;
+<<<<<<< HEAD
 import entity.LoyaltyTier;
 import entity.Room;
+=======
+import entity.LoyaltyProfile;
+>>>>>>> 573bc92e6bf34aedc6401f512d2c31e28eb0aaf1
 import entity.RoomType;
 import entity.WalkInRegistration;
 import java.time.DateTimeException;
@@ -24,12 +28,15 @@ public class RegistrationUI {
     private final RegistrationController controller;
     private final Scanner scanner;
 
+<<<<<<< HEAD
     public RegistrationUI() {
         this(
                 new RegistrationController(),
                 new Scanner(System.in)
         );
     }
+=======
+>>>>>>> 573bc92e6bf34aedc6401f512d2c31e28eb0aaf1
 
     public RegistrationUI(
             RegistrationController controller) {
@@ -167,9 +174,37 @@ public class RegistrationUI {
                 return;
                 }
 
+<<<<<<< HEAD
         } else {
             System.out.println(
                     "\nGuest not found.");
+=======
+                LoyaltyProfile loyaltyProfile
+                                = controller.searchLoyaltyProfileByGuestId(
+                                                guest.getGuestId());
+
+                if (loyaltyProfile != null) {
+                        System.out.println("\nExisting loyalty membership detected.");
+                        System.out.println(
+                                        "Member ID: "
+                                                        + loyaltyProfile.getMemberId());
+                        System.out.println(
+                                        "Loyalty Tier: "
+                                                        + loyaltyProfile.getTier());
+                        System.out.println(
+                                        "VIP Priority: "
+                                                        + loyaltyProfile.getTier()
+                                                                        .getPriority());
+                } else {
+                        System.out.println(
+                                        "\nLoyalty Status: STANDARD / NON-MEMBER");
+                        System.out.println(
+                                        "No existing loyalty tier was found. "
+                                                        + "This registration will use the standard queue.");
+                }
+
+                String roomType = readRoomType();
+>>>>>>> 573bc92e6bf34aedc6401f512d2c31e28eb0aaf1
 
             System.out.println(
                     "Registering a new guest.");
@@ -190,8 +225,81 @@ public class RegistrationUI {
                 return;
             }
 
+<<<<<<< HEAD
             Utility.printSuccess(
                     "New guest saved successfully.");
+=======
+                        System.out.println(
+                                        "Check-in date and time must be "
+                                                        + "in the future.");
+                }
+
+                LocalDateTime checkOutDateTime;
+
+                do {
+                        checkOutDateTime = readDateTimeParts("Check-Out");
+
+                        if (!checkOutDateTime.isAfter(
+                                        checkInDateTime)) {
+
+                                System.out.println(
+                                                "Check-out date and time must be "
+                                                                + "after check-in date and time.");
+                        }
+
+                } while (!checkOutDateTime.isAfter(
+                                checkInDateTime));
+
+                String registrationId = generateRegistrationId();
+
+                WalkInRegistration registration = new WalkInRegistration(
+                                registrationId,
+                                guest,
+                                roomType,
+                                numberOfGuests,
+                                checkInDateTime,
+                                checkOutDateTime);
+
+                if (loyaltyProfile != null) {
+                        int result = controller.addVipRegistration(
+                                        registration,
+                                        loyaltyProfile);
+
+                        if (result != VipPriorityController.ADD_SUCCESS) {
+                                displayVipAddError(result);
+                                return;
+                        }
+
+                        Utility.printSuccess(
+                                        "Existing loyalty member detected. "
+                                                        + "Registration added to the VIP priority heap.");
+                        System.out.println(
+                                        "Registration ID: " + registrationId);
+                        System.out.println(
+                                        "Member ID: " + loyaltyProfile.getMemberId());
+                        System.out.println(
+                                        "Loyalty Tier: " + loyaltyProfile.getTier());
+                        System.out.println(
+                                        "VIP Members Waiting: "
+                                                        + controller.getVipWaitingCount());
+                        System.out.println(
+                                        "Status: " + registration.getStatus());
+
+                } else {
+                        controller.addStandardRegistration(registration);
+
+                        Utility.printSuccess(
+                                        "No loyalty membership detected. "
+                                                        + "Registration added to the standard queue.");
+                        System.out.println(
+                                        "Registration ID: " + registrationId);
+                        System.out.println(
+                                        "Standard Queue Position: "
+                                                        + controller.getWaitingCount());
+                        System.out.println(
+                                        "Status: " + registration.getStatus());
+                }
+>>>>>>> 573bc92e6bf34aedc6401f512d2c31e28eb0aaf1
         }
 
         String roomType = readRoomType();
@@ -670,6 +778,7 @@ public class RegistrationUI {
         }
     }
 
+<<<<<<< HEAD
     private String readNonEmptyString(
             String message) {
 
@@ -698,6 +807,51 @@ public class RegistrationUI {
 
             if (input.matches(
                     "[A-Za-z]+(?: [A-Za-z]+)*")) {
+=======
+        private void displayVipAddError(int result) {
+                switch (result) {
+                        case VipPriorityController.DUPLICATE_MEMBER_ID:
+                                Utility.printError(
+                                                "Member ID already exists in the VIP heap.");
+                                break;
+
+                        case VipPriorityController.REGISTRATION_ALREADY_QUEUED:
+                                Utility.printError(
+                                                "This registration is already in the VIP heap.");
+                                break;
+
+                        case VipPriorityController.GUEST_ALREADY_QUEUED:
+                                Utility.printError(
+                                                "This guest is already waiting in the VIP heap.");
+                                break;
+
+                        default:
+                                Utility.printError(
+                                                "Unable to add the VIP registration. Check all fields.");
+                                break;
+                }
+        }
+
+        private String generateRegistrationId() {
+                return controller.generateNextRegistrationId();
+        }
+
+        private String readNonEmptyString(
+                        String message) {
+
+                String input;
+
+                do {
+                        System.out.print(message);
+                        input = scanner.nextLine().trim();
+
+                        if (input.isEmpty()) {
+                                System.out.println(
+                                                "Input cannot be empty.");
+                        }
+
+                } while (input.isEmpty());
+>>>>>>> 573bc92e6bf34aedc6401f512d2c31e28eb0aaf1
 
                 return input;
             }
