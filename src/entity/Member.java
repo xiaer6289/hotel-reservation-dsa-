@@ -1,16 +1,19 @@
 package entity;
 
+import java.io.Serializable;
 import java.time.LocalDateTime;
 
 /**
- * A loyalty member waiting for a room allocation.
+ * A loyalty member waiting for room allocation.
  *
- * The member keeps the related WalkInRegistration so the VIP heap can use the
- * guest's requested room type, number of guests, check-in and check-out time.
+ * The complete WalkInRegistration is stored in this entity so the VIP heap can
+ * compare priority and still access the requested room details.
  *
  * @author Low Enn Toong
  */
-public class Member implements Comparable<Member> {
+public class Member implements Comparable<Member>, Serializable {
+
+    private static final long serialVersionUID = 1L;
 
     private final String memberId;
     private final WalkInRegistration registration;
@@ -28,22 +31,14 @@ public class Member implements Comparable<Member> {
 
     @Override
     public int compareTo(Member other) {
-        /*
-         * First priority: loyalty tier.
-         * A larger priority value must move nearer to the MaxHeap root.
-         */
         int tierComparison = Integer.compare(
-                this.tier.getPriority(),
+                tier.getPriority(),
                 other.tier.getPriority());
 
         if (tierComparison != 0) {
             return tierComparison;
         }
 
-        /*
-         * Tie-breaker only when both members have the same tier:
-         * the earlier registration receives the higher priority.
-         */
         LocalDateTime thisTime = registration.getRegistrationTime();
         LocalDateTime otherTime = other.registration.getRegistrationTime();
 
@@ -52,7 +47,6 @@ public class Member implements Comparable<Member> {
             return timeComparison;
         }
 
-        /* Lower registration ID is treated as earlier when timestamps match. */
         return other.registration.getRegistrationId()
                 .compareToIgnoreCase(registration.getRegistrationId());
     }
@@ -84,7 +78,8 @@ public class Member implements Comparable<Member> {
     @Override
     public String toString() {
         return String.format(
-                "%-8s | Reg ID: %-6s | Guest ID: %-5s | %-18s | %-10s | Priority: %d | Room: %s",
+                "%-8s | Reg ID: %-6s | Guest ID: %-5s | "
+                + "%-18s | %-10s | Priority: %d | Room: %s",
                 memberId,
                 registration.getRegistrationId(),
                 getGuest().getGuestId(),

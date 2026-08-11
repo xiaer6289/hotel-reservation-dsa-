@@ -3,8 +3,12 @@ package control;
 import adt.linear.DoublyLinkedList;
 import adt.linear.LinearADT;
 import dao.GuestDao;
+import dao.LoyaltyProfileDao;
+import dao.WalkInRegistrationDao;
 import entity.Guest;
+import entity.LoyaltyProfile;
 import entity.LoyaltyTier;
+import entity.RegistrationStatus;
 import entity.WalkInRegistration;
 
 /**
@@ -15,16 +19,15 @@ import entity.WalkInRegistration;
  */
 public class RegistrationController {
 
-    /* Standard guests waiting in chronological FIFO order. */
     private final LinearADT<WalkInRegistration> registrationQueue;
-
-    /* All registrations, including standard and VIP records. */
     private final LinearADT<WalkInRegistration> registrationRecords;
 
     private final GuestDao guestDao;
+    private final WalkInRegistrationDao registrationDao;
+    private final LoyaltyProfileDao loyaltyProfileDao;
     private Guest[] guests;
+    private LoyaltyProfile[] loyaltyProfiles;
 
-    /* Shared with VipAllocationUI through Main. */
     private final VipPriorityController vipPriorityController;
 
     public RegistrationController() {
@@ -40,11 +43,20 @@ public class RegistrationController {
         this.vipPriorityController = vipPriorityController;
 
         guestDao = new GuestDao();
+        registrationDao = new WalkInRegistrationDao();
+        loyaltyProfileDao = new LoyaltyProfileDao();
         guests = guestDao.loadOrSeed();
+        loyaltyProfiles = loyaltyProfileDao.loadOrSeed();
 
         if (guests == null) {
             guests = new Guest[0];
         }
+
+        if (loyaltyProfiles == null) {
+            loyaltyProfiles = new LoyaltyProfile[0];
+        }
+
+        loadSavedRegistrations();
     }
 
     public Guest searchGuestById(String guestId) {
@@ -58,6 +70,27 @@ public class RegistrationController {
                             .equalsIgnoreCase(guestId.trim())) {
 
                 return guest;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Looks up the guest's existing loyalty membership. Registration staff do
+     * not manually choose a VIP tier during check-in.
+     */
+    public LoyaltyProfile searchLoyaltyProfileByGuestId(String guestId) {
+        if (guestId == null) {
+            return null;
+        }
+
+        for (LoyaltyProfile profile : loyaltyProfiles) {
+            if (profile != null
+                    && profile.getGuestId()
+                            .equalsIgnoreCase(guestId.trim())) {
+
+                return profile;
             }
         }
 
@@ -79,10 +112,7 @@ public class RegistrationController {
                 phoneNumber);
 
         Guest[] updatedGuests = new Guest[guests.length + 1];
-
-        for (int i = 0; i < guests.length; i++) {
-            updatedGuests[i] = guests[i];
-        }
+        System.arraycopy(guests, 0, updatedGuests, 0, guests.length);
 
         updatedGuests[guests.length] = newGuest;
         guests = updatedGuests;
@@ -97,13 +127,18 @@ public class RegistrationController {
     public void addStandardRegistration(
             WalkInRegistration registration) {
 
-        registration.setStatus("WAITING");
+        if (registration == null) {
+            return;
+        }
+
+        registration.setStatus(RegistrationStatus.WAITING);
         registrationQueue.addLast(registration);
-        registrationRecords.addLast(registration);
+        addRecordIfAbsent(registration);
+        registrationDao.upsert(registration);
     }
 
     /**
-     * Kept as an alias for existing code that treats a registration as standard.
+     * Alias retained for existing registration code.
      */
     public void addRegistration(
             WalkInRegistration registration) {
@@ -116,6 +151,20 @@ public class RegistrationController {
      */
     public int addVipRegistration(
             WalkInRegistration registration,
+            LoyaltyProfile loyaltyProfile) {
+
+        if (loyaltyProfile == null) {
+            return VipPriorityController.INVALID_INPUT;
+        }
+
+        return addVipRegistration(
+                registration,
+                loyaltyProfile.getMemberId(),
+                loyaltyProfile.getTier());
+    }
+
+    public int addVipRegistration(
+            WalkInRegistration registration,
             String memberId,
             LoyaltyTier tier) {
 
@@ -125,7 +174,7 @@ public class RegistrationController {
                 tier);
 
         if (result == VipPriorityController.ADD_SUCCESS) {
-            registrationRecords.addLast(registration);
+            addRecordIfAbsent(registration);
         }
 
         return result;
@@ -167,19 +216,25 @@ public class RegistrationController {
         WalkInRegistration registration
                 = registrationQueue.removeFirst();
 
-        registration.setStatus("PROCESSED");
+        registration.setStatus(RegistrationStatus.PROCESSED);
+        registrationDao.upsert(registration);
+
         return registration;
     }
 
     public WalkInRegistration searchRegistrationById(
             String registrationId) {
 
+        if (registrationId == null) {
+            return null;
+        }
+
         for (int i = 0; i < registrationRecords.size(); i++) {
             WalkInRegistration registration
                     = registrationRecords.get(i);
 
             if (registration.getRegistrationId()
-                    .equalsIgnoreCase(registrationId)) {
+                    .equalsIgnoreCase(registrationId.trim())) {
 
                 return registration;
             }
@@ -200,27 +255,78 @@ public class RegistrationController {
         return registrationRecords.get(index);
     }
 
-    /**
-     * Cancels from the standard queue first; if it is not there, checks the VIP
-     * MaxHeap through VipPriorityController.
-     */
     public WalkInRegistration cancelRegistrationById(
             String registrationId) {
+
+        if (registrationId == null) {
+            return null;
+        }
 
         for (int i = 0; i < registrationQueue.size(); i++) {
             WalkInRegistration registration
                     = registrationQueue.get(i);
 
             if (registration.getRegistrationId()
-                    .equalsIgnoreCase(registrationId)) {
+                    .equalsIgnoreCase(registrationId.trim())) {
 
                 registrationQueue.removeAt(i);
-                registration.setStatus("CANCELLED");
+                registration.setStatus(RegistrationStatus.CANCELLED);
+                registrationDao.upsert(registration);
                 return registration;
             }
         }
 
         return vipPriorityController
                 .cancelVipRegistrationById(registrationId);
+    }
+
+    /**
+     * Generates the next ID from saved records, so reopening RegistrationUI does
+     * not restart from R0001.
+     */
+    public String generateNextRegistrationId() {
+        int highestNumber = 0;
+
+        for (int i = 0; i < registrationRecords.size(); i++) {
+            String registrationId
+                    = registrationRecords.get(i).getRegistrationId();
+
+            if (registrationId == null
+                    || !registrationId.matches("(?i)R\\d{4}")) {
+                continue;
+            }
+
+            int number = Integer.parseInt(registrationId.substring(1));
+            if (number > highestNumber) {
+                highestNumber = number;
+            }
+        }
+
+        return String.format("R%04d", highestNumber + 1);
+    }
+
+    private void loadSavedRegistrations() {
+        WalkInRegistration[] savedRegistrations
+                = registrationDao.retrieveFromFile();
+
+        for (WalkInRegistration registration : savedRegistrations) {
+            if (registration == null) {
+                continue;
+            }
+
+            registrationRecords.addLast(registration);
+
+            if (registration.getStatus() == RegistrationStatus.WAITING) {
+                registrationQueue.addLast(registration);
+            }
+        }
+    }
+
+    private void addRecordIfAbsent(
+            WalkInRegistration registration) {
+
+        if (searchRegistrationById(registration.getRegistrationId()) == null) {
+            registrationRecords.addLast(registration);
+        }
     }
 }

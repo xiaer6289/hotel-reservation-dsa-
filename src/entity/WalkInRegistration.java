@@ -5,14 +5,15 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
 /**
+ * Stores one walk-in registration record.
  *
  * @author Lai Jen Feng
  */
 public class WalkInRegistration implements Serializable {
 
     private static final long serialVersionUID = 1L;
-
-    private static final DateTimeFormatter DATE_TIME_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+    private static final DateTimeFormatter DATE_TIME_FORMAT
+            = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
 
     private String registrationId;
     private Guest guest;
@@ -21,7 +22,7 @@ public class WalkInRegistration implements Serializable {
     private LocalDateTime registrationTime;
     private LocalDateTime checkInDateTime;
     private LocalDateTime checkOutDateTime;
-    private String status;
+    private RegistrationStatus status;
 
     public WalkInRegistration(
             String registrationId,
@@ -38,7 +39,7 @@ public class WalkInRegistration implements Serializable {
         this.registrationTime = LocalDateTime.now();
         this.checkInDateTime = checkInDateTime;
         this.checkOutDateTime = checkOutDateTime;
-        this.status = "WAITING";
+        this.status = RegistrationStatus.WAITING;
     }
 
     public String getRegistrationId() {
@@ -77,9 +78,7 @@ public class WalkInRegistration implements Serializable {
         return registrationTime;
     }
 
-    public void setRegistrationTime(
-            LocalDateTime registrationTime) {
-
+    public void setRegistrationTime(LocalDateTime registrationTime) {
         this.registrationTime = registrationTime;
     }
 
@@ -87,9 +86,7 @@ public class WalkInRegistration implements Serializable {
         return checkInDateTime;
     }
 
-    public void setCheckInDateTime(
-            LocalDateTime checkInDateTime) {
-
+    public void setCheckInDateTime(LocalDateTime checkInDateTime) {
         this.checkInDateTime = checkInDateTime;
     }
 
@@ -97,17 +94,15 @@ public class WalkInRegistration implements Serializable {
         return checkOutDateTime;
     }
 
-    public void setCheckOutDateTime(
-            LocalDateTime checkOutDateTime) {
-
+    public void setCheckOutDateTime(LocalDateTime checkOutDateTime) {
         this.checkOutDateTime = checkOutDateTime;
     }
 
-    public String getStatus() {
+    public RegistrationStatus getStatus() {
         return status;
     }
 
-    public void setStatus(String status) {
+    public void setStatus(RegistrationStatus status) {
         this.status = status;
     }
 
@@ -117,19 +112,14 @@ public class WalkInRegistration implements Serializable {
                 + "\nGuest ID: " + guest.getGuestId()
                 + "\nGuest Name: " + guest.getName()
                 + "\nPhone Number: " + guest.getPhoneNo()
-                + "\nRequested Room Type: "
-                + requestedRoomType
-                + "\nNumber of Guests: "
-                + numberOfGuests
+                + "\nRequested Room Type: " + requestedRoomType
+                + "\nNumber of Guests: " + numberOfGuests
                 + "\nRegistration Time: "
-                + registrationTime.format(
-                        DATE_TIME_FORMAT)
+                + registrationTime.format(DATE_TIME_FORMAT)
                 + "\nCheck-In Date Time: "
-                + checkInDateTime.format(
-                        DATE_TIME_FORMAT)
+                + checkInDateTime.format(DATE_TIME_FORMAT)
                 + "\nCheck-Out Date Time: "
-                + checkOutDateTime.format(
-                        DATE_TIME_FORMAT)
+                + checkOutDateTime.format(DATE_TIME_FORMAT)
                 + "\nStatus: " + status;
     }
 }

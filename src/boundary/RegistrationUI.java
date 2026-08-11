@@ -4,7 +4,7 @@ import utility.Utility;
 import control.RegistrationController;
 import control.VipPriorityController;
 import entity.Guest;
-import entity.LoyaltyTier;
+import entity.LoyaltyProfile;
 import entity.RoomType;
 import entity.WalkInRegistration;
 import java.time.DateTimeException;
@@ -20,7 +20,6 @@ public class RegistrationUI {
         private final RegistrationController controller;
         private final Scanner scanner;
 
-        private int nextRegistrationNumber = 1;
 
         public RegistrationUI() {
                 this(new RegistrationController(), new Scanner(System.in));
@@ -150,6 +149,30 @@ public class RegistrationUI {
                                         "New guest saved successfully.");
                 }
 
+                LoyaltyProfile loyaltyProfile
+                                = controller.searchLoyaltyProfileByGuestId(
+                                                guest.getGuestId());
+
+                if (loyaltyProfile != null) {
+                        System.out.println("\nExisting loyalty membership detected.");
+                        System.out.println(
+                                        "Member ID: "
+                                                        + loyaltyProfile.getMemberId());
+                        System.out.println(
+                                        "Loyalty Tier: "
+                                                        + loyaltyProfile.getTier());
+                        System.out.println(
+                                        "VIP Priority: "
+                                                        + loyaltyProfile.getTier()
+                                                                        .getPriority());
+                } else {
+                        System.out.println(
+                                        "\nLoyalty Status: STANDARD / NON-MEMBER");
+                        System.out.println(
+                                        "No existing loyalty tier was found. "
+                                                        + "This registration will use the standard queue.");
+                }
+
                 String roomType = readRoomType();
 
                 int numberOfGuests = readPositiveInteger(
@@ -197,19 +220,10 @@ public class RegistrationUI {
                                 checkInDateTime,
                                 checkOutDateTime);
 
-                boolean isVip = readYesNo(
-                                "Is this guest a VIP / Loyalty member? (Y/N): ");
-
-                if (isVip) {
-                        String memberId = readNonEmptyString(
-                                        "Enter Member ID: ");
-
-                        LoyaltyTier tier = readLoyaltyTier();
-
+                if (loyaltyProfile != null) {
                         int result = controller.addVipRegistration(
                                         registration,
-                                        memberId,
-                                        tier);
+                                        loyaltyProfile);
 
                         if (result != VipPriorityController.ADD_SUCCESS) {
                                 displayVipAddError(result);
@@ -217,13 +231,14 @@ public class RegistrationUI {
                         }
 
                         Utility.printSuccess(
-                                        "Registration added to the VIP priority heap.");
+                                        "Existing loyalty member detected. "
+                                                        + "Registration added to the VIP priority heap.");
                         System.out.println(
                                         "Registration ID: " + registrationId);
                         System.out.println(
-                                        "Member ID: " + memberId);
+                                        "Member ID: " + loyaltyProfile.getMemberId());
                         System.out.println(
-                                        "Loyalty Tier: " + tier);
+                                        "Loyalty Tier: " + loyaltyProfile.getTier());
                         System.out.println(
                                         "VIP Members Waiting: "
                                                         + controller.getVipWaitingCount());
@@ -234,7 +249,8 @@ public class RegistrationUI {
                         controller.addStandardRegistration(registration);
 
                         Utility.printSuccess(
-                                        "Registration added to the standard queue.");
+                                        "No loyalty membership detected. "
+                                                        + "Registration added to the standard queue.");
                         System.out.println(
                                         "Registration ID: " + registrationId);
                         System.out.println(
@@ -358,44 +374,6 @@ public class RegistrationUI {
                 System.out.println(registration);
         }
 
-        private boolean readYesNo(String message) {
-                while (true) {
-                        System.out.print(message);
-                        String input = scanner.nextLine().trim();
-
-                        if (input.equalsIgnoreCase("Y")) {
-                                return true;
-                        }
-
-                        if (input.equalsIgnoreCase("N")) {
-                                return false;
-                        }
-
-                        Utility.printError("Please enter Y or N.");
-                }
-        }
-
-        private LoyaltyTier readLoyaltyTier() {
-                LoyaltyTier[] tiers = LoyaltyTier.values();
-
-                while (true) {
-                        System.out.println("\nSelect Loyalty Tier:");
-
-                        for (int i = 0; i < tiers.length; i++) {
-                                System.out.println(
-                                                (i + 1) + ". " + tiers[i]);
-                        }
-
-                        int choice = readInteger("Choice: ");
-
-                        if (choice >= 1 && choice <= tiers.length) {
-                                return tiers[choice - 1];
-                        }
-
-                        Utility.printError("Invalid loyalty tier.");
-                }
-        }
-
         private void displayVipAddError(int result) {
                 switch (result) {
                         case VipPriorityController.DUPLICATE_MEMBER_ID:
@@ -421,13 +399,7 @@ public class RegistrationUI {
         }
 
         private String generateRegistrationId() {
-                String registrationId = String.format(
-                                "R%04d",
-                                nextRegistrationNumber);
-
-                nextRegistrationNumber++;
-
-                return registrationId;
+                return controller.generateNextRegistrationId();
         }
 
         private String readNonEmptyString(
