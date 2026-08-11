@@ -2,22 +2,27 @@ package control;
 
 import adt.heap.MaxHeap;
 import adt.heap.PriorityQueueADT;
+import dao.BookingDao;
 import dao.MemberDao;
 import dao.RoomDao;
 import dao.WalkInRegistrationDao;
+import entity.Booking;
 import entity.LoyaltyTier;
 import entity.Member;
 import entity.RegistrationStatus;
 import entity.Room;
+import entity.RoomStatus;
 import entity.WalkInRegistration;
+import java.io.File;
 import java.time.LocalDateTime;
+import utility.Utility;
 
 /**
- * Controls VIP registration priority and room allocation.
+ * Controls VIP registration priority and room allocation using a MaxHeap.
  *
- * The MaxHeap is shared by all VipPriorityController objects. This allows the
- * existing Main.java to create RegistrationUI and VipAllocationUI separately
- * without losing the VIP registrations added by the Walk-In module.
+ * Existing loyalty tier is supplied by the stored LoyaltyProfile. The heap is
+ * shared by RegistrationUI and VipAllocationUI so VIP registrations remain
+ * available even though Main creates the UIs separately.
  *
  * @author Low Enn Toong
  */
@@ -29,11 +34,6 @@ public class VipPriorityController {
     public static final int REGISTRATION_ALREADY_QUEUED = -3;
     public static final int GUEST_ALREADY_QUEUED = -4;
 
-    /*
-     * Shared non-linear ADT.
-     * Main.java creates separate UI/controller objects, so the heap must be
-     * shared to keep both modules linked without changing Main.java.
-     */
     private static final PriorityQueueADT<Member> PRIORITY_QUEUE
             = new MaxHeap<>();
 
@@ -42,21 +42,25 @@ public class VipPriorityController {
     private final MemberDao memberDao;
     private final WalkInRegistrationDao registrationDao;
     private final RoomDao roomDao;
+    private final BookingDao bookingDao;
 
     private Room[] rooms;
+    private Booking[] bookings;
 
     public VipPriorityController() {
         memberDao = new MemberDao();
         registrationDao = new WalkInRegistrationDao();
         roomDao = new RoomDao();
+        bookingDao = new BookingDao();
 
         rooms = roomDao.loadOrSeed();
+        bookings = loadExistingBookings();
         loadWaitingMembersOnce();
     }
 
     /**
-     * Receives a completed WalkInRegistration from RegistrationController and
-     * inserts it into the shared MaxHeap according to loyalty tier.
+     * Inserts an existing loyalty member into the MaxHeap. Higher tier wins;
+     * for the same tier, earlier registration time wins.
      */
     public int addVipRegistration(
             String memberId,
@@ -112,12 +116,11 @@ public class VipPriorityController {
     }
 
     /**
-     * Allocates a suitable available room to the highest-priority VIP.
-     *
-     * Room.java is used exactly as provided by its author. No change to
-     * Room.java, RoomStatus.java, RoomDao.java or PaymentDao.java is required.
+     * Allocates a clean/ready suitable room to the highest-priority VIP and
+     * creates a Booking so the same guest can later be checked out by Front
+     * Desk using a confirmation number.
      */
-    public Room allocateNextVipRoom() {
+    public Booking allocateNextVipBooking() {
         Member nextVip = PRIORITY_QUEUE.peek();
 
         if (nextVip == null) {
@@ -125,24 +128,53 @@ public class VipPriorityController {
         }
 
         WalkInRegistration registration = nextVip.getRegistration();
+        rooms = roomDao.loadOrSeed();
+        bookings = loadExistingBookings();
+
         Room suitableRoom = findSuitableVacantRoom(registration);
 
         if (suitableRoom == null) {
-            /* Keep the VIP at the MaxHeap root when no room matches. */
+            /* No dequeue: the highest-priority VIP keeps the front position. */
             return null;
         }
 
-        updateAllocatedRoom(suitableRoom, registration);
+        LocalDateTime actualCheckInTime = LocalDateTime.now()
+                .withSecond(0)
+                .withNano(0);
+
+        updateAllocatedRoom(
+                suitableRoom,
+                registration,
+                actualCheckInTime);
+
+        registration.setCheckInDateTime(actualCheckInTime);
         registration.setStatus(RegistrationStatus.CHECKED_IN);
 
+        Booking booking = new Booking(
+                generateUniqueConfirmationNo(),
+                registration.getGuest(),
+                suitableRoom,
+                null);
+
+        bookings = appendBooking(bookings, booking);
+
         roomDao.saveToFile(rooms);
+        bookingDao.saveToFile(bookings);
         registrationDao.upsert(registration);
 
-        /* Remove only after the room and registration have been updated. */
+        /* Remove only after room, booking and registration are successfully updated. */
         PRIORITY_QUEUE.dequeue();
         saveWaitingMembers();
 
-        return suitableRoom;
+        return booking;
+    }
+
+    /**
+     * Compatibility method retained for existing code that only needs Room.
+     */
+    public Room allocateNextVipRoom() {
+        Booking booking = allocateNextVipBooking();
+        return booking == null ? null : booking.getRoom();
     }
 
     public Member[] getMembersByPriority() {
@@ -157,10 +189,11 @@ public class VipPriorityController {
     }
 
     public Room[] getVacantRooms() {
+        rooms = roomDao.loadOrSeed();
         int vacantCount = 0;
 
         for (Room room : rooms) {
-            if (room != null && room.isAvailability()) {
+            if (room != null && room.isAssignable()) {
                 vacantCount++;
             }
         }
@@ -169,7 +202,7 @@ public class VipPriorityController {
         int index = 0;
 
         for (Room room : rooms) {
-            if (room != null && room.isAvailability()) {
+            if (room != null && room.isAssignable()) {
                 vacantRooms[index++] = room;
             }
         }
@@ -177,9 +210,6 @@ public class VipPriorityController {
         return vacantRooms;
     }
 
-    /**
-     * Removes a VIP registration when it is cancelled from RegistrationUI.
-     */
     public WalkInRegistration cancelVipRegistrationById(
             String registrationId) {
 
@@ -297,7 +327,7 @@ public class VipPriorityController {
             WalkInRegistration registration) {
 
         for (Room room : rooms) {
-            if (room == null || !room.isAvailability()) {
+            if (room == null || !room.isAssignable()) {
                 continue;
             }
 
@@ -318,13 +348,65 @@ public class VipPriorityController {
 
     private void updateAllocatedRoom(
             Room room,
-            WalkInRegistration registration) {
+            WalkInRegistration registration,
+            LocalDateTime actualCheckInTime) {
 
-        /* Use only the existing methods provided by Room.java. */
-        room.setAvailability(false);
-        room.setStatus('O');
-        room.setBookingDate(LocalDateTime.now());
-        room.setCheckInDateTime(registration.getCheckInDateTime());
+        room.setRoomStatus(RoomStatus.OCCUPIED);
+        room.setBookingDate(actualCheckInTime);
+        room.setCheckInDateTime(actualCheckInTime);
         room.setCheckOutDateTime(registration.getCheckOutDateTime());
+    }
+
+    private Booking[] loadExistingBookings() {
+        File bookingFile = new File("booking.dat");
+
+        if (!bookingFile.exists()) {
+            return new Booking[0];
+        }
+
+        Booking[] loadedBookings = bookingDao.retrieveFromFile();
+        return loadedBookings == null ? new Booking[0] : loadedBookings;
+    }
+
+    private String generateUniqueConfirmationNo() {
+        String confirmationNo;
+
+        do {
+            confirmationNo = Utility.generateConfirmationNo();
+        } while (confirmationNoExists(confirmationNo));
+
+        return confirmationNo;
+    }
+
+    private boolean confirmationNoExists(String confirmationNo) {
+        for (Booking booking : bookings) {
+            if (booking != null
+                    && booking.getConfirmationNo() != null
+                    && booking.getConfirmationNo().equals(confirmationNo)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private Booking[] appendBooking(
+            Booking[] original,
+            Booking newBooking) {
+
+        Booking[] safeOriginal = original == null
+                ? new Booking[0]
+                : original;
+
+        Booking[] updated = new Booking[safeOriginal.length + 1];
+        System.arraycopy(
+                safeOriginal,
+                0,
+                updated,
+                0,
+                safeOriginal.length);
+        updated[safeOriginal.length] = newBooking;
+
+        return updated;
     }
 }

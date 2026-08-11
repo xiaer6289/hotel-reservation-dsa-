@@ -3,6 +3,7 @@ package boundary;
 import control.VipPriorityController;
 import control.report.VipPriorityQueueRP;
 import control.report.VipRoomReadinessRP;
+import entity.Booking;
 import entity.LoyaltyTier;
 import entity.Member;
 import entity.Room;
@@ -111,15 +112,15 @@ public class VipAllocationUI {
             return;
         }
 
-        Room allocatedRoom = controller.allocateNextVipRoom();
+        Booking booking = controller.allocateNextVipBooking();
 
-        if (allocatedRoom == null) {
+        if (booking == null) {
             WalkInRegistration registration
                     = nextMember.getRegistration();
 
             Utility.printError(
-                    "No suitable vacant room matches the requested room "
-                    + "type and capacity. The VIP remains in the heap.");
+                    "No clean/ready room matches the requested room type "
+                    + "and capacity. The VIP remains in the heap.");
             System.out.println(
                     "Requested Room Type : "
                     + registration.getRequestedRoomType());
@@ -131,11 +132,15 @@ public class VipAllocationUI {
 
         WalkInRegistration registration
                 = nextMember.getRegistration();
+        Room allocatedRoom = booking.getRoom();
 
-        Utility.printSuccess("VIP room allocated successfully.");
+        Utility.printSuccess("VIP room allocated and guest checked in successfully.");
         System.out.println(
                 "Registration ID    : "
                 + registration.getRegistrationId());
+        System.out.println(
+                "Confirmation No.   : "
+                + booking.getConfirmationNo());
         System.out.println(
                 "Member ID          : "
                 + nextMember.getMemberId());
@@ -157,6 +162,12 @@ public class VipAllocationUI {
         System.out.println(
                 "Allocated Type     : "
                 + allocatedRoom.getRoomType());
+        System.out.println(
+                "Check-In Time      : "
+                + allocatedRoom.getCheckInDateTime());
+        System.out.println(
+                "Expected Check-Out : "
+                + allocatedRoom.getCheckOutDateTime());
         System.out.println(
                 "Registration Status: "
                 + registration.getStatus());
