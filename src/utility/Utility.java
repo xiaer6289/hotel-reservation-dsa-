@@ -52,4 +52,15 @@ public class Utility {
         int number = (int) (Math.random() * 90_000_000) + 10_000_000;
         return String.valueOf(number);
     }
+
+    public static boolean isValidPersonName(String name) {
+        if (name == null) {
+            return false;
+        }
+
+        String normalized = name.trim();
+        return normalized.length() >= 2
+                && normalized.length() <= 50
+                && normalized.matches("[\\p{L}]+(?:[ '-][\\p{L}]+)*");
+    }
 }

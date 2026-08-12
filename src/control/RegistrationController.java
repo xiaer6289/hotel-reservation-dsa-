@@ -97,6 +97,69 @@ public class RegistrationController {
     }
 
     /**
+     * Finds every saved guest whose full name matches the staff input.
+     * A two-pass array implementation is used so duplicate names can be
+     * returned without relying on Java collection classes.
+     */
+    public Guest[] searchGuestsByName(String guestName) {
+        if (guestName == null || guestName.isBlank()) {
+            return new Guest[0];
+        }
+
+        String normalizedName = guestName.trim();
+        int matchCount = 0;
+
+        for (Guest guest : guests) {
+            if (guest != null
+                    && guest.getName() != null
+                    && guest.getName().trim().equalsIgnoreCase(normalizedName)) {
+                matchCount++;
+            }
+        }
+
+        Guest[] matches = new Guest[matchCount];
+        int index = 0;
+
+        for (Guest guest : guests) {
+            if (guest != null
+                    && guest.getName() != null
+                    && guest.getName().trim().equalsIgnoreCase(normalizedName)) {
+                matches[index++] = guest;
+            }
+        }
+
+        return matches;
+    }
+
+    /**
+     * Finds an existing guest using the phone number entered at the counter.
+     * Guest ID is an internal system identifier, so staff do not need to know
+     * or manually enter it during a new walk-in registration.
+     */
+    public Guest searchGuestByPhoneNo(Long phoneNumber) {
+        Long normalizedInput = normalizeStoredPhoneNumber(phoneNumber);
+
+        if (normalizedInput == null) {
+            return null;
+        }
+
+        for (Guest guest : guests) {
+            if (guest == null || guest.getPhoneNo() == null) {
+                continue;
+            }
+
+            Long normalizedStored
+                    = normalizeStoredPhoneNumber(guest.getPhoneNo());
+
+            if (normalizedInput.equals(normalizedStored)) {
+                return guest;
+            }
+        }
+
+        return null;
+    }
+
+    /**
      * Reads an existing loyalty profile. Front-desk staff do not manually
      * create a Diamond/Platinum/Elite tier during registration.
      */
@@ -283,18 +346,24 @@ public class RegistrationController {
     }
 
     public Guest addNewGuest(
-            String guestId,
             String guestName,
             Long phoneNumber) {
 
-        if (searchGuestById(guestId) != null) {
+        Long normalizedPhoneNumber
+                = normalizeStoredPhoneNumber(phoneNumber);
+
+        if (!Utility.isValidPersonName(guestName)
+                || normalizedPhoneNumber == null
+                || searchGuestByPhoneNo(normalizedPhoneNumber) != null) {
             return null;
         }
 
+        String guestId = generateNextGuestId();
+
         Guest newGuest = new Guest(
                 guestId,
-                guestName,
-                phoneNumber);
+                guestName.trim(),
+                normalizedPhoneNumber);
 
         Guest[] updatedGuests = new Guest[guests.length + 1];
         System.arraycopy(guests, 0, updatedGuests, 0, guests.length);
@@ -357,6 +426,89 @@ public class RegistrationController {
 
     public int getWaitingCount() {
         return registrationQueue.size();
+    }
+
+    /**
+     * Returns the highest single-room occupancy supported by the current hotel
+     * inventory. One walk-in registration represents one room request.
+     */
+    public int getMaximumRoomCapacity() {
+        rooms = roomDao.loadOrSeed();
+        int maximum = 0;
+
+        for (Room room : rooms) {
+            if (room != null && room.getNoOfGuest() > maximum) {
+                maximum = room.getNoOfGuest();
+            }
+        }
+
+        return maximum;
+    }
+
+    /**
+     * Returns the maximum occupancy offered by a particular room type.
+     * A value of 0 means the room type is not present in the current inventory.
+     */
+    public int getMaximumCapacityForRoomType(String roomType) {
+        if (roomType == null || roomType.isBlank()) {
+            return 0;
+        }
+
+        rooms = roomDao.loadOrSeed();
+        int maximum = 0;
+
+        for (Room room : rooms) {
+            if (room != null
+                    && room.getRoomType().equalsIgnoreCase(roomType.trim())
+                    && room.getNoOfGuest() > maximum) {
+
+                maximum = room.getNoOfGuest();
+            }
+        }
+
+        return maximum;
+    }
+
+    /**
+     * Counts physically ready/assignable rooms for a request. Used when a VIP
+     * registration is created because VIP priority is handled inside the heap.
+     */
+    public int getReadyRoomCountForRequest(
+            String roomType,
+            int numberOfGuests) {
+
+        rooms = roomDao.loadOrSeed();
+        int count = 0;
+
+        for (Room room : rooms) {
+            if (isSuitableRoomForRequest(room, roomType, numberOfGuests)) {
+                count++;
+            }
+        }
+
+        return count;
+    }
+
+    /**
+     * Counts rooms a Standard guest could currently use after respecting the
+     * assignment rule that waiting VIPs receive first access to suitable rooms.
+     */
+    public int getReadyRoomCountForStandardRequest(
+            String roomType,
+            int numberOfGuests) {
+
+        rooms = roomDao.loadOrSeed();
+        int count = 0;
+
+        for (Room room : rooms) {
+            if (isSuitableRoomForRequest(room, roomType, numberOfGuests)
+                    && !vipPriorityController
+                            .hasWaitingVipEligibleForRoom(room)) {
+                count++;
+            }
+        }
+
+        return count;
     }
 
     public int getVipWaitingCount() {
@@ -524,15 +676,16 @@ public class RegistrationController {
     public WalkInRegistration cancelRegistrationById(
             String registrationId) {
 
-        if (registrationId == null) {
+        if (!Utility.isValidRegistrationId(registrationId)) {
             return null;
         }
 
         for (int i = 0; i < registrationQueue.size(); i++) {
             WalkInRegistration registration = registrationQueue.get(i);
 
-            if (registration.getRegistrationId()
-                    .equalsIgnoreCase(registrationId.trim())) {
+            if (registration != null
+                    && registration.getRegistrationId()
+                            .equalsIgnoreCase(registrationId.trim())) {
 
                 registrationQueue.removeAt(i);
                 registration.setStatus(RegistrationStatus.CANCELLED);
@@ -541,8 +694,12 @@ public class RegistrationController {
             }
         }
 
-        return vipPriorityController
-                .cancelVipRegistrationById(registrationId.trim());
+        /*
+         * VIP waiting requests are intentionally not cancelled here. They are
+         * maintained in the separate VIP module so each assignment module owns
+         * its own ADT operations.
+         */
+        return null;
     }
 
     public String generateRegistrationId() {
@@ -650,6 +807,88 @@ public class RegistrationController {
         }
 
         return null;
+    }
+
+    private boolean isSuitableRoomForRequest(
+            Room room,
+            String roomType,
+            int numberOfGuests) {
+
+        if (room == null
+                || roomType == null
+                || roomType.isBlank()
+                || numberOfGuests <= 0) {
+            return false;
+        }
+
+        return room.isAssignable()
+                && room.getRoomType().equalsIgnoreCase(roomType.trim())
+                && room.getNoOfGuest() >= numberOfGuests;
+    }
+
+    /**
+     * Normalizes both current and legacy Guest.phoneNo values to 60... format.
+     * Older records may have lost the leading 0 when a domestic number was
+     * converted directly to Long (e.g. 0123456789 -> 123456789).
+     */
+    private Long normalizeStoredPhoneNumber(Long phoneNumber) {
+        if (phoneNumber == null) {
+            return null;
+        }
+
+        String digits = String.valueOf(phoneNumber);
+
+        if (digits.startsWith("60")
+                && (digits.length() == 11 || digits.length() == 12)) {
+            return phoneNumber;
+        }
+
+        if (digits.startsWith("1")
+                && (digits.length() == 9 || digits.length() == 10)) {
+            try {
+                return Long.valueOf("60" + digits);
+            } catch (NumberFormatException exception) {
+                return null;
+            }
+        }
+
+        return phoneNumber;
+    }
+
+    /**
+     * Generates an internal guest ID such as G0001, G0002, ... .
+     * Numeric legacy guest IDs are also considered so new IDs do not restart
+     * from G0001 when old sample data contains IDs such as 1, 2, 3.
+     */
+    private String generateNextGuestId() {
+        int highestNumber = 0;
+
+        for (Guest guest : guests) {
+            if (guest == null || guest.getGuestId() == null) {
+                continue;
+            }
+
+            String guestId = guest.getGuestId().trim();
+            int number;
+
+            try {
+                if (guestId.matches("(?i)G\\d{4}")) {
+                    number = Integer.parseInt(guestId.substring(1));
+                } else if (guestId.matches("\\d+")) {
+                    number = Integer.parseInt(guestId);
+                } else {
+                    continue;
+                }
+            } catch (NumberFormatException exception) {
+                continue;
+            }
+
+            if (number > highestNumber) {
+                highestNumber = number;
+            }
+        }
+
+        return String.format("G%04d", highestNumber + 1);
     }
 
     private String generateNextMemberId() {
