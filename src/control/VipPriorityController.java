@@ -30,7 +30,6 @@ import utility.Utility;
 public class VipPriorityController {
     public static final int ADD_SUCCESS = 1;
     public static final int INVALID_INPUT = -1;
-    public static final int DUPLICATE_MEMBER_ID = -2;
     public static final int REGISTRATION_ALREADY_QUEUED = -3;
     public static final int GUEST_ALREADY_QUEUED = -4;
     private static final PriorityQueueADT<Member> PRIORITY_QUEUE = new MaxHeap<>();
@@ -56,13 +55,9 @@ public class VipPriorityController {
      * Inserts an existing loyalty member into the MaxHeap. Higher tier wins;
      * for the same tier, earlier registration time wins.
      */
-    public int addVipRegistration(String memberId, WalkInRegistration registration, LoyaltyTier tier) {
-        if (memberId == null || memberId.isBlank() || registration == null || registration.getGuest() == null || registration.getRegistrationId() == null || tier == null) {
+    public int addVipRegistration(WalkInRegistration registration, LoyaltyTier tier) {
+        if (registration == null || registration.getGuest() == null || registration.getRegistrationId() == null || tier == null) {
             return INVALID_INPUT;
-        }
-
-        if (memberIdExists(memberId)) {
-            return DUPLICATE_MEMBER_ID;
         }
 
         if (registrationAlreadyQueued(registration.getRegistrationId())) {
@@ -73,7 +68,7 @@ public class VipPriorityController {
             return GUEST_ALREADY_QUEUED;
         }
 
-        Member member = new Member(memberId.trim(), registration, tier);
+        Member member = new Member(registration, tier);
 
         registration.setStatus(RegistrationStatus.VIP_WAITING);
         PRIORITY_QUEUE.enqueue(member);
@@ -250,7 +245,7 @@ public class VipPriorityController {
 
     /**
      * Updates editable parts of a waiting VIP room request. Loyalty tier,
-     * priority, member ID and registration time are intentionally not editable.
+     * priority and registration time are intentionally not editable.
      * These fields do not affect heap priority, so the member keeps the same
      * MaxHeap ordering after the request update.
      */
@@ -406,20 +401,6 @@ public class VipPriorityController {
     private void saveWaitingMembers() {
         Member[] waitingMembers = getMembersByPriority();
         memberDao.saveToFile(waitingMembers);
-    }
-
-    private boolean memberIdExists(String memberId) {
-        PriorityQueueADT<Member> copiedQueue = PRIORITY_QUEUE.copy();
-
-        while (!copiedQueue.isEmpty()) {
-            Member member = copiedQueue.dequeue();
-
-            if (member.getMemberId().equalsIgnoreCase(memberId.trim())) {
-                return true;
-            }
-        }
-
-        return false;
     }
 
     private boolean registrationAlreadyQueued(String registrationId) {

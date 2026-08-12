@@ -42,8 +42,8 @@ public class VipPriorityQueueRP {
         }
 
         System.out.printf(
-                "%-3s %-9s %-7s %-16s %-10s %-17s %-6s %-16s %-8s%n",
-                "No.", "Member", "Reg ID", "Guest", "Tier", "Requested Room", "Guests", "Registered At", "Wait Min");
+                "%-3s %-7s %-8s %-16s %-10s %-17s %-6s %-16s %-8s%n",
+                "No.", "Reg ID", "Guest ID", "Guest", "Tier", "Requested Room", "Guests", "Registered At", "Wait Min");
         System.out.println("-----------------------------------------------------------------------------------------------");
 
         int eliteCount = 0;
@@ -58,10 +58,10 @@ public class VipPriorityQueueRP {
             long waitingMinutes = calculateWaitingMinutes(member);
 
             System.out.printf(
-                    "%-3d %-9s %-7s %-16s %-10s %-17s %-6d %-16s %-8d%n",
+                    "%-3d %-7s %-8s %-16s %-10s %-17s %-6d %-16s %-8d%n",
                     i + 1,
-                    member.getMemberId(),
                     member.getRegistration().getRegistrationId(),
+                    member.getGuest().getGuestId(),
                     shorten(member.getName(), 16),
                     member.getTier(),
                     formatRoomType(member.getRegistration().getRequestedRoomType()),
@@ -104,7 +104,10 @@ public class VipPriorityQueueRP {
         System.out.printf("Average Party Size   : %.2f guest(s)%n", averagePartySize);
         System.out.printf("Average Waiting Time : %.2f minute(s)%n", averageWaitingMinutes);
         System.out.println("Longest Waiting Time : " + longestWaitingMinutes + " minute(s)");
-        System.out.println("Highest Priority in Filter: " + filteredMembers[0].getMemberId() + " (" + filteredMembers[0].getTier() + ")");
+        System.out.println("Highest Priority in Filter: "
+                + filteredMembers[0].getRegistration().getRegistrationId()
+                + " / " + filteredMembers[0].getGuest().getGuestId()
+                + " (" + filteredMembers[0].getTier() + ")");
         System.out.println("===============================================================================================");
     }
 
@@ -147,7 +150,9 @@ public class VipPriorityQueueRP {
 
         String value = keyword.trim().toLowerCase();
 
-        return member.getMemberId().toLowerCase().contains(value) || member.getRegistration().getRegistrationId().toLowerCase().contains(value) || member.getGuest().getGuestId().toLowerCase().contains(value) || member.getName().toLowerCase().contains(value);
+        return member.getRegistration().getRegistrationId().toLowerCase().contains(value)
+                || member.getGuest().getGuestId().toLowerCase().contains(value)
+                || member.getName().toLowerCase().contains(value);
     }
 
     /**

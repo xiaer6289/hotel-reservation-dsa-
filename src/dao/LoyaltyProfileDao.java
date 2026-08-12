@@ -80,9 +80,9 @@ public class LoyaltyProfileDao {
      */
     public LoyaltyProfile[] seedSampleData() {
         return new LoyaltyProfile[] {
-            new LoyaltyProfile("M0001", "1", 10),
-            new LoyaltyProfile("M0002", "2", 6),
-            new LoyaltyProfile("M0003", "3", 3)
+            new LoyaltyProfile("1", 10),
+            new LoyaltyProfile("2", 6),
+            new LoyaltyProfile("3", 3)
         };
     }
 }

@@ -3,7 +3,7 @@ package entity;
 import java.io.Serializable;
 
 /**
- * Stores a hotel's loyalty membership profile.
+ * Stores a hotel's loyalty profile using Guest ID as the profile identifier.
  *
  * Loyalty is intentionally simple for this assignment: a guest becomes a VIP
  * after reaching the required number of completed stays. The VIP room
@@ -21,7 +21,6 @@ public class LoyaltyProfile implements Serializable {
     public static final int ELITE_MIN_STAYS = 3;
     public static final int PLATINUM_MIN_STAYS = 6;
     public static final int DIAMOND_MIN_STAYS = 10;
-    private final String memberId;
     private final String guestId;
     private int completedStays;
     private LoyaltyTier tier;
@@ -29,8 +28,7 @@ public class LoyaltyProfile implements Serializable {
     /**
      * Main constructor used by the simplified loyalty qualification logic.
      */
-    public LoyaltyProfile(String memberId, String guestId, int completedStays) {
-        this.memberId = memberId;
+    public LoyaltyProfile(String guestId, int completedStays) {
         this.guestId = guestId;
         updateCompletedStays(completedStays);
     }
@@ -38,16 +36,12 @@ public class LoyaltyProfile implements Serializable {
     /**
      * Compatibility constructor for older code/data that already stores a tier.
      */
-    public LoyaltyProfile(String memberId, String guestId, LoyaltyTier tier) {
-        this.memberId = memberId;
+    public LoyaltyProfile(String guestId, LoyaltyTier tier) {
         this.guestId = guestId;
         this.tier = tier;
         this.completedStays = minimumStaysForTier(tier);
     }
 
-    public String getMemberId() {
-        return memberId;
-    }
 
     public String getGuestId() {
         return guestId;
@@ -156,7 +150,7 @@ public class LoyaltyProfile implements Serializable {
     @Override
     public String toString() {
         return String.format(
-                "Member ID: %s | Guest ID: %s | Completed Stays: %d | Loyalty Tier: %s",
-                memberId, guestId, completedStays, tier);
+                "Guest ID: %s | Completed Stays: %d | Loyalty Tier: %s",
+                guestId, completedStays, tier);
     }
 }

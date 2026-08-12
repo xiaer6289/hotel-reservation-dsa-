@@ -87,7 +87,7 @@ public class VipRoomReadinessRP {
 
         System.out.printf(
                 "%-3s %-9s %-10s %-17s %-6s %-8s %-12s %-15s%n",
-                "No.", "Member", "Tier", "Requested Room", "Party", "Matches", "Suggested", "Readiness");
+                "No.", "Reg ID", "Tier", "Requested Room", "Party", "Matches", "Suggested", "Readiness");
         System.out.println("------------------------------------------------------------------------------------------------");
 
         int matchedCount = 0;
@@ -100,7 +100,7 @@ public class VipRoomReadinessRP {
             System.out.printf(
                     "%-3d %-9s %-10s %-17s %-6d %-8d %-12s %-15s%n",
                     i + 1,
-                    members[i].getMemberId(),
+                    members[i].getRegistration().getRegistrationId(),
                     members[i].getTier(),
                     formatRoomType(members[i].getRegistration().getRequestedRoomType()),
                     members[i].getRegistration().getNumberOfGuests(),
@@ -130,10 +130,18 @@ public class VipRoomReadinessRP {
 
         int nextReadyIndex = findFirstReadyIndex(matchingRoomCounts);
 
-        System.out.println("Highest Priority Waiting  : " + members[0].getMemberId() + " (" + members[0].getTier() + ", " + (matchingRoomCounts[0] > 0 ? "READY" : "WAITING FOR SUITABLE ROOM") + ")");
+        System.out.println("Highest Priority Waiting  : "
+                + members[0].getRegistration().getRegistrationId()
+                + " / " + members[0].getGuest().getGuestId()
+                + " (" + members[0].getTier() + ", "
+                + (matchingRoomCounts[0] > 0 ? "READY" : "WAITING FOR SUITABLE ROOM") + ")");
 
         if (nextReadyIndex >= 0) {
-            System.out.println("Next Allocatable VIP      : " + members[nextReadyIndex].getMemberId() + " (" + members[nextReadyIndex].getTier() + ", Room " + suggestedRooms[nextReadyIndex] + ")");
+            System.out.println("Next Allocatable VIP      : "
+                    + members[nextReadyIndex].getRegistration().getRegistrationId()
+                    + " / " + members[nextReadyIndex].getGuest().getGuestId()
+                    + " (" + members[nextReadyIndex].getTier() + ", Room "
+                    + suggestedRooms[nextReadyIndex] + ")");
 
             if (nextReadyIndex > 0) {
                 System.out.println("Allocation Note           : Higher-priority VIP(s) without a suitable room remain waiting; the highest-priority eligible VIP may proceed.");
@@ -202,7 +210,9 @@ public class VipRoomReadinessRP {
 
         String value = keyword.trim().toLowerCase();
 
-        return member.getMemberId().toLowerCase().contains(value) || member.getRegistration().getRegistrationId().toLowerCase().contains(value) || member.getGuest().getGuestId().toLowerCase().contains(value) || member.getName().toLowerCase().contains(value);
+        return member.getRegistration().getRegistrationId().toLowerCase().contains(value)
+                || member.getGuest().getGuestId().toLowerCase().contains(value)
+                || member.getName().toLowerCase().contains(value);
     }
 
     private boolean matchesReadinessFilter(String readinessFilter, boolean isMatched) {

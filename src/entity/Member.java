@@ -4,7 +4,7 @@ import java.io.Serializable;
 import java.time.LocalDateTime;
 
 /**
- * A loyalty member waiting for room allocation.
+ * A VIP loyalty guest waiting for room allocation.
  *
  * The complete WalkInRegistration is stored in this entity so the VIP heap can
  * compare priority and still access the requested room details.
@@ -13,12 +13,10 @@ import java.time.LocalDateTime;
  */
 public class Member implements Comparable<Member>, Serializable {
     private static final long serialVersionUID = 1L;
-    private final String memberId;
     private final WalkInRegistration registration;
     private final LoyaltyTier tier;
 
-    public Member(String memberId, WalkInRegistration registration, LoyaltyTier tier) {
-        this.memberId = memberId;
+    public Member(WalkInRegistration registration, LoyaltyTier tier) {
         this.registration = registration;
         this.tier = tier;
     }
@@ -42,9 +40,6 @@ public class Member implements Comparable<Member>, Serializable {
         return other.registration.getRegistrationId().compareToIgnoreCase(registration.getRegistrationId());
     }
 
-    public String getMemberId() {
-        return memberId;
-    }
 
     public WalkInRegistration getRegistration() {
         return registration;
@@ -69,8 +64,7 @@ public class Member implements Comparable<Member>, Serializable {
     @Override
     public String toString() {
         return String.format(
-                "%-8s | Reg ID: %-6s | Guest ID: %-5s | " + "%-18s | %-10s | Priority: %d | Room: %s",
-                memberId,
+                "Reg ID: %-6s | Guest ID: %-5s | %-18s | %-10s | Priority: %d | Room: %s",
                 registration.getRegistrationId(),
                 getGuest().getGuestId(),
                 getGuest().getName(),

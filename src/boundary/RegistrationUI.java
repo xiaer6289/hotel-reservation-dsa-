@@ -289,7 +289,6 @@ public class RegistrationUI {
             Utility.printSuccess(
                     "VIP walk-in registered and routed to the VIP priority heap.");
             System.out.println("Registration ID : " + registrationId);
-            System.out.println("Member ID       : " + loyaltyProfile.getMemberId());
             System.out.println("Loyalty Tier    : " + loyaltyProfile.getTier());
             System.out.println("Status          : " + registration.getStatus());
             System.out.println("VIPs Waiting    : " + controller.getVipWaitingCount());
@@ -322,7 +321,6 @@ public class RegistrationUI {
 
         if (loyaltyProfile != null) {
             System.out.println("Category       : VIP LOYALTY MEMBER");
-            System.out.println("Member ID      : " + loyaltyProfile.getMemberId());
             System.out.println("Loyalty Tier   : " + loyaltyProfile.getTier());
             System.out.println("Completed Stays: " + loyaltyProfile.getCompletedStays());
             System.out.println(
@@ -552,10 +550,6 @@ public class RegistrationUI {
 
     private void displayVipAddError(int result) {
         switch (result) {
-            case VipPriorityController.DUPLICATE_MEMBER_ID:
-                Utility.printError(
-                        "This loyalty member is already waiting in the VIP priority heap.");
-                break;
             case VipPriorityController.REGISTRATION_ALREADY_QUEUED:
                 Utility.printError(
                         "This registration is already in the VIP priority heap.");
@@ -676,7 +670,6 @@ public class RegistrationUI {
                 + (profile == null ? "STANDARD" : "VIP - " + profile.getTier()));
 
         if (profile != null) {
-            System.out.println("Member ID    : " + profile.getMemberId());
         }
     }
 

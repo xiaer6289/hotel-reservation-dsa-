@@ -219,7 +219,6 @@ public class RegistrationController {
         }
 
         LoyaltyProfile newProfile = new LoyaltyProfile(
-                generateNextMemberId(),
                 guestId.trim(),
                 completedStays);
 
@@ -401,21 +400,9 @@ public class RegistrationController {
             return VipPriorityController.INVALID_INPUT;
         }
 
-        return addVipRegistration(
-                registration,
-                loyaltyProfile.getMemberId(),
-                loyaltyProfile.getTier());
-    }
-
-    public int addVipRegistration(
-            WalkInRegistration registration,
-            String memberId,
-            LoyaltyTier tier) {
-
         int result = vipPriorityController.addVipRegistration(
-                memberId,
                 registration,
-                tier);
+                loyaltyProfile.getTier());
 
         if (result == VipPriorityController.ADD_SUCCESS) {
             addRecordIfAbsent(registration);
@@ -889,28 +876,6 @@ public class RegistrationController {
         }
 
         return String.format("G%04d", highestNumber + 1);
-    }
-
-    private String generateNextMemberId() {
-        int highestNumber = 0;
-
-        for (LoyaltyProfile profile : loyaltyProfiles) {
-            if (profile == null || profile.getMemberId() == null) {
-                continue;
-            }
-
-            String memberId = profile.getMemberId().trim();
-            if (!memberId.matches("(?i)M\\d{4}")) {
-                continue;
-            }
-
-            int number = Integer.parseInt(memberId.substring(1));
-            if (number > highestNumber) {
-                highestNumber = number;
-            }
-        }
-
-        return String.format("M%04d", highestNumber + 1);
     }
 
     private String generateUniqueConfirmationNo() {

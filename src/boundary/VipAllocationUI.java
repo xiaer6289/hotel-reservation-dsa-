@@ -150,17 +150,16 @@ public class VipAllocationUI {
 
         System.out.println("\n=== VIP HEAP: HIGHEST PRIORITY FIRST ===");
         System.out.printf(
-                "%-4s %-9s %-7s %-10s %-18s %-10s %-17s %-6s%n",
-                "No.", "Member", "Reg ID", "Guest ID", "Guest Name", "Tier", "Requested Room", "Party");
+                "%-4s %-7s %-10s %-18s %-10s %-17s %-6s%n",
+                "No.", "Reg ID", "Guest ID", "Guest Name", "Tier", "Requested Room", "Party");
         System.out
-                .println("------------------------------------------------------------------------------------------");
+                .println("---------------------------------------------------------------------------------");
 
         for (int i = 0; i < members.length; i++) {
             Member member = members[i];
             System.out.printf(
-                    "%-4d %-9s %-7s %-10s %-18s %-10s %-17s %-6d%n",
+                    "%-4d %-7s %-10s %-18s %-10s %-17s %-6d%n",
                     i + 1,
-                    member.getMemberId(),
                     member.getRegistration().getRegistrationId(),
                     member.getGuest().getGuestId(),
                     shorten(member.getName(), 18),
@@ -170,7 +169,8 @@ public class VipAllocationUI {
         }
 
         System.out.println(
-                "\nHeap Root / Next Priority: " + members[0].getMemberId() + " (" + members[0].getTier() + ")");
+                "\nHeap Root / Next Priority: " + members[0].getRegistration().getRegistrationId()
+                + " / " + members[0].getGuest().getGuestId() + " (" + members[0].getTier() + ")");
         System.out
                 .println("Display note: priority order is read from a copied MaxHeap; the original heap is unchanged.");
     }
@@ -178,8 +178,15 @@ public class VipAllocationUI {
     private void searchVipRegistration() {
         System.out.println("\n===== SEARCH VIP REGISTRATION =====");
         System.out.println("Hint: VIP registration IDs use the format R followed by 4 digits, e.g. R0001.");
+        System.out.println("Enter 0 to return without searching.");
 
-        String registrationId = readRegistrationId("Enter VIP Registration ID (e.g. R0001): ");
+        String registrationId = readRegistrationIdOrCancel(
+                "Enter VIP Registration ID (e.g. R0001) or 0 to return: ");
+
+        if (registrationId == null) {
+            System.out.println("Search cancelled. Returning to VIP menu.");
+            return;
+        }
 
         Member member = controller.findWaitingMemberByRegistrationId(registrationId);
 
@@ -197,8 +204,15 @@ public class VipAllocationUI {
         System.out.println("Only a VIP registration that is still waiting can be updated.");
         System.out.println("Loyalty tier and priority cannot be edited manually.");
         System.out.println("Hint: Registration ID example = R0001.");
+        System.out.println("Enter 0 to cancel and return to the VIP menu.");
 
-        String registrationId = readRegistrationId("Enter VIP Registration ID to update (e.g. R0001): ");
+        String registrationId = readRegistrationIdOrCancel(
+                "Enter VIP Registration ID to update (e.g. R0001) or 0 to cancel: ");
+
+        if (registrationId == null) {
+            System.out.println("Update cancelled. No changes were made.");
+            return;
+        }
 
         Member member = controller.findWaitingMemberByRegistrationId(registrationId);
 
@@ -279,8 +293,15 @@ public class VipAllocationUI {
     private void cancelVipRegistration() {
         System.out.println("\n===== CANCEL VIP WAITING REGISTRATION =====");
         System.out.println("Hint: Enter a waiting VIP registration ID such as R0001.");
+        System.out.println("Enter 0 to return without cancelling any registration.");
 
-        String registrationId = readRegistrationId("Enter VIP Registration ID to cancel (e.g. R0001): ");
+        String registrationId = readRegistrationIdOrCancel(
+                "Enter VIP Registration ID to cancel (e.g. R0001) or 0 to return: ");
+
+        if (registrationId == null) {
+            System.out.println("Cancellation action exited. No registration was changed.");
+            return;
+        }
 
         Member member = controller.findWaitingMemberByRegistrationId(registrationId);
 
@@ -357,7 +378,9 @@ public class VipAllocationUI {
         }
 
         if (heapRoot != null && heapRoot != nextMember) {
-            System.out.println("Highest-priority VIP " + heapRoot.getMemberId()
+            System.out.println("Highest-priority VIP registration "
+                    + heapRoot.getRegistration().getRegistrationId()
+                    + " (Guest " + heapRoot.getGuest().getGuestId() + ")"
                     + " cannot currently be matched to a suitable ready room.");
             System.out.println(
                     "The system therefore selects the highest-priority VIP who CAN use an available suitable room.");
@@ -391,7 +414,6 @@ public class VipAllocationUI {
         Utility.printSuccess("VIP room allocated and guest checked in successfully.");
         System.out.println("Registration ID    : " + registration.getRegistrationId());
         System.out.println("Confirmation No.   : " + booking.getConfirmationNo());
-        System.out.println("Member ID          : " + nextMember.getMemberId());
         System.out.println("Guest ID           : " + nextMember.getGuest().getGuestId());
         System.out.println("Guest Name         : " + nextMember.getName());
         System.out.println("Loyalty Tier       : " + nextMember.getTier());
@@ -413,7 +435,7 @@ public class VipAllocationUI {
         }
 
         System.out.println("\n=== VIP PRIORITY QUEUE REPORT FILTERS ===");
-        String keyword = readOptionalString("Search keyword (e.g. M0001, R0001, G0001 or guest name; Enter for ALL): ");
+        String keyword = readOptionalString("Search keyword (e.g. R0001, G0001 or guest name; Enter for ALL): ");
         LoyaltyTier tierFilter = readTierFilter();
         String roomTypeFilter = readRoomTypeFilter();
         int minimumGuests = readNonNegativeInteger("Minimum number of guests (0 = ALL, e.g. 2): ");
@@ -429,7 +451,7 @@ public class VipAllocationUI {
         }
 
         System.out.println("\n=== VIP ROOM READINESS REPORT FILTERS ===");
-        String keyword = readOptionalString("Search keyword (e.g. M0001, R0001, G0001 or guest name; Enter for ALL): ");
+        String keyword = readOptionalString("Search keyword (e.g. R0001, G0001 or guest name; Enter for ALL): ");
         LoyaltyTier tierFilter = readTierFilter();
         String roomTypeFilter = readRoomTypeFilter();
         String readinessFilter = readReadinessFilter();
@@ -440,7 +462,6 @@ public class VipAllocationUI {
     private void displayMemberDetails(Member member) {
         WalkInRegistration registration = member.getRegistration();
 
-        System.out.println("Member ID          : " + member.getMemberId());
         System.out.println("Registration ID    : " + registration.getRegistrationId());
         System.out.println("Guest ID           : " + member.getGuest().getGuestId());
         System.out.println("Guest Name         : " + member.getName());
@@ -603,15 +624,26 @@ public class VipAllocationUI {
         }
     }
 
-    private String readRegistrationId(String message) {
+    private String readRegistrationIdOrCancel(String message) {
         while (true) {
-            String input = readNonEmptyString(message).toUpperCase();
+            System.out.print(message);
+            String input = scanner.nextLine().trim().toUpperCase();
+
+            if (input.equals("0")) {
+                return null;
+            }
+
+            if (input.isEmpty()) {
+                Utility.printError("Input cannot be empty. Enter a Registration ID or 0 to return.");
+                continue;
+            }
 
             if (Utility.isValidRegistrationId(input)) {
                 return input;
             }
 
-            Utility.printError("Invalid Registration ID. Required format: R followed by 4 digits (e.g. R0001).");
+            Utility.printError(
+                    "Invalid Registration ID. Use R followed by 4 digits (e.g. R0001), or enter 0 to return.");
         }
     }
 
