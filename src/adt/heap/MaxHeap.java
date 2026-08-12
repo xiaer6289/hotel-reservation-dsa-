@@ -26,9 +26,11 @@ public class MaxHeap<T extends Comparable<T>> implements PriorityQueueADT<T> {
         if (data == null) {
             throw new IllegalArgumentException("Heap entry cannot be null.");
         }
+
         if (size == heap.length - 1) {
             expandCapacity();
         }
+
         size++;
         heap[size] = data;
         // Automatically reorganise the heap.
@@ -37,14 +39,19 @@ public class MaxHeap<T extends Comparable<T>> implements PriorityQueueADT<T> {
 
     @Override
     public T dequeue() {
-        if (isEmpty()) return null;
+        if (isEmpty()) {
+            return null;
+        }
+
         T highest = heap[1];
         heap[1] = heap[size];
         heap[size] = null;
         size--;
+
         if (size > 0) {
             reheapDown(1);
         }
+
         return highest;
     }
 
@@ -69,6 +76,7 @@ public class MaxHeap<T extends Comparable<T>> implements PriorityQueueADT<T> {
         for (int i = 1; i <= size; i++) {
             heap[i] = null;
         }
+
         size = 0;
     }
 
@@ -86,6 +94,7 @@ public class MaxHeap<T extends Comparable<T>> implements PriorityQueueADT<T> {
     private void reheapUp(int index) {
         while (index > 1) {
             int parent = index / 2;
+
             if (heap[index].compareTo(heap[parent]) > 0) {
                 swap(index, parent);
                 index = parent;
@@ -100,9 +109,11 @@ public class MaxHeap<T extends Comparable<T>> implements PriorityQueueADT<T> {
             int left = index * 2;
             int right = left + 1;
             int largerChild = left;
+
             if (right <= size && heap[right].compareTo(heap[left]) > 0) {
                 largerChild = right;
             }
+            
             if (heap[largerChild].compareTo(heap[index]) > 0) {
                 swap(index, largerChild);
                 index = largerChild;

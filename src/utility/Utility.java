@@ -40,6 +40,14 @@ public class Utility {
         return phoneNo != null && phoneNo.matches("^01\\d{8,9}$");
     }
     
+    public static boolean isValidRegistrationId(String registrationId) {
+        return registrationId != null && registrationId.trim().matches("(?i)^R\\d{4}$");
+    }
+
+    public static boolean isValidYesNo(String input) {
+        return input != null && input.trim().matches("(?i)^[YN]$");
+    }
+
     public static String generateConfirmationNo() {
         int number = (int) (Math.random() * 90_000_000) + 10_000_000;
         return String.valueOf(number);

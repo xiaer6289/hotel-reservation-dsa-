@@ -16,37 +16,20 @@ import java.time.format.DateTimeFormatter;
  * @author Low Enn Toong
  */
 public class VipPriorityQueueRP {
+    private static final DateTimeFormatter DATE_TIME_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
 
-    private static final DateTimeFormatter DATE_TIME_FORMAT
-            = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
-
-    public void generateReport(
-            Member[] members,
-            String keyword,
-            LoyaltyTier tierFilter,
-            String roomTypeFilter,
-            int minimumGuests) {
-
-        Member[] filteredMembers = searchAndFilter(
-                members,
-                keyword,
-                tierFilter,
-                roomTypeFilter,
-                minimumGuests);
+    public void generateReport(Member[] members, String keyword, LoyaltyTier tierFilter, String roomTypeFilter, int minimumGuests) {
+        Member[] filteredMembers = searchAndFilter(members, keyword, tierFilter, roomTypeFilter, minimumGuests);
 
         sortByPriorityAndArrival(filteredMembers);
 
         System.out.println("\n===============================================================================================");
         System.out.println("                    VIP PRIORITY QUEUE ANALYSIS REPORT");
         System.out.println("===============================================================================================");
-        System.out.println("Generated On       : "
-                + LocalDateTime.now().format(DATE_TIME_FORMAT));
-        System.out.println("Search Keyword     : "
-                + displayFilter(keyword, "ALL"));
-        System.out.println("Loyalty Tier       : "
-                + (tierFilter == null ? "ALL" : tierFilter));
-        System.out.println("Requested Room Type: "
-                + displayRoomType(roomTypeFilter));
+        System.out.println("Generated On       : " + LocalDateTime.now().format(DATE_TIME_FORMAT));
+        System.out.println("Search Keyword     : " + displayFilter(keyword, "ALL"));
+        System.out.println("Loyalty Tier       : " + (tierFilter == null ? "ALL" : tierFilter));
+        System.out.println("Requested Room Type: " + displayRoomType(roomTypeFilter));
         System.out.println("Minimum Guests     : " + minimumGuests);
         System.out.println("Search Technique   : Linear Search");
         System.out.println("Sorting Technique  : Selection Sort (Tier Descending, Arrival Time Ascending)");
@@ -60,15 +43,7 @@ public class VipPriorityQueueRP {
 
         System.out.printf(
                 "%-3s %-9s %-7s %-16s %-10s %-17s %-6s %-16s %-8s%n",
-                "No.",
-                "Member",
-                "Reg ID",
-                "Guest",
-                "Tier",
-                "Requested Room",
-                "Guests",
-                "Registered At",
-                "Wait Min");
+                "No.", "Member", "Reg ID", "Guest", "Tier", "Requested Room", "Guests", "Registered At", "Wait Min");
         System.out.println("-----------------------------------------------------------------------------------------------");
 
         int eliteCount = 0;
@@ -89,11 +64,9 @@ public class VipPriorityQueueRP {
                     member.getRegistration().getRegistrationId(),
                     shorten(member.getName(), 16),
                     member.getTier(),
-                    formatRoomType(
-                            member.getRegistration().getRequestedRoomType()),
+                    formatRoomType(member.getRegistration().getRequestedRoomType()),
                     member.getRegistration().getNumberOfGuests(),
-                    member.getRegistration().getRegistrationTime()
-                            .format(DATE_TIME_FORMAT),
+                    member.getRegistration().getRegistrationTime().format(DATE_TIME_FORMAT),
                     waitingMinutes);
 
             switch (member.getTier()) {
@@ -118,10 +91,8 @@ public class VipPriorityQueueRP {
             }
         }
 
-        double averagePartySize
-                = (double) totalGuests / filteredMembers.length;
-        double averageWaitingMinutes
-                = (double) totalWaitingMinutes / filteredMembers.length;
+        double averagePartySize = (double) totalGuests / filteredMembers.length;
+        double averageWaitingMinutes = (double) totalWaitingMinutes / filteredMembers.length;
 
         System.out.println("-----------------------------------------------------------------------------------------------");
         System.out.println("MANAGEMENT SUMMARY");
@@ -132,23 +103,15 @@ public class VipPriorityQueueRP {
         System.out.println("Total Guest Demand   : " + totalGuests);
         System.out.printf("Average Party Size   : %.2f guest(s)%n", averagePartySize);
         System.out.printf("Average Waiting Time : %.2f minute(s)%n", averageWaitingMinutes);
-        System.out.println("Longest Waiting Time : "
-                + longestWaitingMinutes + " minute(s)");
-        System.out.println("Next Allocation      : "
-                + filteredMembers[0].getMemberId()
-                + " (" + filteredMembers[0].getTier() + ")");
+        System.out.println("Longest Waiting Time : " + longestWaitingMinutes + " minute(s)");
+        System.out.println("Highest Priority in Filter: " + filteredMembers[0].getMemberId() + " (" + filteredMembers[0].getTier() + ")");
         System.out.println("===============================================================================================");
     }
 
     /**
      * Performs a linear search and applies all selected criteria.
      */
-    private Member[] searchAndFilter(
-            Member[] members,
-            String keyword,
-            LoyaltyTier tierFilter,
-            String roomTypeFilter,
-            int minimumGuests) {
+    private Member[] searchAndFilter(Member[] members, String keyword, LoyaltyTier tierFilter, String roomTypeFilter, int minimumGuests) {
 
         if (members == null) {
             return new Member[0];
@@ -163,20 +126,11 @@ public class VipPriorityQueueRP {
             }
 
             boolean matchesKeyword = matchesKeyword(member, keyword);
-            boolean matchesTier = tierFilter == null
-                    || member.getTier() == tierFilter;
-            boolean matchesRoomType = roomTypeFilter == null
-                    || member.getRegistration().getRequestedRoomType()
-                            .equalsIgnoreCase(roomTypeFilter);
-            boolean matchesGuestCount
-                    = member.getRegistration().getNumberOfGuests()
-                    >= minimumGuests;
+            boolean matchesTier = tierFilter == null || member.getTier() == tierFilter;
+            boolean matchesRoomType = roomTypeFilter == null || member.getRegistration().getRequestedRoomType().equalsIgnoreCase(roomTypeFilter);
+            boolean matchesGuestCount = member.getRegistration().getNumberOfGuests() >= minimumGuests;
 
-            if (matchesKeyword
-                    && matchesTier
-                    && matchesRoomType
-                    && matchesGuestCount) {
-
+            if (matchesKeyword && matchesTier && matchesRoomType && matchesGuestCount) {
                 temporary[count++] = member;
             }
         }
@@ -193,12 +147,7 @@ public class VipPriorityQueueRP {
 
         String value = keyword.trim().toLowerCase();
 
-        return member.getMemberId().toLowerCase().contains(value)
-                || member.getRegistration().getRegistrationId()
-                        .toLowerCase().contains(value)
-                || member.getGuest().getGuestId()
-                        .toLowerCase().contains(value)
-                || member.getName().toLowerCase().contains(value);
+        return member.getMemberId().toLowerCase().contains(value) || member.getRegistration().getRegistrationId().toLowerCase().contains(value) || member.getGuest().getGuestId().toLowerCase().contains(value) || member.getName().toLowerCase().contains(value);
     }
 
     /**
@@ -229,29 +178,23 @@ public class VipPriorityQueueRP {
             return firstPriority > secondPriority;
         }
 
-        int timeComparison = first.getRegistration().getRegistrationTime()
-                .compareTo(second.getRegistration().getRegistrationTime());
+        int timeComparison = first.getRegistration().getRegistrationTime().compareTo(second.getRegistration().getRegistrationTime());
 
         if (timeComparison != 0) {
             return timeComparison < 0;
         }
 
-        return first.getRegistration().getRegistrationId()
-                .compareToIgnoreCase(
-                        second.getRegistration().getRegistrationId()) < 0;
+        return first.getRegistration().getRegistrationId().compareToIgnoreCase(second.getRegistration().getRegistrationId()) < 0;
     }
 
     private long calculateWaitingMinutes(Member member) {
-        LocalDateTime registrationTime
-                = member.getRegistration().getRegistrationTime();
+        LocalDateTime registrationTime = member.getRegistration().getRegistrationTime();
 
         if (registrationTime == null) {
             return 0;
         }
 
-        long minutes = Duration.between(
-                registrationTime,
-                LocalDateTime.now()).toMinutes();
+        long minutes = Duration.between(registrationTime, LocalDateTime.now()).toMinutes();
 
         return Math.max(minutes, 0);
     }

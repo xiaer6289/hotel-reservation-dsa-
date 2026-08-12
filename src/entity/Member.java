@@ -12,18 +12,12 @@ import java.time.LocalDateTime;
  * @author Low Enn Toong
  */
 public class Member implements Comparable<Member>, Serializable {
-
     private static final long serialVersionUID = 1L;
-
     private final String memberId;
     private final WalkInRegistration registration;
     private final LoyaltyTier tier;
 
-    public Member(
-            String memberId,
-            WalkInRegistration registration,
-            LoyaltyTier tier) {
-
+    public Member(String memberId, WalkInRegistration registration, LoyaltyTier tier) {
         this.memberId = memberId;
         this.registration = registration;
         this.tier = tier;
@@ -31,9 +25,7 @@ public class Member implements Comparable<Member>, Serializable {
 
     @Override
     public int compareTo(Member other) {
-        int tierComparison = Integer.compare(
-                tier.getPriority(),
-                other.tier.getPriority());
+        int tierComparison = Integer.compare(tier.getPriority(), other.tier.getPriority());
 
         if (tierComparison != 0) {
             return tierComparison;
@@ -47,8 +39,7 @@ public class Member implements Comparable<Member>, Serializable {
             return timeComparison;
         }
 
-        return other.registration.getRegistrationId()
-                .compareToIgnoreCase(registration.getRegistrationId());
+        return other.registration.getRegistrationId().compareToIgnoreCase(registration.getRegistrationId());
     }
 
     public String getMemberId() {
@@ -78,8 +69,7 @@ public class Member implements Comparable<Member>, Serializable {
     @Override
     public String toString() {
         return String.format(
-                "%-8s | Reg ID: %-6s | Guest ID: %-5s | "
-                + "%-18s | %-10s | Priority: %d | Room: %s",
+                "%-8s | Reg ID: %-6s | Guest ID: %-5s | " + "%-18s | %-10s | Priority: %d | Room: %s",
                 memberId,
                 registration.getRegistrationId(),
                 getGuest().getGuestId(),

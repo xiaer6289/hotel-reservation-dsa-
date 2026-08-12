@@ -18,16 +18,11 @@ import java.io.ObjectOutputStream;
  * @author Low Enn Toong
  */
 public class LoyaltyProfileDao {
-
     private static final String FILE_NAME = "loyalty_profile.dat";
 
     public void saveToFile(LoyaltyProfile[] profiles) {
-        try (ObjectOutputStream output = new ObjectOutputStream(
-                new FileOutputStream(FILE_NAME))) {
-
-            output.writeObject(
-                    profiles == null ? new LoyaltyProfile[0] : profiles);
-
+        try (ObjectOutputStream output = new ObjectOutputStream(new FileOutputStream(FILE_NAME))) {
+            output.writeObject(profiles == null ? new LoyaltyProfile[0] : profiles);
         } catch (IOException exception) {
             System.out.println("Unable to save " + FILE_NAME + ".");
         }
@@ -40,14 +35,9 @@ public class LoyaltyProfileDao {
             return new LoyaltyProfile[0];
         }
 
-        try (ObjectInputStream input = new ObjectInputStream(
-                new FileInputStream(file))) {
-
+        try (ObjectInputStream input = new ObjectInputStream(new FileInputStream(file))) {
             Object data = input.readObject();
-            return data instanceof LoyaltyProfile[]
-                    ? (LoyaltyProfile[]) data
-                    : new LoyaltyProfile[0];
-
+            return data instanceof LoyaltyProfile[] ? (LoyaltyProfile[]) data : new LoyaltyProfile[0];
         } catch (EOFException exception) {
             return new LoyaltyProfile[0];
         } catch (IOException | ClassNotFoundException exception) {
@@ -65,8 +55,7 @@ public class LoyaltyProfileDao {
                 boolean changed = false;
 
                 for (LoyaltyProfile profile : loaded) {
-                    if (profile != null
-                            && profile.normalizeLegacyCompletedStays()) {
+                    if (profile != null && profile.normalizeLegacyCompletedStays()) {
                         changed = true;
                     }
                 }

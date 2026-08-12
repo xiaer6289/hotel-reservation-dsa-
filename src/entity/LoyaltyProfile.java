@@ -17,13 +17,10 @@ import java.io.Serializable;
  * @author Low Enn Toong
  */
 public class LoyaltyProfile implements Serializable {
-
     private static final long serialVersionUID = 1L;
-
     public static final int ELITE_MIN_STAYS = 3;
     public static final int PLATINUM_MIN_STAYS = 6;
     public static final int DIAMOND_MIN_STAYS = 10;
-
     private final String memberId;
     private final String guestId;
     private int completedStays;
@@ -32,11 +29,7 @@ public class LoyaltyProfile implements Serializable {
     /**
      * Main constructor used by the simplified loyalty qualification logic.
      */
-    public LoyaltyProfile(
-            String memberId,
-            String guestId,
-            int completedStays) {
-
+    public LoyaltyProfile(String memberId, String guestId, int completedStays) {
         this.memberId = memberId;
         this.guestId = guestId;
         updateCompletedStays(completedStays);
@@ -45,11 +38,7 @@ public class LoyaltyProfile implements Serializable {
     /**
      * Compatibility constructor for older code/data that already stores a tier.
      */
-    public LoyaltyProfile(
-            String memberId,
-            String guestId,
-            LoyaltyTier tier) {
-
+    public LoyaltyProfile(String memberId, String guestId, LoyaltyTier tier) {
         this.memberId = memberId;
         this.guestId = guestId;
         this.tier = tier;
@@ -168,9 +157,6 @@ public class LoyaltyProfile implements Serializable {
     public String toString() {
         return String.format(
                 "Member ID: %s | Guest ID: %s | Completed Stays: %d | Loyalty Tier: %s",
-                memberId,
-                guestId,
-                completedStays,
-                tier);
+                memberId, guestId, completedStays, tier);
     }
 }

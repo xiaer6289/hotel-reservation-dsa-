@@ -11,28 +11,17 @@ import java.time.format.DateTimeFormatter;
  * vacant room.
  *
  * Searching technique: linear search through VIP records and vacant rooms.
- * Sorting technique: selection sort by loyalty tier, readiness and arrival.
+ * Sorting technique: selection sort by loyalty tier and arrival time.
  *
  * @author Low Enn Toong
  */
 public class VipRoomReadinessRP {
-
     private static final String ALL = "ALL";
     private static final String MATCHED = "MATCHED";
     private static final String UNMATCHED = "UNMATCHED";
+    private static final DateTimeFormatter DATE_TIME_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
 
-    private static final DateTimeFormatter DATE_TIME_FORMAT
-            = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
-
-    public void generateReport(
-            Member[] members,
-            Room[] vacantRooms,
-            String keyword,
-            LoyaltyTier tierFilter,
-            String roomTypeFilter,
-            String readinessFilter,
-            int minimumGuests) {
-
+    public void generateReport(Member[] members, Room[] vacantRooms, String keyword, LoyaltyTier tierFilter, String roomTypeFilter, String readinessFilter, int minimumGuests) {
         if (members == null) {
             members = new Member[0];
         }
@@ -55,15 +44,7 @@ public class VipRoomReadinessRP {
             String suggestedRoom = findSuggestedRoom(member, vacantRooms);
             boolean isMatched = matchingRoomCount > 0;
 
-            if (matchesFilters(
-                    member,
-                    keyword,
-                    tierFilter,
-                    roomTypeFilter,
-                    readinessFilter,
-                    minimumGuests,
-                    isMatched)) {
-
+            if (matchesFilters(member, keyword, tierFilter, roomTypeFilter, readinessFilter, minimumGuests, isMatched)) {
                 temporaryMembers[count] = member;
                 temporaryMatchCounts[count] = matchingRoomCount;
                 temporarySuggestedRooms[count] = suggestedRoom;
@@ -79,51 +60,23 @@ public class VipRoomReadinessRP {
         System.arraycopy(temporaryMatchCounts, 0, matchingRoomCounts, 0, count);
         System.arraycopy(temporarySuggestedRooms, 0, suggestedRooms, 0, count);
 
-        sortByReadinessAndPriority(
-                filteredMembers,
-                matchingRoomCounts,
-                suggestedRooms);
+        sortByPriorityAndArrival(filteredMembers, matchingRoomCounts, suggestedRooms);
 
-        printReport(
-                filteredMembers,
-                matchingRoomCounts,
-                suggestedRooms,
-                vacantRooms,
-                keyword,
-                tierFilter,
-                roomTypeFilter,
-                readinessFilter,
-                minimumGuests);
+        printReport(filteredMembers, matchingRoomCounts, suggestedRooms, vacantRooms, keyword, tierFilter, roomTypeFilter, readinessFilter, minimumGuests);
     }
 
-    private void printReport(
-            Member[] members,
-            int[] matchingRoomCounts,
-            String[] suggestedRooms,
-            Room[] vacantRooms,
-            String keyword,
-            LoyaltyTier tierFilter,
-            String roomTypeFilter,
-            String readinessFilter,
-            int minimumGuests) {
-
+    private void printReport(Member[] members, int[] matchingRoomCounts, String[] suggestedRooms, Room[] vacantRooms, String keyword, LoyaltyTier tierFilter, String roomTypeFilter, String readinessFilter, int minimumGuests) {
         System.out.println("\n================================================================================================");
         System.out.println("                    VIP ROOM ALLOCATION READINESS REPORT");
         System.out.println("================================================================================================");
-        System.out.println("Generated On       : "
-                + LocalDateTime.now().format(DATE_TIME_FORMAT));
-        System.out.println("Search Keyword     : "
-                + displayFilter(keyword, ALL));
-        System.out.println("Loyalty Tier       : "
-                + (tierFilter == null ? ALL : tierFilter));
-        System.out.println("Requested Room Type: "
-                + (roomTypeFilter == null
-                        ? ALL : formatRoomType(roomTypeFilter)));
-        System.out.println("Readiness Status   : "
-                + normalizeReadinessFilter(readinessFilter));
+        System.out.println("Generated On       : " + LocalDateTime.now().format(DATE_TIME_FORMAT));
+        System.out.println("Search Keyword     : " + displayFilter(keyword, ALL));
+        System.out.println("Loyalty Tier       : " + (tierFilter == null ? ALL : tierFilter));
+        System.out.println("Requested Room Type: " + (roomTypeFilter == null ? ALL : formatRoomType(roomTypeFilter)));
+        System.out.println("Readiness Status   : " + normalizeReadinessFilter(readinessFilter));
         System.out.println("Minimum Guests     : " + minimumGuests);
         System.out.println("Search Technique   : Linear Search (VIP Records + Suitable Vacant Rooms)");
-        System.out.println("Sorting Technique  : Selection Sort (Tier Descending, Matched First, Arrival Ascending)");
+        System.out.println("Sorting Technique  : Selection Sort (Tier Descending, Arrival Time Ascending)");
         System.out.println("------------------------------------------------------------------------------------------------");
 
         if (members.length == 0) {
@@ -134,14 +87,7 @@ public class VipRoomReadinessRP {
 
         System.out.printf(
                 "%-3s %-9s %-10s %-17s %-6s %-8s %-12s %-15s%n",
-                "No.",
-                "Member",
-                "Tier",
-                "Requested Room",
-                "Party",
-                "Matches",
-                "Suggested",
-                "Readiness");
+                "No.", "Member", "Tier", "Requested Room", "Party", "Matches", "Suggested", "Readiness");
         System.out.println("------------------------------------------------------------------------------------------------");
 
         int matchedCount = 0;
@@ -156,9 +102,7 @@ public class VipRoomReadinessRP {
                     i + 1,
                     members[i].getMemberId(),
                     members[i].getTier(),
-                    formatRoomType(
-                            members[i].getRegistration()
-                                    .getRequestedRoomType()),
+                    formatRoomType(members[i].getRegistration().getRequestedRoomType()),
                     members[i].getRegistration().getNumberOfGuests(),
                     matchingRoomCounts[i],
                     suggestedRooms[i],
@@ -173,8 +117,7 @@ public class VipRoomReadinessRP {
             totalMatchingRoomOptions += matchingRoomCounts[i];
         }
 
-        double readinessRate
-                = (double) matchedCount * 100.0 / members.length;
+        double readinessRate = (double) matchedCount * 100.0 / members.length;
 
         System.out.println("------------------------------------------------------------------------------------------------");
         System.out.println("MANAGEMENT SUMMARY");
@@ -182,23 +125,22 @@ public class VipRoomReadinessRP {
         System.out.println("Available Vacant Rooms    : " + vacantRooms.length);
         System.out.println("Ready for Allocation      : " + matchedCount);
         System.out.println("Blocked by Room Mismatch  : " + unmatchedCount);
-        System.out.println("Total Suitable Room Options: "
-                + totalMatchingRoomOptions);
+        System.out.println("Total Suitable Room Options: " + totalMatchingRoomOptions);
         System.out.printf("Allocation Readiness Rate : %.2f%%%n", readinessRate);
 
-        if (matchingRoomCounts[0] > 0) {
-            System.out.println("Next Priority Allocation  : "
-                    + members[0].getMemberId()
-                    + " (" + members[0].getTier()
-                    + ", Room " + suggestedRooms[0] + ")");
+        int nextReadyIndex = findFirstReadyIndex(matchingRoomCounts);
+
+        System.out.println("Highest Priority Waiting  : " + members[0].getMemberId() + " (" + members[0].getTier() + ", " + (matchingRoomCounts[0] > 0 ? "READY" : "WAITING FOR SUITABLE ROOM") + ")");
+
+        if (nextReadyIndex >= 0) {
+            System.out.println("Next Allocatable VIP      : " + members[nextReadyIndex].getMemberId() + " (" + members[nextReadyIndex].getTier() + ", Room " + suggestedRooms[nextReadyIndex] + ")");
+
+            if (nextReadyIndex > 0) {
+                System.out.println("Allocation Note           : Higher-priority VIP(s) without a suitable room remain waiting; the highest-priority eligible VIP may proceed.");
+            }
         } else {
-            System.out.println("Priority Blocker          : "
-                    + members[0].getMemberId()
-                    + " (" + members[0].getTier() + ") requires "
-                    + formatRoomType(
-                            members[0].getRegistration()
-                                    .getRequestedRoomType()));
-            System.out.println("Management Action         : Prepare a suitable room for the highest-tier VIP before lower tiers.");
+            System.out.println("Next Allocatable VIP      : NONE");
+            System.out.println("Management Action         : Prepare a suitable ready room matching a waiting VIP's requested type and party size.");
         }
 
         System.out.println("================================================================================================");
@@ -233,45 +175,24 @@ public class VipRoomReadinessRP {
     }
 
     private boolean isSuitableRoom(Member member, Room room) {
-        if (room == null || !room.isAvailability()) {
+        if (room == null || !room.isAssignable()) {
             return false;
         }
 
-        boolean matchesType = room.getRoomType().equalsIgnoreCase(
-                member.getRegistration().getRequestedRoomType());
-        boolean enoughCapacity = room.getNoOfGuest()
-                >= member.getRegistration().getNumberOfGuests();
+        boolean matchesType = room.getRoomType().equalsIgnoreCase(member.getRegistration().getRequestedRoomType());
+        boolean enoughCapacity = room.getNoOfGuest() >= member.getRegistration().getNumberOfGuests();
 
         return matchesType && enoughCapacity;
     }
 
-    private boolean matchesFilters(
-            Member member,
-            String keyword,
-            LoyaltyTier tierFilter,
-            String roomTypeFilter,
-            String readinessFilter,
-            int minimumGuests,
-            boolean isMatched) {
-
+    private boolean matchesFilters(Member member, String keyword, LoyaltyTier tierFilter, String roomTypeFilter, String readinessFilter, int minimumGuests, boolean isMatched) {
         boolean matchesKeyword = matchesKeyword(member, keyword);
-        boolean matchesTier = tierFilter == null
-                || member.getTier() == tierFilter;
-        boolean matchesRoomType = roomTypeFilter == null
-                || member.getRegistration().getRequestedRoomType()
-                        .equalsIgnoreCase(roomTypeFilter);
-        boolean matchesGuestCount
-                = member.getRegistration().getNumberOfGuests()
-                >= minimumGuests;
-        boolean matchesReadiness = matchesReadinessFilter(
-                readinessFilter,
-                isMatched);
+        boolean matchesTier = tierFilter == null || member.getTier() == tierFilter;
+        boolean matchesRoomType = roomTypeFilter == null || member.getRegistration().getRequestedRoomType().equalsIgnoreCase(roomTypeFilter);
+        boolean matchesGuestCount = member.getRegistration().getNumberOfGuests() >= minimumGuests;
+        boolean matchesReadiness = matchesReadinessFilter(readinessFilter, isMatched);
 
-        return matchesKeyword
-                && matchesTier
-                && matchesRoomType
-                && matchesGuestCount
-                && matchesReadiness;
+        return matchesKeyword && matchesTier && matchesRoomType && matchesGuestCount && matchesReadiness;
     }
 
     private boolean matchesKeyword(Member member, String keyword) {
@@ -281,18 +202,10 @@ public class VipRoomReadinessRP {
 
         String value = keyword.trim().toLowerCase();
 
-        return member.getMemberId().toLowerCase().contains(value)
-                || member.getRegistration().getRegistrationId()
-                        .toLowerCase().contains(value)
-                || member.getGuest().getGuestId()
-                        .toLowerCase().contains(value)
-                || member.getName().toLowerCase().contains(value);
+        return member.getMemberId().toLowerCase().contains(value) || member.getRegistration().getRegistrationId().toLowerCase().contains(value) || member.getGuest().getGuestId().toLowerCase().contains(value) || member.getName().toLowerCase().contains(value);
     }
 
-    private boolean matchesReadinessFilter(
-            String readinessFilter,
-            boolean isMatched) {
-
+    private boolean matchesReadinessFilter(String readinessFilter, boolean isMatched) {
         String normalized = normalizeReadinessFilter(readinessFilter);
 
         if (MATCHED.equals(normalized)) {
@@ -310,21 +223,12 @@ public class VipRoomReadinessRP {
      * Selection sort using parallel arrays so each member stays together with
      * its matching-room information.
      */
-    private void sortByReadinessAndPriority(
-            Member[] members,
-            int[] matchingRoomCounts,
-            String[] suggestedRooms) {
-
+    private void sortByPriorityAndArrival(Member[] members, int[] matchingRoomCounts, String[] suggestedRooms) {
         for (int i = 0; i < members.length - 1; i++) {
             int bestIndex = i;
 
             for (int j = i + 1; j < members.length; j++) {
-                if (comesBefore(
-                        members[j],
-                        matchingRoomCounts[j],
-                        members[bestIndex],
-                        matchingRoomCounts[bestIndex])) {
-
+                if (comesBefore(members[j], members[bestIndex])) {
                     bestIndex = j;
                 }
             }
@@ -335,12 +239,7 @@ public class VipRoomReadinessRP {
         }
     }
 
-    private boolean comesBefore(
-            Member first,
-            int firstMatchCount,
-            Member second,
-            int secondMatchCount) {
-
+    private boolean comesBefore(Member first, Member second) {
         int firstPriority = first.getTier().getPriority();
         int secondPriority = second.getTier().getPriority();
 
@@ -348,23 +247,22 @@ public class VipRoomReadinessRP {
             return firstPriority > secondPriority;
         }
 
-        boolean firstMatched = firstMatchCount > 0;
-        boolean secondMatched = secondMatchCount > 0;
-
-        if (firstMatched != secondMatched) {
-            return firstMatched;
-        }
-
-        int timeComparison = first.getRegistration().getRegistrationTime()
-                .compareTo(second.getRegistration().getRegistrationTime());
+        int timeComparison = first.getRegistration().getRegistrationTime().compareTo(second.getRegistration().getRegistrationTime());
 
         if (timeComparison != 0) {
             return timeComparison < 0;
         }
 
-        return first.getRegistration().getRegistrationId()
-                .compareToIgnoreCase(
-                        second.getRegistration().getRegistrationId()) < 0;
+        return first.getRegistration().getRegistrationId().compareToIgnoreCase(second.getRegistration().getRegistrationId()) < 0;
+    }
+
+    private int findFirstReadyIndex(int[] matchingRoomCounts) {
+        for (int i = 0; i < matchingRoomCounts.length; i++) {
+            if (matchingRoomCounts[i] > 0) {
+                return i;
+            }
+        }
+        return -1;
     }
 
     private void swapMembers(Member[] values, int first, int second) {
