@@ -15,7 +15,7 @@ public class BillSummaryRP {
         Booking[] temp = new Booking[bookings.length];
         int count = 0;
         for (Booking booking : bookings) {
-            if (booking == null) continue;
+            if (booking == null || booking.getPayment() == null) continue;
             if (booking.getPayment().getStatus() == statusFilter) {
                 temp[count] = booking;
                 count++;

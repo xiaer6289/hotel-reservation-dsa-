@@ -57,7 +57,7 @@ public class FrontDeskUI {
                     Utility.clearScreen();
                     break;
                 default: 
-                    Utility.printError("Invalid option, try again");
+                    Utility.printError("Invalid option, please try again...");
             }
             if (choice != 8) Utility.pauseScreen();
         } while (choice != 8);
@@ -90,7 +90,7 @@ public class FrontDeskUI {
         String confirmationNo = scanner.nextLine().toLowerCase().trim();
         
         if (!Utility.isValidConfirmationNo(confirmationNo)) {
-            Utility.printError("Invalid Confirmation number format");
+            Utility.printError("Invalid Confirmation number format. Please try again...");
             return;
         }
         
@@ -198,8 +198,12 @@ public class FrontDeskUI {
             case 4:
                 roomTypeFilter = RoomType.SUPERIOR_TWIN.name();
                 break;
-            default:
+            case 5:
                 roomTypeFilter = null;
+                break;
+            default:
+                Utility.printError("Invalid Option. Please try again...");
+                return;
         }
         
         System.out.print("Show Available (A) or Occupied (O) rooms?");
@@ -231,6 +235,11 @@ public class FrontDeskUI {
         System.out.print("Filter by Payment Status: ");
         char status = scanner.nextLine().trim().toUpperCase().charAt(0);
         
+        if (status != 'P' && status != 'C' && status != 'X' && status != 'R') {
+            Utility.printError("Invalid Option. Please try again...");
+            return;
+        }
+
         Booking[] allBookings = control.sortBooking();
         Booking[] report = billSummary.generateReport(allBookings, status);
         double total = billSummary.calcTotalRevenue(report);

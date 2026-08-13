@@ -31,6 +31,7 @@ public class FrontDeskControl implements RoomAvailabilityNotifier.RoomReadyListe
     private PaymentDao paymentDao;
     private GuestDao guestDao;
     private Room[] rooms;
+    private RegistrationController registrationController;
     private final HousekeepingController housekeepingController;
     private final LinearADT<Room> readyRoomInbox;
     
@@ -39,6 +40,7 @@ public class FrontDeskControl implements RoomAvailabilityNotifier.RoomReadyListe
         roomDao = new RoomDao();
         paymentDao = new PaymentDao();
         bookingDao = new BookingDao();
+        registrationController = new RegistrationController();
         housekeepingController = new HousekeepingController();
         readyRoomInbox = new DoublyLinkedList<>();
 
@@ -128,6 +130,11 @@ public class FrontDeskControl implements RoomAvailabilityNotifier.RoomReadyListe
         TaskLogEntry task = housekeepingController.createCheckoutTask(room.getRoomNumber(), staffId, remarks);
         if (task == null) {
             return null;
+        }
+        
+        if (booking.getGuest() != null) {
+            registrationController.markGuestCheckedOut(
+                booking.getGuest().getGuestId());
         }
 
         return task;

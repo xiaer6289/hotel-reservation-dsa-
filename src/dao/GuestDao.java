@@ -68,11 +68,10 @@ public class GuestDao {
     
     public Guest[] seedSampleData() {
         return new Guest[] {
-            new Guest("1", "Ali", 60123456789L),
-            new Guest("2", "Aiman", 60123456788L),
-            new Guest("3", "Mei", 60123456787L),
-            new Guest("4", "Ah Kang", 60123456786L),
-            new Guest("5", "Wai Keong", 60123456785L)
+            new Guest("G0001", "Alex Tan", 60123456789L),
+            new Guest("G0002", "Brenda Lee", 60123456788L),
+            new Guest("G0003", "Chloe Wong", 60123456787L),
+            new Guest("G0004", "Daniel Lim", 60123456786L),
         };
     }
 }
