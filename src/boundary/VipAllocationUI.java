@@ -1,8 +1,8 @@
 package boundary;
 
 import control.VipPriorityController;
-import control.report.VipPriorityQueueRP;
-import control.report.VipRoomReadinessRP;
+import control.report.VipRoomAllocationDemandRP;
+import control.report.VipTierWaitingPerformanceRP;
 import entity.Booking;
 import entity.Guest;
 import entity.LoyaltyProfile;
@@ -30,8 +30,8 @@ public class VipAllocationUI {
     private static final DateTimeFormatter DATE_TIME_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
     private final VipPriorityController controller;
     private final Scanner scanner;
-    private final VipPriorityQueueRP priorityQueueReport;
-    private final VipRoomReadinessRP roomReadinessReport;
+    private final VipTierWaitingPerformanceRP waitingPerformanceReport;
+    private final VipRoomAllocationDemandRP roomDemandReport;
 
     public VipAllocationUI() {
         this(new VipPriorityController(), new Scanner(System.in));
@@ -44,8 +44,8 @@ public class VipAllocationUI {
     public VipAllocationUI(VipPriorityController controller, Scanner scanner) {
         this.controller = controller;
         this.scanner = scanner;
-        this.priorityQueueReport = new VipPriorityQueueRP();
-        this.roomReadinessReport = new VipRoomReadinessRP();
+        this.waitingPerformanceReport = new VipTierWaitingPerformanceRP();
+        this.roomDemandReport = new VipRoomAllocationDemandRP();
     }
 
     public void run() {
@@ -82,10 +82,10 @@ public class VipAllocationUI {
                     allocateRoom();
                     break;
                 case 9:
-                    generatePriorityQueueReport();
+                    generateWaitingPerformanceReport();
                     break;
                 case 10:
-                    generateRoomReadinessReport();
+                    generateRoomDemandReport();
                     break;
                 case 0:
                     System.out.println("Returning to Main Menu...");
@@ -120,8 +120,8 @@ public class VipAllocationUI {
         System.out.println("8. Assign Room & Check In VIP");
         System.out.println();
         System.out.println("REPORTS");
-        System.out.println("9. VIP Waiting List Report");
-        System.out.println("10. VIP Room Readiness Report");
+        System.out.println("9. VIP Tier & Waiting Performance Analysis");
+        System.out.println("10. VIP Room Allocation Demand Analysis");
         System.out.println("0. Return to Main Menu");
     }
 
@@ -475,7 +475,7 @@ public class VipAllocationUI {
         System.out.println("VIP Members Waiting: " + controller.getWaitingCount());
     }
 
-    private void generatePriorityQueueReport() {
+    private void generateWaitingPerformanceReport() {
         Member[] members = controller.getMembersByPriority();
 
         if (members.length == 0) {
@@ -483,15 +483,24 @@ public class VipAllocationUI {
             return;
         }
 
-        System.out.println("\n=== VIP WAITING LIST REPORT FILTERS ===");
+        System.out.println("\n=== VIP TIER & WAITING PERFORMANCE ANALYSIS FILTERS ===");
+        System.out.println("This report summarizes waiting performance instead of repeating the normal VIP waiting list.");
         String keyword = readOptionalString("Search keyword (e.g. R0001, G0001 or guest name; Enter for ALL): ");
         LoyaltyTier tierFilter = readTierFilter();
         String roomTypeFilter = readRoomTypeFilter();
-        int minimumGuests = readNonNegativeInteger("Minimum number of guests (0 = ALL, e.g. 2): ");
-        priorityQueueReport.generateReport(members, keyword, tierFilter, roomTypeFilter, minimumGuests);
+        int minimumWaitingMinutes = readNonNegativeInteger("Minimum waiting time in minutes (0 = ALL, e.g. 15): ");
+        int minimumGuests = readNonNegativeInteger("Minimum party size (0 = ALL, e.g. 2): ");
+
+        waitingPerformanceReport.generateReport(
+                members,
+                keyword,
+                tierFilter,
+                roomTypeFilter,
+                minimumWaitingMinutes,
+                minimumGuests);
     }
 
-    private void generateRoomReadinessReport() {
+    private void generateRoomDemandReport() {
         Member[] members = controller.getMembersByPriority();
 
         if (members.length == 0) {
@@ -499,13 +508,22 @@ public class VipAllocationUI {
             return;
         }
 
-        System.out.println("\n=== VIP ROOM READINESS REPORT FILTERS ===");
+        System.out.println("\n=== VIP ROOM ALLOCATION DEMAND ANALYSIS FILTERS ===");
+        System.out.println("This report compares current VIP room demand with suitable ready-room supply.");
         String keyword = readOptionalString("Search keyword (e.g. R0001, G0001 or guest name; Enter for ALL): ");
         LoyaltyTier tierFilter = readTierFilter();
         String roomTypeFilter = readRoomTypeFilter();
-        String readinessFilter = readReadinessFilter();
-        int minimumGuests = readNonNegativeInteger("Minimum number of guests (0 = ALL, e.g. 2): ");
-        roomReadinessReport.generateReport(members, controller.getVacantRooms(), keyword, tierFilter, roomTypeFilter, readinessFilter, minimumGuests);
+        String readinessFilter = readAllocationStatusFilter();
+        int minimumGuests = readNonNegativeInteger("Minimum party size (0 = ALL, e.g. 2): ");
+
+        roomDemandReport.generateReport(
+                members,
+                controller.getVacantRooms(),
+                keyword,
+                tierFilter,
+                roomTypeFilter,
+                readinessFilter,
+                minimumGuests);
     }
 
     private void displayMemberDetails(Member member) {
@@ -574,24 +592,24 @@ public class VipAllocationUI {
         }
     }
 
-    private String readReadinessFilter() {
+    private String readAllocationStatusFilter() {
         while (true) {
-            System.out.println("\nFilter by Allocation Readiness:");
+            System.out.println("\nFilter by Allocation Status:");
             System.out.println("0. ALL");
-            System.out.println("1. MATCHED - suitable ready room is available");
-            System.out.println("2. UNMATCHED - no suitable ready room is available");
+            System.out.println("1. READY - at least one suitable ready room is available");
+            System.out.println("2. BLOCKED - no suitable ready room is available");
 
-            int choice = readInteger("Enter readiness filter choice (0-2): ");
+            int choice = readInteger("Enter allocation-status filter choice (0-2): ");
 
             switch (choice) {
                 case 0:
                     return "ALL";
                 case 1:
-                    return "MATCHED";
+                    return "READY";
                 case 2:
-                    return "UNMATCHED";
+                    return "BLOCKED";
                 default:
-                    Utility.printError("Invalid readiness filter. Enter 0, 1 or 2.");
+                    Utility.printError("Invalid allocation-status filter. Enter 0, 1 or 2.");
                     break;
             }
         }
