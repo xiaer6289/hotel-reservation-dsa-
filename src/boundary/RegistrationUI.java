@@ -1,6 +1,8 @@
 package boundary;
 
 import control.RegistrationController;
+import control.report.StandardFifoWaitingTimeRP;
+import control.report.WalkInArrivalPatternRP;
 import control.VipPriorityController;
 import entity.Booking;
 import entity.Guest;
@@ -9,9 +11,12 @@ import entity.RegistrationStatus;
 import entity.Room;
 import entity.RoomType;
 import entity.WalkInRegistration;
+
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.Scanner;
 import utility.Utility;
 
@@ -57,7 +62,7 @@ public class RegistrationUI {
 
         do {
             displayMenu();
-            choice = readMenuChoice("Enter choice (0-6): ", 0, 6);
+            choice = readMenuChoice("Enter choice (0-8): ", 0, 8);
 
             switch (choice) {
                 case 1:
@@ -77,6 +82,12 @@ public class RegistrationUI {
                     break;
                 case 6:
                     cancelRegistration();
+                    break;
+                case 7:
+                    generateStandardFifoWaitingTimeReport();
+                    break;
+                case 8:
+                    generateWalkInArrivalPatternReport();
                     break;
                 case 0:
                     System.out.println("Returning to Main Menu...");
@@ -99,6 +110,8 @@ public class RegistrationUI {
         System.out.println("4. Assign Ready Room & Check In Next Standard Guest");
         System.out.println("5. Search Walk-In Registration by ID");
         System.out.println("6. Cancel Waiting Standard Registration");
+        System.out.println("7. Standard FIFO Waiting Time Analysis Report");
+        System.out.println("8. Walk-In Arrival Pattern Analysis Report");
         System.out.println("0. Return to Main Menu");
     }
 
@@ -112,7 +125,7 @@ public class RegistrationUI {
     private void addWalkInRegistration() {
         System.out.println("\n===== REGISTER WALK-IN GUEST =====");
         System.out.println("Guest ID and Registration ID are generated automatically.");
-        System.out.println("Hint: Existing guests/members are searched by full name. New guests will register a new profile.");
+        
 
         boolean existingGuestOrMember = readYesNo(
                 "Is this an existing guest or loyalty member? (Y/N): ");
@@ -548,6 +561,205 @@ public class RegistrationUI {
         System.out.println("Status         : " + cancelled.getStatus());
     }
 
+    private void generateStandardFifoWaitingTimeReport() {
+
+            System.out.println(
+                    "\n===== STANDARD FIFO WAITING TIME REPORT OPTIONS =====");
+
+            if (controller.getWaitingCount() == 0) {
+                System.out.println(
+                        "No Standard guests are currently waiting in the FIFO queue.");
+                return;
+            }
+
+            System.out.println(
+                    "Press Enter without typing anything to include all records.");
+
+            System.out.print(
+                    "Search by Registration ID, Guest ID or Guest Name "
+                    + "(Enter = All): ");
+
+            String keyword = scanner.nextLine().trim();
+
+            RoomType[] roomTypes = RoomType.values();
+
+            System.out.println("\nFilter by Room Type:");
+            System.out.println("0. All Room Types");
+
+            for (int i = 0; i < roomTypes.length; i++) {
+                System.out.println(
+                        (i + 1)
+                        + ". "
+                        + formatRoomType(roomTypes[i].name()));
+            }
+
+            int roomTypeChoice = readIntegerInRange(
+                    "Select Room Type (0-"
+                    + roomTypes.length
+                    + "): ",
+                    0,
+                    roomTypes.length);
+
+            String roomTypeFilter = "";
+
+            if (roomTypeChoice > 0) {
+                roomTypeFilter
+                        = roomTypes[roomTypeChoice - 1].name();
+            }
+
+            int maximumOccupancy
+                    = controller.getMaximumRoomCapacity();
+
+            int minimumGuests = readIntegerInRange(
+                    "Minimum Party Size "
+                    + "(0 = All, 1-"
+                    + maximumOccupancy
+                    + "): ",
+                    0,
+                    maximumOccupancy);
+
+            int minimumWaitingMinutes = readNonNegativeInteger(
+                    "Minimum Waiting Time in Minutes (0 = All): ");
+
+            System.out.println("\nSort Report By:");
+            System.out.println(
+                    "1. FIFO Order / Earliest Arrival First");
+            System.out.println(
+                    "2. Longest Waiting Time First");
+            System.out.println(
+                    "3. Largest Party Size First");
+
+            int sortOption = readIntegerInRange(
+                    "Select Sort Option (1-3): ",
+                    1,
+                    3);
+
+            StandardFifoWaitingTimeRP report
+                    = new StandardFifoWaitingTimeRP();
+
+            report.generateReport(
+                    controller,
+                    keyword,
+                    roomTypeFilter,
+                    minimumGuests,
+                    minimumWaitingMinutes,
+                    sortOption);
+        }
+
+        private void generateWalkInArrivalPatternReport() {
+
+        System.out.println(
+                "\n===== WALK-IN ARRIVAL PATTERN REPORT OPTIONS =====");
+
+        if (controller.getTotalRegistrationCount() == 0) {
+            System.out.println(
+                    "No walk-in registration records are available.");
+            return;
+        }
+
+        System.out.println(
+                "Date format: YYYY-MM-DD");
+        System.out.println(
+                "Press Enter to include all dates.");
+
+        LocalDate startDate
+                = readOptionalDate(
+                        "Start Date (Enter = No Start Date): ");
+
+        LocalDate endDate
+                = readOptionalDate(
+                        "End Date (Enter = No End Date): ");
+
+        while (startDate != null
+                && endDate != null
+                && endDate.isBefore(startDate)) {
+
+            Utility.printError(
+                    "End Date cannot be earlier than Start Date.");
+
+            endDate = readOptionalDate(
+                    "Re-enter End Date (Enter = No End Date): ");
+        }
+
+        RoomType[] roomTypes
+                = RoomType.values();
+
+        System.out.println(
+                "\nFilter by Room Type:");
+        System.out.println(
+                "0. All Room Types");
+
+        for (int i = 0;
+                i < roomTypes.length;
+                i++) {
+
+            System.out.println(
+                    (i + 1)
+                    + ". "
+                    + formatRoomType(
+                            roomTypes[i].name()));
+        }
+
+        int roomTypeChoice
+                = readIntegerInRange(
+                        "Select Room Type (0-"
+                        + roomTypes.length
+                        + "): ",
+                        0,
+                        roomTypes.length);
+
+        String roomTypeFilter = "";
+
+        if (roomTypeChoice > 0) {
+
+            roomTypeFilter
+                    = roomTypes[
+                            roomTypeChoice - 1]
+                            .name();
+        }
+
+        int maximumOccupancy
+                = controller.getMaximumRoomCapacity();
+
+        int minimumGuests
+                = readIntegerInRange(
+                        "Minimum Party Size "
+                        + "(0 = All, 1-"
+                        + maximumOccupancy
+                        + "): ",
+                        0,
+                        maximumOccupancy);
+
+        System.out.println(
+                "\nSort Report Display By:");
+
+        System.out.println(
+                "1. Arrival Time (Earliest First)");
+
+        System.out.println(
+                "2. Arrival Time (Latest First)");
+
+        System.out.println(
+                "3. Party Size (Largest First)");
+
+        int sortOption
+                = readIntegerInRange(
+                        "Select Sort Option (1-3): ",
+                        1,
+                        3);
+
+        WalkInArrivalPatternRP report
+                = new WalkInArrivalPatternRP();
+
+        report.generateReport(
+                controller,
+                startDate,
+                endDate,
+                roomTypeFilter,
+                minimumGuests,
+                sortOption);
+    }
+
     private void displayVipAddError(int result) {
         switch (result) {
             case VipPriorityController.REGISTRATION_ALREADY_QUEUED:
@@ -737,8 +949,9 @@ public class RegistrationUI {
         int eligibleCount = 0;
 
         for (RoomType roomType : allTypes) {
-            int capacity = controller.getMaximumCapacityForRoomType(
-                    roomType.name());
+            int capacity
+                    = controller.getMaximumCapacityForRoomType(
+                            roomType.name());
 
             if (capacity >= numberOfGuests) {
                 eligibleTypes[eligibleCount++] = roomType;
@@ -750,29 +963,49 @@ public class RegistrationUI {
         }
 
         while (true) {
-            System.out.println("\nRoom Types Suitable for " + numberOfGuests + " Guest(s):");
+            System.out.println(
+                    "\nRoom Types Suitable for "
+                    + numberOfGuests
+                    + " Guest(s):");
 
             for (int i = 0; i < eligibleCount; i++) {
+
                 RoomType roomType = eligibleTypes[i];
-                int capacity = controller.getMaximumCapacityForRoomType(
-                        roomType.name());
+
+                int capacity
+                        = controller.getMaximumCapacityForRoomType(
+                                roomType.name());
+
+                int readyNow
+                        = controller.getReadyRoomCountForStandardRequest(
+                                roomType.name(),
+                                numberOfGuests);
 
                 System.out.printf(
-                        "%d. %-17s | Max Occupancy: %d | Rate: RM %.2f/night%n",
+                        "%d. %-17s | Max Occupancy: %d"
+                        + " | Rate: RM %.2f/night"
+                        + " | Ready Now: %d%n",
                         i + 1,
                         formatRoomType(roomType.name()),
                         capacity,
-                        roomType.getPricePerDay());
+                        roomType.getPricePerDay(),
+                        readyNow);
             }
 
             int choice = readInteger(
-                    "Select Room Type (1-" + eligibleCount + "): ");
+                    "Select Room Type (1-"
+                    + eligibleCount
+                    + "): ");
 
-            if (choice >= 1 && choice <= eligibleCount) {
-                return eligibleTypes[choice - 1].name();
+            if (choice >= 1
+                    && choice <= eligibleCount) {
+
+                return eligibleTypes[
+                        choice - 1].name();
             }
 
-            Utility.printError("Invalid room type selection.");
+            Utility.printError(
+                    "Invalid room type selection.");
         }
     }
 
@@ -837,6 +1070,49 @@ public class RegistrationUI {
 
             Utility.printError(
                     "Enter a number from " + minimum + " to " + maximum + ".");
+        }
+    }
+
+    private int readNonNegativeInteger(String message) {
+
+        while (true) {
+
+            int number = readInteger(message);
+
+            if (number >= 0) {
+                return number;
+            }
+
+            Utility.printError(
+                    "Please enter 0 or a positive whole number.");
+        }
+    }
+
+    private LocalDate readOptionalDate(
+            String message) {
+
+        while (true) {
+
+            System.out.print(message);
+
+            String input
+                    = scanner.nextLine().trim();
+
+            if (input.isEmpty()) {
+                return null;
+            }
+
+            try {
+
+                return LocalDate.parse(input);
+
+            } catch (DateTimeParseException e) {
+
+                Utility.printError(
+                        "Invalid date. "
+                        + "Please use YYYY-MM-DD, "
+                        + "for example 2026-08-13.");
+            }
         }
     }
 
