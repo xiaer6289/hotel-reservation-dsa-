@@ -3,10 +3,14 @@ package control;
 import adt.heap.MaxHeap;
 import adt.heap.PriorityQueueADT;
 import dao.BookingDao;
+import dao.GuestDao;
+import dao.LoyaltyProfileDao;
 import dao.MemberDao;
 import dao.RoomDao;
 import dao.WalkInRegistrationDao;
 import entity.Booking;
+import entity.Guest;
+import entity.LoyaltyProfile;
 import entity.LoyaltyTier;
 import entity.Member;
 import entity.RegistrationStatus;
@@ -38,6 +42,8 @@ public class VipPriorityController {
     private final WalkInRegistrationDao registrationDao;
     private final RoomDao roomDao;
     private final BookingDao bookingDao;
+    private final GuestDao guestDao;
+    private final LoyaltyProfileDao loyaltyProfileDao;
     private Room[] rooms;
     private Booking[] bookings;
 
@@ -46,9 +52,57 @@ public class VipPriorityController {
         registrationDao = new WalkInRegistrationDao();
         roomDao = new RoomDao();
         bookingDao = new BookingDao();
+        guestDao = new GuestDao();
+        loyaltyProfileDao = new LoyaltyProfileDao();
         rooms = roomDao.loadOrSeed();
         bookings = loadExistingBookings();
         loadWaitingMembersOnce();
+    }
+
+    /**
+     * Returns every guest who currently has a valid VIP loyalty tier.
+     * This is master loyalty data and is separate from the VIP waiting heap.
+     */
+    public LoyaltyProfile[] getAllVipProfiles() {
+        LoyaltyProfile[] profiles = loyaltyProfileDao.loadOrSeed();
+        int vipCount = 0;
+
+        for (LoyaltyProfile profile : profiles) {
+            if (profile != null && profile.getTier() != null) {
+                vipCount++;
+            }
+        }
+
+        LoyaltyProfile[] vipProfiles = new LoyaltyProfile[vipCount];
+        int index = 0;
+
+        for (LoyaltyProfile profile : profiles) {
+            if (profile != null && profile.getTier() != null) {
+                vipProfiles[index++] = profile;
+            }
+        }
+
+        return vipProfiles;
+    }
+
+    /**
+     * Finds the guest master record that belongs to a loyalty profile.
+     */
+    public Guest findGuestById(String guestId) {
+        if (guestId == null || guestId.isBlank()) {
+            return null;
+        }
+
+        Guest[] guests = guestDao.loadOrSeed();
+
+        for (Guest guest : guests) {
+            if (guest != null && guest.getGuestId() != null
+                    && guest.getGuestId().equalsIgnoreCase(guestId.trim())) {
+                return guest;
+            }
+        }
+
+        return null;
     }
 
     /**
