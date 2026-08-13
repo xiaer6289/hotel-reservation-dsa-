@@ -60,6 +60,124 @@ public class VipPriorityController {
     }
 
     /**
+     * Finds the stored loyalty profile for a guest. Loyalty master-data lookup
+     * belongs to the VIP/Loyalty module rather than Standard registration.
+     */
+    public LoyaltyProfile searchLoyaltyProfileByGuestId(String guestId) {
+        if (guestId == null || guestId.isBlank()) {
+            return null;
+        }
+
+        LoyaltyProfile[] profiles = loyaltyProfileDao.loadOrSeed();
+
+        for (LoyaltyProfile profile : profiles) {
+            if (profile != null
+                    && profile.getGuestId() != null
+                    && profile.getGuestId().equalsIgnoreCase(guestId.trim())) {
+                return profile;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Recalculates a guest's loyalty progress from completed stays and updates
+     * the stored tier. Guests below ELITE remain Standard and have no VIP profile.
+     */
+    public LoyaltyProfile refreshLoyaltyProfileByGuestId(String guestId) {
+        if (guestId == null || guestId.isBlank()) {
+            return null;
+        }
+
+        LoyaltyProfile[] profiles = loyaltyProfileDao.loadOrSeed();
+        LoyaltyProfile existingProfile = findLoyaltyProfile(profiles, guestId);
+        int completedStays = getCompletedStayCount(guestId);
+
+        if (existingProfile != null) {
+            int before = existingProfile.getCompletedStays();
+            LoyaltyTier beforeTier = existingProfile.getTier();
+
+            existingProfile.updateCompletedStays(completedStays);
+
+            if (before != existingProfile.getCompletedStays()
+                    || beforeTier != existingProfile.getTier()) {
+                loyaltyProfileDao.saveToFile(profiles);
+            }
+
+            return existingProfile;
+        }
+
+        LoyaltyTier qualifiedTier = LoyaltyProfile.determineTier(completedStays);
+
+        if (qualifiedTier == null) {
+            return null;
+        }
+
+        LoyaltyProfile newProfile = new LoyaltyProfile(guestId.trim(), completedStays);
+        LoyaltyProfile[] updatedProfiles = new LoyaltyProfile[profiles.length + 1];
+        System.arraycopy(profiles, 0, updatedProfiles, 0, profiles.length);
+        updatedProfiles[profiles.length] = newProfile;
+        loyaltyProfileDao.saveToFile(updatedProfiles);
+
+        return newProfile;
+    }
+
+    /**
+     * Counts only stays that have completed the Front Desk checkout process.
+     * Existing stored loyalty progress is preserved for seeded/legacy profiles.
+     */
+    public int getCompletedStayCount(String guestId) {
+        if (guestId == null || guestId.isBlank()) {
+            return 0;
+        }
+
+        String normalizedGuestId = guestId.trim();
+        WalkInRegistration[] registrations = registrationDao.loadExisting();
+        int historicalCount = 0;
+
+        for (WalkInRegistration registration : registrations) {
+            if (registration == null || registration.getGuest() == null) {
+                continue;
+            }
+
+            boolean sameGuest = registration.getGuest().getGuestId() != null
+                    && registration.getGuest().getGuestId()
+                            .equalsIgnoreCase(normalizedGuestId);
+            boolean stayCompleted = registration.getStatus()
+                    == RegistrationStatus.CHECKED_OUT;
+
+            if (sameGuest && stayCompleted) {
+                historicalCount++;
+            }
+        }
+
+        LoyaltyProfile profile = searchLoyaltyProfileByGuestId(normalizedGuestId);
+        int storedCount = profile == null ? 0 : profile.getCompletedStays();
+
+        return Math.max(historicalCount, storedCount);
+    }
+
+    private LoyaltyProfile findLoyaltyProfile(
+            LoyaltyProfile[] profiles,
+            String guestId) {
+
+        if (profiles == null || guestId == null) {
+            return null;
+        }
+
+        for (LoyaltyProfile profile : profiles) {
+            if (profile != null
+                    && profile.getGuestId() != null
+                    && profile.getGuestId().equalsIgnoreCase(guestId.trim())) {
+                return profile;
+            }
+        }
+
+        return null;
+    }
+
+    /**
      * Returns every guest who currently has a valid VIP loyalty tier.
      * This is master loyalty data and is separate from the VIP waiting heap.
      */

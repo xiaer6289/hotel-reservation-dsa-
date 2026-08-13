@@ -4,13 +4,11 @@ import adt.linear.DoublyLinkedList;
 import adt.linear.LinearADT;
 import dao.BookingDao;
 import dao.GuestDao;
-import dao.LoyaltyProfileDao;
 import dao.RoomDao;
 import dao.WalkInRegistrationDao;
 import entity.Booking;
 import entity.Guest;
 import entity.LoyaltyProfile;
-import entity.LoyaltyTier;
 import entity.RegistrationStatus;
 import entity.Room;
 import entity.RoomStatus;
@@ -32,13 +30,11 @@ public class RegistrationController {
 
     private final GuestDao guestDao;
     private final WalkInRegistrationDao registrationDao;
-    private final LoyaltyProfileDao loyaltyProfileDao;
     private final RoomDao roomDao;
     private final BookingDao bookingDao;
     private final VipPriorityController vipPriorityController;
 
     private Guest[] guests;
-    private LoyaltyProfile[] loyaltyProfiles;
     private Room[] rooms;
     private Booking[] bookings;
 
@@ -55,12 +51,10 @@ public class RegistrationController {
         this.vipPriorityController = vipPriorityController;
         guestDao = new GuestDao();
         registrationDao = new WalkInRegistrationDao();
-        loyaltyProfileDao = new LoyaltyProfileDao();
         roomDao = new RoomDao();
         bookingDao = new BookingDao();
 
         guests = guestDao.loadOrSeed();
-        loyaltyProfiles = loyaltyProfileDao.loadOrSeed();
         rooms = roomDao.loadOrSeed();
         bookings = loadExistingBookings();
 
@@ -68,9 +62,6 @@ public class RegistrationController {
             guests = new Guest[0];
         }
 
-        if (loyaltyProfiles == null) {
-            loyaltyProfiles = new LoyaltyProfile[0];
-        }
 
         if (rooms == null) {
             rooms = new Room[0];
@@ -160,145 +151,39 @@ public class RegistrationController {
     }
 
     /**
-     * Reads an existing loyalty profile. Front-desk staff do not manually
-     * create a Diamond/Platinum/Elite tier during registration.
+     * Reads loyalty information through the VIP/Loyalty controller.
+     * The public method is retained so RegistrationUI output and flow remain
+     * unchanged while loyalty business rules stay inside the VIP module.
      */
     public LoyaltyProfile searchLoyaltyProfileByGuestId(String guestId) {
-        if (guestId == null) {
-            return null;
-        }
-
-        for (LoyaltyProfile profile : loyaltyProfiles) {
-            if (profile != null
-                    && profile.getGuestId()
-                            .equalsIgnoreCase(guestId.trim())) {
-
-                return profile;
-            }
-        }
-
-        return null;
+        return vipPriorityController.searchLoyaltyProfileByGuestId(guestId);
     }
 
     /**
-     * Refreshes loyalty qualification using completed past stays.
-     *
-     * This keeps the loyalty feature intentionally simple: 3 completed stays
-     * qualify for ELITE, 6 for PLATINUM and 10 for DIAMOND. A guest below the
-     * first threshold remains a Standard guest and has no VIP profile yet.
+     * Delegates loyalty qualification and tier refresh to the VIP/Loyalty
+     * controller. Kept here only as an integration facade for existing UI code.
      */
     public LoyaltyProfile refreshLoyaltyProfileByGuestId(String guestId) {
-        if (guestId == null || guestId.isBlank()) {
-            return null;
-        }
-
-        LoyaltyProfile existingProfile
-                = searchLoyaltyProfileByGuestId(guestId);
-
-        int completedStays = getCompletedStayCount(guestId);
-
-        if (existingProfile != null) {
-            int before = existingProfile.getCompletedStays();
-            LoyaltyTier beforeTier = existingProfile.getTier();
-
-            existingProfile.updateCompletedStays(completedStays);
-
-            if (before != existingProfile.getCompletedStays()
-                    || beforeTier != existingProfile.getTier()) {
-                loyaltyProfileDao.saveToFile(loyaltyProfiles);
-            }
-
-            return existingProfile;
-        }
-
-        LoyaltyTier qualifiedTier
-                = LoyaltyProfile.determineTier(completedStays);
-
-        if (qualifiedTier == null) {
-            return null;
-        }
-
-        LoyaltyProfile newProfile = new LoyaltyProfile(
-                guestId.trim(),
-                completedStays);
-
-        LoyaltyProfile[] updatedProfiles
-                = new LoyaltyProfile[loyaltyProfiles.length + 1];
-
-        System.arraycopy(
-                loyaltyProfiles,
-                0,
-                updatedProfiles,
-                0,
-                loyaltyProfiles.length);
-
-        updatedProfiles[loyaltyProfiles.length] = newProfile;
-        loyaltyProfiles = updatedProfiles;
-        loyaltyProfileDao.saveToFile(loyaltyProfiles);
-
-        return newProfile;
+        return vipPriorityController.refreshLoyaltyProfileByGuestId(guestId);
     }
 
     /**
-     * Counts past registrations that have reached their expected checkout
-     * time. Only CHECKED_IN records are counted; waiting/cancelled records do
-     * not earn loyalty credit. Existing stored loyalty progress is kept if it
-     * is already higher, so stay totals never decrease.
+     * Delegates completed-stay counting to the VIP/Loyalty module.
      */
     public int getCompletedStayCount(String guestId) {
-        if (guestId == null || guestId.isBlank()) {
-            return 0;
-        }
-
-        String normalizedGuestId = guestId.trim();
-        LocalDateTime now = LocalDateTime.now();
-        int historicalCount = 0;
-
-        for (int i = 0; i < registrationRecords.size(); i++) {
-            WalkInRegistration registration = registrationRecords.get(i);
-
-            if (registration == null
-                    || registration.getGuest() == null
-                    || registration.getCheckOutDateTime() == null) {
-                continue;
-            }
-
-            boolean sameGuest = registration.getGuest().getGuestId()
-                    .equalsIgnoreCase(normalizedGuestId);
-
-            boolean checkedOut
-                    = registration.getStatus()
-                            == RegistrationStatus.CHECKED_OUT;
-
-            boolean oldCompletedStay
-                    = registration.getStatus()
-                            == RegistrationStatus.CHECKED_IN
-                    && !registration.getCheckOutDateTime()
-                            .isAfter(now);
-
-            boolean stayCompleted
-                    = checkedOut || oldCompletedStay;
-
-            if (sameGuest && stayCompleted) {
-                historicalCount++;
-            }
-        }
-
-        LoyaltyProfile profile
-                = searchLoyaltyProfileByGuestId(normalizedGuestId);
-
-        int storedCount = profile == null
-                ? 0
-                : profile.getCompletedStays();
-
-        return Math.max(historicalCount, storedCount);
+        return vipPriorityController.getCompletedStayCount(guestId);
     }
 
+    /**
+     * Calculates the remaining completed stays needed before the Registration UI
+     * displays the guest as eligible for ELITE. The completed-stay total itself
+     * is supplied by the VIP/Loyalty module.
+     */
     public int getStaysNeededForElite(String guestId) {
         return Math.max(
                 0,
                 LoyaltyProfile.ELITE_MIN_STAYS
-                - getCompletedStayCount(guestId));
+                - vipPriorityController.getCompletedStayCount(guestId));
     }
 
     /**
@@ -466,8 +351,8 @@ public class RegistrationController {
     }
 
     /**
-     * Counts physically ready/assignable rooms for a request. Used when a VIP
-     * registration is created because VIP priority is handled inside the heap.
+     * Counts physically ready/assignable rooms for the request summary shown by
+     * RegistrationUI. VIP priority itself remains handled by the VIP MaxHeap.
      */
     public int getReadyRoomCountForRequest(
             String roomType,
@@ -671,8 +556,8 @@ public class RegistrationController {
 
                 registrationDao.upsert(registration);
 
-                // Refresh loyalty progress after a completed stay.
-                refreshLoyaltyProfileByGuestId(
+                // Notify the VIP/Loyalty module after a completed stay.
+                vipPriorityController.refreshLoyaltyProfileByGuestId(
                         normalizedGuestId);
 
                 return registration;
