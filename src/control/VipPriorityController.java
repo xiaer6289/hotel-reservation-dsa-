@@ -5,14 +5,12 @@ import adt.heap.PriorityQueueADT;
 import dao.BookingDao;
 import dao.GuestDao;
 import dao.LoyaltyProfileDao;
-import dao.MemberDao;
 import dao.RoomDao;
 import dao.WalkInRegistrationDao;
 import entity.Booking;
 import entity.Guest;
 import entity.LoyaltyProfile;
 import entity.LoyaltyTier;
-import entity.Member;
 import entity.RegistrationStatus;
 import entity.Room;
 import entity.RoomStatus;
@@ -36,9 +34,10 @@ public class VipPriorityController {
     public static final int INVALID_INPUT = -1;
     public static final int REGISTRATION_ALREADY_QUEUED = -3;
     public static final int GUEST_ALREADY_QUEUED = -4;
-    private static final PriorityQueueADT<Member> PRIORITY_QUEUE = new MaxHeap<>();
-    private static boolean waitingMembersLoaded = false;
-    private final MemberDao memberDao;
+    private static final LoyaltyProfileDao PRIORITY_LOYALTY_DAO = new LoyaltyProfileDao();
+    private static final PriorityQueueADT<WalkInRegistration> PRIORITY_QUEUE
+            = new MaxHeap<>(VipPriorityController::compareVipPriority);
+    private static boolean waitingVipRegistrationsLoaded = false;
     private final WalkInRegistrationDao registrationDao;
     private final RoomDao roomDao;
     private final BookingDao bookingDao;
@@ -48,7 +47,6 @@ public class VipPriorityController {
     private Booking[] bookings;
 
     public VipPriorityController() {
-        memberDao = new MemberDao();
         registrationDao = new WalkInRegistrationDao();
         roomDao = new RoomDao();
         bookingDao = new BookingDao();
@@ -56,7 +54,7 @@ public class VipPriorityController {
         loyaltyProfileDao = new LoyaltyProfileDao();
         rooms = roomDao.loadOrSeed();
         bookings = loadExistingBookings();
-        loadWaitingMembersOnce();
+        loadWaitingVipRegistrationsOnce();
     }
 
     /**
@@ -240,18 +238,15 @@ public class VipPriorityController {
             return GUEST_ALREADY_QUEUED;
         }
 
-        Member member = new Member(registration, tier);
-
         registration.setStatus(RegistrationStatus.VIP_WAITING);
-        PRIORITY_QUEUE.enqueue(member);
+        PRIORITY_QUEUE.enqueue(registration);
 
         registrationDao.upsert(registration);
-        saveWaitingMembers();
-
+        
         return ADD_SUCCESS;
     }
 
-    public Member peekNextVip() {
+    public WalkInRegistration peekNextVip() {
         return PRIORITY_QUEUE.peek();
     }
 
@@ -273,12 +268,12 @@ public class VipPriorityController {
             return false;
         }
 
-        PriorityQueueADT<Member> copiedQueue = PRIORITY_QUEUE.copy();
+        PriorityQueueADT<WalkInRegistration> copiedQueue = PRIORITY_QUEUE.copy();
 
         while (!copiedQueue.isEmpty()) {
-            Member member = copiedQueue.dequeue();
+            WalkInRegistration registration = copiedQueue.dequeue();
 
-            if (isRoomSuitableForRegistration(room, member.getRegistration())) {
+            if (isRoomSuitableForRegistration(room, registration)) {
                 return true;
             }
         }
@@ -291,15 +286,15 @@ public class VipPriorityController {
      * A higher-priority VIP who needs a different unavailable room remains in
      * the heap and does not prevent another VIP from using a suitable room.
      */
-    public Member peekNextAllocatableVip() {
+    public WalkInRegistration peekNextAllocatableVip() {
         rooms = roomDao.loadOrSeed();
-        PriorityQueueADT<Member> copiedQueue = PRIORITY_QUEUE.copy();
+        PriorityQueueADT<WalkInRegistration> copiedQueue = PRIORITY_QUEUE.copy();
 
         while (!copiedQueue.isEmpty()) {
-            Member member = copiedQueue.dequeue();
+            WalkInRegistration registration = copiedQueue.dequeue();
 
-            if (findSuitableVacantRoom(member.getRegistration()) != null) {
-                return member;
+            if (findSuitableVacantRoom(registration) != null) {
+                return registration;
             }
         }
 
@@ -319,8 +314,8 @@ public class VipPriorityController {
         rooms = roomDao.loadOrSeed();
         bookings = loadExistingBookings();
 
-        PriorityQueueADT<Member> retainedMembers = new MaxHeap<>();
-        Member selectedMember = null;
+        PriorityQueueADT<WalkInRegistration> retainedRegistrations = new MaxHeap<>(VipPriorityController::compareVipPriority);
+        WalkInRegistration selectedRegistration = null;
         Room suitableRoom = null;
 
         /*
@@ -329,28 +324,27 @@ public class VipPriorityController {
          * without a suitable room are temporarily retained and reinserted.
          */
         while (!PRIORITY_QUEUE.isEmpty()) {
-            Member candidate = PRIORITY_QUEUE.dequeue();
-            Room candidateRoom = findSuitableVacantRoom(candidate.getRegistration());
+            WalkInRegistration candidate = PRIORITY_QUEUE.dequeue();
+            Room candidateRoom = findSuitableVacantRoom(candidate);
 
             if (candidateRoom != null) {
-                selectedMember = candidate;
+                selectedRegistration = candidate;
                 suitableRoom = candidateRoom;
                 break;
             }
 
-            retainedMembers.enqueue(candidate);
+            retainedRegistrations.enqueue(candidate);
         }
 
-        while (!retainedMembers.isEmpty()) {
-            PRIORITY_QUEUE.enqueue(retainedMembers.dequeue());
+        while (!retainedRegistrations.isEmpty()) {
+            PRIORITY_QUEUE.enqueue(retainedRegistrations.dequeue());
         }
 
-        if (selectedMember == null) {
-            saveWaitingMembers();
-            return null;
+        if (selectedRegistration == null) {
+                        return null;
         }
 
-        WalkInRegistration registration = selectedMember.getRegistration();
+        WalkInRegistration registration = selectedRegistration;
 
         LocalDateTime actualCheckInTime = LocalDateTime.now().withSecond(0).withNano(0);
 
@@ -367,9 +361,8 @@ public class VipPriorityController {
         bookingDao.saveToFile(bookings);
         registrationDao.upsert(registration);
 
-        /* selectedMember has already been removed from the heap above. */
-        saveWaitingMembers();
-
+        /* selectedRegistration has already been removed from the heap above. */
+        
         return booking;
     }
 
@@ -381,34 +374,35 @@ public class VipPriorityController {
         return booking == null ? null : booking.getRoom();
     }
 
-    public Member[] getMembersByPriority() {
-        PriorityQueueADT<Member> copiedQueue = PRIORITY_QUEUE.copy();
-        Member[] members = new Member[copiedQueue.size()];
+    public WalkInRegistration[] getVipRegistrationsByPriority() {
+        PriorityQueueADT<WalkInRegistration> copiedQueue = PRIORITY_QUEUE.copy();
+        WalkInRegistration[] registrations = new WalkInRegistration[copiedQueue.size()];
 
-        for (int i = 0; i < members.length; i++) {
-            members[i] = copiedQueue.dequeue();
+        for (int i = 0; i < registrations.length; i++) {
+            registrations[i] = copiedQueue.dequeue();
         }
 
-        return members;
+        return registrations;
     }
 
     /**
-     * Finds one waiting VIP by registration ID without removing the member
-     * from the MaxHeap. The copied heap contains the same member references,
-     * so this is a read-only priority search.
+     * Finds one waiting VIP by registration ID without removing the
+     * registration from the MaxHeap.
      */
-    public Member findWaitingMemberByRegistrationId(String registrationId) {
+    public WalkInRegistration findWaitingVipRegistrationById(String registrationId) {
         if (!Utility.isValidRegistrationId(registrationId)) {
             return null;
         }
 
-        PriorityQueueADT<Member> copiedQueue = PRIORITY_QUEUE.copy();
+        PriorityQueueADT<WalkInRegistration> copiedQueue = PRIORITY_QUEUE.copy();
 
         while (!copiedQueue.isEmpty()) {
-            Member member = copiedQueue.dequeue();
+            WalkInRegistration registration = copiedQueue.dequeue();
 
-            if (member != null && member.getRegistration() != null && member.getRegistration().getStatus() == RegistrationStatus.VIP_WAITING && member.getRegistration().getRegistrationId().equalsIgnoreCase(registrationId.trim())) {
-                return member;
+            if (registration != null
+                    && registration.getStatus() == RegistrationStatus.VIP_WAITING
+                    && registration.getRegistrationId().equalsIgnoreCase(registrationId.trim())) {
+                return registration;
             }
         }
 
@@ -418,13 +412,22 @@ public class VipPriorityController {
     /**
      * Updates editable parts of a waiting VIP room request. Loyalty tier,
      * priority and registration time are intentionally not editable.
-     * These fields do not affect heap priority, so the member keeps the same
-     * MaxHeap ordering after the request update.
+     * These fields do not affect heap priority, so the registration keeps the
+     * same MaxHeap ordering after the request update.
      */
-    public boolean updateVipRegistrationRequest(String registrationId, String requestedRoomType, int numberOfGuests, LocalDateTime checkOutDateTime) {
-        Member member = findWaitingMemberByRegistrationId(registrationId);
+    public boolean updateVipRegistrationRequest(
+            String registrationId,
+            String requestedRoomType,
+            int numberOfGuests,
+            LocalDateTime checkOutDateTime) {
 
-        if (member == null || requestedRoomType == null || requestedRoomType.isBlank() || numberOfGuests <= 0 || checkOutDateTime == null) {
+        WalkInRegistration registration = findWaitingVipRegistrationById(registrationId);
+
+        if (registration == null
+                || requestedRoomType == null
+                || requestedRoomType.isBlank()
+                || numberOfGuests <= 0
+                || checkOutDateTime == null) {
             return false;
         }
 
@@ -441,14 +444,14 @@ public class VipPriorityController {
             return false;
         }
 
-        WalkInRegistration registration = member.getRegistration();
         LocalDateTime now = LocalDateTime.now().withSecond(0).withNano(0);
 
         if (!checkOutDateTime.isAfter(now)) {
             return false;
         }
 
-        if (registration.getRegistrationTime() != null && !checkOutDateTime.isAfter(registration.getRegistrationTime())) {
+        if (registration.getRegistrationTime() != null
+                && !checkOutDateTime.isAfter(registration.getRegistrationTime())) {
             return false;
         }
 
@@ -457,7 +460,6 @@ public class VipPriorityController {
         registration.setCheckOutDateTime(checkOutDateTime);
 
         registrationDao.upsert(registration);
-        saveWaitingMembers();
         return true;
     }
 
@@ -486,13 +488,13 @@ public class VipPriorityController {
      * Returns a currently ready room suitable for the supplied VIP, without
      * changing the heap or room data.
      */
-    public Room findReadyRoomForMember(Member member) {
-        if (member == null || member.getRegistration() == null) {
+    public Room findReadyRoomForRegistration(WalkInRegistration registration) {
+        if (registration == null) {
             return null;
         }
 
         rooms = roomDao.loadOrSeed();
-        return findSuitableVacantRoom(member.getRegistration());
+        return findSuitableVacantRoom(registration);
     }
 
     public Room[] getVacantRooms() {
@@ -522,66 +524,69 @@ public class VipPriorityController {
             return null;
         }
 
-        PriorityQueueADT<Member> retainedMembers = new MaxHeap<>();
+        PriorityQueueADT<WalkInRegistration> retainedRegistrations
+                = new MaxHeap<>(VipPriorityController::compareVipPriority);
         WalkInRegistration removedRegistration = null;
 
         while (!PRIORITY_QUEUE.isEmpty()) {
-            Member member = PRIORITY_QUEUE.dequeue();
+            WalkInRegistration registration = PRIORITY_QUEUE.dequeue();
 
-            if (removedRegistration == null && member.getRegistration().getRegistrationId().equalsIgnoreCase(registrationId.trim())) {
-                removedRegistration = member.getRegistration();
+            if (removedRegistration == null
+                    && registration.getRegistrationId().equalsIgnoreCase(registrationId.trim())) {
+                removedRegistration = registration;
             } else {
-                retainedMembers.enqueue(member);
+                retainedRegistrations.enqueue(registration);
             }
         }
 
-        while (!retainedMembers.isEmpty()) {
-            PRIORITY_QUEUE.enqueue(retainedMembers.dequeue());
+        while (!retainedRegistrations.isEmpty()) {
+            PRIORITY_QUEUE.enqueue(retainedRegistrations.dequeue());
         }
 
         if (removedRegistration != null) {
             removedRegistration.setStatus(RegistrationStatus.CANCELLED);
             registrationDao.upsert(removedRegistration);
-            saveWaitingMembers();
         }
 
         return removedRegistration;
     }
 
-    private void loadWaitingMembersOnce() {
-        if (waitingMembersLoaded) {
+    /**
+     * Rebuilds the in-memory VIP MaxHeap from the persisted registration data.
+     * VIP waiting state is stored only in walkin_registration.dat and the
+     * MaxHeap is rebuilt from those VIP_WAITING records when the module starts.
+     */
+    private void loadWaitingVipRegistrationsOnce() {
+        if (waitingVipRegistrationsLoaded) {
             return;
         }
 
         synchronized (VipPriorityController.class) {
-            if (waitingMembersLoaded) {
+            if (waitingVipRegistrationsLoaded) {
                 return;
             }
 
-            Member[] savedMembers = memberDao.retrieveFromFile();
+            WalkInRegistration[] savedRegistrations = registrationDao.loadExisting();
 
-            for (Member member : savedMembers) {
-                if (member != null && member.getRegistration() != null && member.getRegistration().getStatus() == RegistrationStatus.VIP_WAITING) {
-                    PRIORITY_QUEUE.enqueue(member);
+            for (WalkInRegistration registration : savedRegistrations) {
+                if (registration != null
+                        && registration.getStatus() == RegistrationStatus.VIP_WAITING
+                        && getLoyaltyTier(registration) != null) {
+                    PRIORITY_QUEUE.enqueue(registration);
                 }
             }
 
-            waitingMembersLoaded = true;
+            waitingVipRegistrationsLoaded = true;
         }
     }
 
-    private void saveWaitingMembers() {
-        Member[] waitingMembers = getMembersByPriority();
-        memberDao.saveToFile(waitingMembers);
-    }
-
     private boolean registrationAlreadyQueued(String registrationId) {
-        PriorityQueueADT<Member> copiedQueue = PRIORITY_QUEUE.copy();
+        PriorityQueueADT<WalkInRegistration> copiedQueue = PRIORITY_QUEUE.copy();
 
         while (!copiedQueue.isEmpty()) {
-            Member member = copiedQueue.dequeue();
+            WalkInRegistration registration = copiedQueue.dequeue();
 
-            if (member.getRegistration().getRegistrationId().equalsIgnoreCase(registrationId.trim())) {
+            if (registration.getRegistrationId().equalsIgnoreCase(registrationId.trim())) {
                 return true;
             }
         }
@@ -590,17 +595,88 @@ public class VipPriorityController {
     }
 
     private boolean guestAlreadyQueued(String guestId) {
-        PriorityQueueADT<Member> copiedQueue = PRIORITY_QUEUE.copy();
+        PriorityQueueADT<WalkInRegistration> copiedQueue = PRIORITY_QUEUE.copy();
 
         while (!copiedQueue.isEmpty()) {
-            Member member = copiedQueue.dequeue();
+            WalkInRegistration registration = copiedQueue.dequeue();
 
-            if (member.getGuest().getGuestId().equalsIgnoreCase(guestId.trim())) {
+            if (registration.getGuest().getGuestId().equalsIgnoreCase(guestId.trim())) {
                 return true;
             }
         }
 
         return false;
+    }
+
+    /**
+     * Returns the current stored loyalty tier for a VIP waiting registration.
+     */
+    public LoyaltyTier getLoyaltyTier(WalkInRegistration registration) {
+        if (registration == null || registration.getGuest() == null) {
+            return null;
+        }
+
+        LoyaltyProfile profile = searchLoyaltyProfileByGuestId(
+                registration.getGuest().getGuestId());
+        return profile == null ? null : profile.getTier();
+    }
+
+    public int getPriorityScore(WalkInRegistration registration) {
+        LoyaltyTier tier = getLoyaltyTier(registration);
+        return tier == null ? 0 : tier.getPriority();
+    }
+
+    /**
+     * VIP MaxHeap comparison rule:
+     * DIAMOND > PLATINUM > ELITE, then earlier registration time, then the
+     * smaller registration ID as a deterministic final tie-breaker.
+     */
+    private static int compareVipPriority(
+            WalkInRegistration first,
+            WalkInRegistration second) {
+
+        int firstPriority = getStoredPriority(first);
+        int secondPriority = getStoredPriority(second);
+
+        int tierComparison = Integer.compare(firstPriority, secondPriority);
+        if (tierComparison != 0) {
+            return tierComparison;
+        }
+
+        if (first.getRegistrationTime() != null
+                && second.getRegistrationTime() != null) {
+            int timeComparison = second.getRegistrationTime()
+                    .compareTo(first.getRegistrationTime());
+
+            if (timeComparison != 0) {
+                return timeComparison;
+            }
+        }
+
+        String firstId = first.getRegistrationId() == null ? "" : first.getRegistrationId();
+        String secondId = second.getRegistrationId() == null ? "" : second.getRegistrationId();
+        return secondId.compareToIgnoreCase(firstId);
+    }
+
+    private static int getStoredPriority(WalkInRegistration registration) {
+        if (registration == null || registration.getGuest() == null
+                || registration.getGuest().getGuestId() == null) {
+            return 0;
+        }
+
+        LoyaltyProfile[] profiles = PRIORITY_LOYALTY_DAO.loadOrSeed();
+        String guestId = registration.getGuest().getGuestId();
+
+        for (LoyaltyProfile profile : profiles) {
+            if (profile != null
+                    && profile.getGuestId() != null
+                    && profile.getGuestId().equalsIgnoreCase(guestId)) {
+                LoyaltyTier tier = profile.getTier();
+                return tier == null ? 0 : tier.getPriority();
+            }
+        }
+
+        return 0;
     }
 
     private Room findSuitableVacantRoom(WalkInRegistration registration) {

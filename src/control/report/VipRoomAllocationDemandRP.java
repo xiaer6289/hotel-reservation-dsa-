@@ -1,7 +1,8 @@
 package control.report;
 
+import entity.LoyaltyProfile;
 import entity.LoyaltyTier;
-import entity.Member;
+import entity.WalkInRegistration;
 import entity.Room;
 import entity.RoomType;
 import java.time.LocalDateTime;
@@ -22,13 +23,15 @@ import java.time.format.DateTimeFormatter;
  * @author Low Enn Toong
  */
 public class VipRoomAllocationDemandRP {
+    private LoyaltyProfile[] loyaltyProfiles = new LoyaltyProfile[0];
     private static final String ALL = "ALL";
     private static final String READY = "READY";
     private static final String BLOCKED = "BLOCKED";
     private static final DateTimeFormatter DATE_TIME_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
 
     public void generateReport(
-            Member[] members,
+            WalkInRegistration[] members,
+            LoyaltyProfile[] loyaltyProfiles,
             Room[] readyRooms,
             String keyword,
             LoyaltyTier tierFilter,
@@ -37,21 +40,25 @@ public class VipRoomAllocationDemandRP {
             int minimumGuests) {
 
         if (members == null) {
-            members = new Member[0];
+            members = new WalkInRegistration[0];
         }
+
+        this.loyaltyProfiles = loyaltyProfiles == null
+                ? new LoyaltyProfile[0]
+                : loyaltyProfiles;
 
         if (readyRooms == null) {
             readyRooms = new Room[0];
         }
 
-        Member[] filteredMembers = new Member[members.length];
+        WalkInRegistration[] filteredMembers = new WalkInRegistration[members.length];
         int[] memberMatchCounts = new int[members.length];
         int filteredCount = 0;
 
         // Linear search over VIP records. For each VIP, another linear search
         // checks the ready-room supply to determine allocation readiness.
-        for (Member member : members) {
-            if (member == null || member.getRegistration() == null) {
+        for (WalkInRegistration member : members) {
+            if (member == null || member.getGuest() == null) {
                 continue;
             }
 
@@ -80,17 +87,17 @@ public class VipRoomAllocationDemandRP {
         RoomDemandSummary[] summaries = createRoomTypeSummaries();
 
         for (int i = 0; i < filteredCount; i++) {
-            Member member = filteredMembers[i];
+            WalkInRegistration member = filteredMembers[i];
             RoomDemandSummary summary = findSummary(
                     summaries,
-                    member.getRegistration().getRequestedRoomType());
+                    member.getRequestedRoomType());
 
             if (summary == null) {
                 continue;
             }
 
             summary.vipRequests++;
-            summary.guestDemand += member.getRegistration().getNumberOfGuests();
+            summary.guestDemand += member.getNumberOfGuests();
 
             if (memberMatchCounts[i] > 0) {
                 summary.vipWithReadyMatch++;
@@ -128,7 +135,7 @@ public class VipRoomAllocationDemandRP {
 
     private void printReport(
             RoomDemandSummary[] summaries,
-            Member[] filteredMembers,
+            WalkInRegistration[] filteredMembers,
             int[] memberMatchCounts,
             int filteredCount,
             String keyword,
@@ -194,12 +201,12 @@ public class VipRoomAllocationDemandRP {
 
         int highestPriorityBlockedIndex = findHighestPriorityBlockedVip(filteredMembers, memberMatchCounts, filteredCount);
         if (highestPriorityBlockedIndex >= 0) {
-            Member blocked = filteredMembers[highestPriorityBlockedIndex];
+            WalkInRegistration blocked = filteredMembers[highestPriorityBlockedIndex];
             System.out.println("Highest-Priority Blocked VIP: "
-                    + blocked.getRegistration().getRegistrationId()
+                    + blocked.getRegistrationId()
                     + " / " + blocked.getGuest().getGuestId()
-                    + " (" + blocked.getTier() + ", "
-                    + formatRoomType(blocked.getRegistration().getRequestedRoomType()) + ")");
+                    + " (" + getTier(blocked) + ", "
+                    + formatRoomType(blocked.getRequestedRoomType()) + ")");
         } else {
             System.out.println("Highest-Priority Blocked VIP: NONE");
         }
@@ -296,7 +303,7 @@ public class VipRoomAllocationDemandRP {
         return null;
     }
 
-    private int countMatchingRooms(Member member, Room[] readyRooms) {
+    private int countMatchingRooms(WalkInRegistration member, Room[] readyRooms) {
         int count = 0;
 
         for (Room room : readyRooms) {
@@ -308,20 +315,20 @@ public class VipRoomAllocationDemandRP {
         return count;
     }
 
-    private boolean isSuitableRoom(Member member, Room room) {
+    private boolean isSuitableRoom(WalkInRegistration member, Room room) {
         if (room == null || !room.isAssignable()) {
             return false;
         }
 
         boolean matchesType = room.getRoomType().equalsIgnoreCase(
-                member.getRegistration().getRequestedRoomType());
-        boolean enoughCapacity = room.getNoOfGuest() >= member.getRegistration().getNumberOfGuests();
+                member.getRequestedRoomType());
+        boolean enoughCapacity = room.getNoOfGuest() >= member.getNumberOfGuests();
 
         return matchesType && enoughCapacity;
     }
 
     private boolean matchesFilters(
-            Member member,
+            WalkInRegistration member,
             String keyword,
             LoyaltyTier tierFilter,
             String roomTypeFilter,
@@ -330,10 +337,10 @@ public class VipRoomAllocationDemandRP {
             boolean hasReadyMatch) {
 
         boolean matchesKeyword = matchesKeyword(member, keyword);
-        boolean matchesTier = tierFilter == null || member.getTier() == tierFilter;
+        boolean matchesTier = tierFilter == null || getTier(member) == tierFilter;
         boolean matchesRoomType = roomTypeFilter == null
-                || member.getRegistration().getRequestedRoomType().equalsIgnoreCase(roomTypeFilter);
-        boolean matchesGuestCount = member.getRegistration().getNumberOfGuests() >= minimumGuests;
+                || member.getRequestedRoomType().equalsIgnoreCase(roomTypeFilter);
+        boolean matchesGuestCount = member.getNumberOfGuests() >= minimumGuests;
         boolean matchesReadiness = matchesReadinessFilter(readinessFilter, hasReadyMatch);
 
         return matchesKeyword
@@ -343,16 +350,16 @@ public class VipRoomAllocationDemandRP {
                 && matchesReadiness;
     }
 
-    private boolean matchesKeyword(Member member, String keyword) {
+    private boolean matchesKeyword(WalkInRegistration member, String keyword) {
         if (keyword == null || keyword.isBlank()) {
             return true;
         }
 
         String value = keyword.trim().toLowerCase();
 
-        return member.getRegistration().getRegistrationId().toLowerCase().contains(value)
+        return member.getRegistrationId().toLowerCase().contains(value)
                 || member.getGuest().getGuestId().toLowerCase().contains(value)
-                || member.getName().toLowerCase().contains(value);
+                || member.getGuest().getName().toLowerCase().contains(value);
     }
 
     private boolean matchesReadinessFilter(String readinessFilter, boolean hasReadyMatch) {
@@ -441,7 +448,7 @@ public class VipRoomAllocationDemandRP {
         return best;
     }
 
-    private int findHighestPriorityBlockedVip(Member[] members, int[] matchCounts, int count) {
+    private int findHighestPriorityBlockedVip(WalkInRegistration[] members, int[] matchCounts, int count) {
         int bestIndex = -1;
 
         for (int i = 0; i < count; i++) {
@@ -457,23 +464,42 @@ public class VipRoomAllocationDemandRP {
         return bestIndex;
     }
 
-    private boolean higherVipPriority(Member first, Member second) {
-        int firstPriority = first.getTier().getPriority();
-        int secondPriority = second.getTier().getPriority();
+    private boolean higherVipPriority(WalkInRegistration first, WalkInRegistration second) {
+        int firstPriority = getTier(first).getPriority();
+        int secondPriority = getTier(second).getPriority();
 
         if (firstPriority != secondPriority) {
             return firstPriority > secondPriority;
         }
 
-        int timeComparison = first.getRegistration().getRegistrationTime()
-                .compareTo(second.getRegistration().getRegistrationTime());
+        int timeComparison = first.getRegistrationTime()
+                .compareTo(second.getRegistrationTime());
 
         if (timeComparison != 0) {
             return timeComparison < 0;
         }
 
-        return first.getRegistration().getRegistrationId()
-                .compareToIgnoreCase(second.getRegistration().getRegistrationId()) < 0;
+        return first.getRegistrationId()
+                .compareToIgnoreCase(second.getRegistrationId()) < 0;
+    }
+
+    private LoyaltyTier getTier(WalkInRegistration registration) {
+        if (registration == null || registration.getGuest() == null
+                || registration.getGuest().getGuestId() == null) {
+            return null;
+        }
+
+        String guestId = registration.getGuest().getGuestId();
+
+        for (LoyaltyProfile profile : loyaltyProfiles) {
+            if (profile != null
+                    && profile.getGuestId() != null
+                    && profile.getGuestId().equalsIgnoreCase(guestId)) {
+                return profile.getTier();
+            }
+        }
+
+        return null;
     }
 
     private String buildManagementInsight(

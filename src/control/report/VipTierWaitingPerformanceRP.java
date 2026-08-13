@@ -1,7 +1,8 @@
 package control.report;
 
+import entity.LoyaltyProfile;
 import entity.LoyaltyTier;
-import entity.Member;
+import entity.WalkInRegistration;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -21,9 +22,11 @@ import java.time.format.DateTimeFormatter;
  */
 public class VipTierWaitingPerformanceRP {
     private static final DateTimeFormatter DATE_TIME_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+    private LoyaltyProfile[] loyaltyProfiles = new LoyaltyProfile[0];
 
     public void generateReport(
-            Member[] members,
+            WalkInRegistration[] members,
+            LoyaltyProfile[] loyaltyProfiles,
             String keyword,
             LoyaltyTier tierFilter,
             String roomTypeFilter,
@@ -31,17 +34,21 @@ public class VipTierWaitingPerformanceRP {
             int minimumGuests) {
 
         if (members == null) {
-            members = new Member[0];
+            members = new WalkInRegistration[0];
         }
 
-        Member[] temporaryMembers = new Member[members.length];
+        this.loyaltyProfiles = loyaltyProfiles == null
+                ? new LoyaltyProfile[0]
+                : loyaltyProfiles;
+
+        WalkInRegistration[] temporaryMembers = new WalkInRegistration[members.length];
         long[] temporaryWaitingMinutes = new long[members.length];
         int count = 0;
 
         // Linear search through all waiting VIP records while applying all
         // selected criteria at the same time.
-        for (Member member : members) {
-            if (member == null || member.getRegistration() == null) {
+        for (WalkInRegistration member : members) {
+            if (member == null || member.getGuest() == null) {
                 continue;
             }
 
@@ -61,7 +68,7 @@ public class VipTierWaitingPerformanceRP {
             }
         }
 
-        Member[] filteredMembers = new Member[count];
+        WalkInRegistration[] filteredMembers = new WalkInRegistration[count];
         long[] waitingMinutes = new long[count];
         System.arraycopy(temporaryMembers, 0, filteredMembers, 0, count);
         System.arraycopy(temporaryWaitingMinutes, 0, waitingMinutes, 0, count);
@@ -80,7 +87,7 @@ public class VipTierWaitingPerformanceRP {
     }
 
     private void printReport(
-            Member[] members,
+            WalkInRegistration[] members,
             long[] waitingMinutes,
             String keyword,
             LoyaltyTier tierFilter,
@@ -118,9 +125,9 @@ public class VipTierWaitingPerformanceRP {
         long longestWaitingMinutes = waitingMinutes[0];
 
         for (int i = 0; i < members.length; i++) {
-            Member member = members[i];
-            int tierIndex = member.getTier().ordinal();
-            int partySize = member.getRegistration().getNumberOfGuests();
+            WalkInRegistration member = members[i];
+            int tierIndex = getTier(member).ordinal();
+            int partySize = member.getNumberOfGuests();
             long wait = waitingMinutes[i];
 
             tierCounts[tierIndex]++;
@@ -170,14 +177,14 @@ public class VipTierWaitingPerformanceRP {
 
         int exceptionCount = Math.min(3, members.length);
         for (int i = 0; i < exceptionCount; i++) {
-            Member member = members[i];
+            WalkInRegistration member = members[i];
             System.out.printf("%-4d %-8s %-10s %-18s %-17s %-7d %-10d%n",
                     i + 1,
-                    member.getRegistration().getRegistrationId(),
-                    member.getTier(),
-                    shorten(member.getName(), 18),
-                    formatRoomType(member.getRegistration().getRequestedRoomType()),
-                    member.getRegistration().getNumberOfGuests(),
+                    member.getRegistrationId(),
+                    getTier(member),
+                    shorten(member.getGuest().getName(), 18),
+                    formatRoomType(member.getRequestedRoomType()),
+                    member.getNumberOfGuests(),
                     waitingMinutes[i]);
         }
 
@@ -214,7 +221,7 @@ public class VipTierWaitingPerformanceRP {
     }
 
     private boolean matchesFilters(
-            Member member,
+            WalkInRegistration member,
             long waitingMinutes,
             String keyword,
             LoyaltyTier tierFilter,
@@ -223,11 +230,11 @@ public class VipTierWaitingPerformanceRP {
             int minimumGuests) {
 
         boolean matchesKeyword = matchesKeyword(member, keyword);
-        boolean matchesTier = tierFilter == null || member.getTier() == tierFilter;
+        boolean matchesTier = tierFilter == null || getTier(member) == tierFilter;
         boolean matchesRoomType = roomTypeFilter == null
-                || member.getRegistration().getRequestedRoomType().equalsIgnoreCase(roomTypeFilter);
+                || member.getRequestedRoomType().equalsIgnoreCase(roomTypeFilter);
         boolean matchesWaitingTime = waitingMinutes >= minimumWaitingMinutes;
-        boolean matchesGuestCount = member.getRegistration().getNumberOfGuests() >= minimumGuests;
+        boolean matchesGuestCount = member.getNumberOfGuests() >= minimumGuests;
 
         return matchesKeyword
                 && matchesTier
@@ -236,16 +243,16 @@ public class VipTierWaitingPerformanceRP {
                 && matchesGuestCount;
     }
 
-    private boolean matchesKeyword(Member member, String keyword) {
+    private boolean matchesKeyword(WalkInRegistration member, String keyword) {
         if (keyword == null || keyword.isBlank()) {
             return true;
         }
 
         String value = keyword.trim().toLowerCase();
 
-        return member.getRegistration().getRegistrationId().toLowerCase().contains(value)
+        return member.getRegistrationId().toLowerCase().contains(value)
                 || member.getGuest().getGuestId().toLowerCase().contains(value)
-                || member.getName().toLowerCase().contains(value);
+                || member.getGuest().getName().toLowerCase().contains(value);
     }
 
     /**
@@ -253,7 +260,7 @@ public class VipTierWaitingPerformanceRP {
      * placed first; ties are broken by higher loyalty priority and then by
      * earlier registration time.
      */
-    private void sortByWaitingTimeAndPriority(Member[] members, long[] waitingMinutes) {
+    private void sortByWaitingTimeAndPriority(WalkInRegistration[] members, long[] waitingMinutes) {
         for (int i = 0; i < members.length - 1; i++) {
             int bestIndex = i;
 
@@ -263,36 +270,36 @@ public class VipTierWaitingPerformanceRP {
                 }
             }
 
-            swapMembers(members, i, bestIndex);
+            swapRegistrations(members, i, bestIndex);
             swapLongs(waitingMinutes, i, bestIndex);
         }
     }
 
-    private boolean comesBefore(Member first, long firstWait, Member second, long secondWait) {
+    private boolean comesBefore(WalkInRegistration first, long firstWait, WalkInRegistration second, long secondWait) {
         if (firstWait != secondWait) {
             return firstWait > secondWait;
         }
 
-        int firstPriority = first.getTier().getPriority();
-        int secondPriority = second.getTier().getPriority();
+        int firstPriority = getTier(first).getPriority();
+        int secondPriority = getTier(second).getPriority();
 
         if (firstPriority != secondPriority) {
             return firstPriority > secondPriority;
         }
 
-        int timeComparison = first.getRegistration().getRegistrationTime()
-                .compareTo(second.getRegistration().getRegistrationTime());
+        int timeComparison = first.getRegistrationTime()
+                .compareTo(second.getRegistrationTime());
 
         if (timeComparison != 0) {
             return timeComparison < 0;
         }
 
-        return first.getRegistration().getRegistrationId()
-                .compareToIgnoreCase(second.getRegistration().getRegistrationId()) < 0;
+        return first.getRegistrationId()
+                .compareToIgnoreCase(second.getRegistrationId()) < 0;
     }
 
-    private long calculateWaitingMinutes(Member member) {
-        LocalDateTime registrationTime = member.getRegistration().getRegistrationTime();
+    private long calculateWaitingMinutes(WalkInRegistration member) {
+        LocalDateTime registrationTime = member.getRegistrationTime();
 
         if (registrationTime == null) {
             return 0;
@@ -353,7 +360,7 @@ public class VipTierWaitingPerformanceRP {
         return best;
     }
 
-    private String buildManagementInsight(Member[] members, long[] waitingMinutes, LoyaltyTier highestAverageWaitTier) {
+    private String buildManagementInsight(WalkInRegistration[] members, long[] waitingMinutes, LoyaltyTier highestAverageWaitTier) {
         if (members.length == 1) {
             return "Only one VIP matches the selected filters; continue monitoring the waiting time before drawing a broader trend.";
         }
@@ -365,6 +372,25 @@ public class VipTierWaitingPerformanceRP {
         return displayTier(highestAverageWaitTier)
                 + " currently has the highest average waiting time; the filtered waiting-time spread is "
                 + spread + " minute(s).";
+    }
+
+    private LoyaltyTier getTier(WalkInRegistration registration) {
+        if (registration == null || registration.getGuest() == null
+                || registration.getGuest().getGuestId() == null) {
+            return null;
+        }
+
+        String guestId = registration.getGuest().getGuestId();
+
+        for (LoyaltyProfile profile : loyaltyProfiles) {
+            if (profile != null
+                    && profile.getGuestId() != null
+                    && profile.getGuestId().equalsIgnoreCase(guestId)) {
+                return profile.getTier();
+            }
+        }
+
+        return null;
     }
 
     private String displayTier(LoyaltyTier tier) {
@@ -395,8 +421,8 @@ public class VipTierWaitingPerformanceRP {
         return value.substring(0, maximumLength - 3) + "...";
     }
 
-    private void swapMembers(Member[] values, int first, int second) {
-        Member temporary = values[first];
+    private void swapRegistrations(WalkInRegistration[] values, int first, int second) {
+        WalkInRegistration temporary = values[first];
         values[first] = values[second];
         values[second] = temporary;
     }

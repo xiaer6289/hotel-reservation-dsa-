@@ -12,8 +12,8 @@ import java.io.ObjectOutputStream;
 /**
  * Persists hotel loyalty membership profiles.
  *
- * LoyaltyProfile is long-lived master data. MemberDao remains separate and is
- * only for VIP guests currently waiting inside the MaxHeap.
+ * LoyaltyProfile is long-lived master data used to determine whether a guest
+ * qualifies for VIP priority and which loyalty tier applies.
  *
  * @author Low Enn Toong
  */

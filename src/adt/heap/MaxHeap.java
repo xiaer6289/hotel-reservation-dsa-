@@ -1,5 +1,7 @@
 package adt.heap;
 
+import java.util.Comparator;
+
 /**
  * Array-based MaxHeap ADT implementation.
  *
@@ -7,18 +9,27 @@ package adt.heap;
  * Parent and child positions are calculated by index:
  * parent = index / 2, left = index * 2, right = index * 2 + 1.
  *
+ * A Comparator can be supplied when the stored entity should not implement
+ * Comparable itself. This keeps VIP-priority rules inside the VIP module
+ * instead of placing that business rule in WalkInRegistration.
+ *
  * @author Low Enn Toong
  */
-
-public class MaxHeap<T extends Comparable<T>> implements PriorityQueueADT<T> {
+public class MaxHeap<T> implements PriorityQueueADT<T> {
     private T[] heap;
     private int size;
+    private final Comparator<? super T> comparator;
     private static final int DEFAULT_CAPACITY = 20;
 
-    @SuppressWarnings("unchecked")
     public MaxHeap() {
-        heap = (T[]) new Comparable[DEFAULT_CAPACITY + 1];
+        this(null);
+    }
+
+    @SuppressWarnings("unchecked")
+    public MaxHeap(Comparator<? super T> comparator) {
+        heap = (T[]) new Object[DEFAULT_CAPACITY + 1];
         size = 0;
+        this.comparator = comparator;
     }
 
     @Override
@@ -57,7 +68,9 @@ public class MaxHeap<T extends Comparable<T>> implements PriorityQueueADT<T> {
 
     @Override
     public T peek() {
-        if (isEmpty()) return null;
+        if (isEmpty()) {
+            return null;
+        }
         return heap[1];
     }
 
@@ -83,8 +96,8 @@ public class MaxHeap<T extends Comparable<T>> implements PriorityQueueADT<T> {
     @Override
     @SuppressWarnings("unchecked")
     public PriorityQueueADT<T> copy() {
-        MaxHeap<T> copiedHeap = new MaxHeap<>();
-        copiedHeap.heap = (T[]) new Comparable[this.heap.length];
+        MaxHeap<T> copiedHeap = new MaxHeap<>(comparator);
+        copiedHeap.heap = (T[]) new Object[this.heap.length];
         System.arraycopy(this.heap, 1, copiedHeap.heap, 1, this.size);
         copiedHeap.size = this.size;
         return copiedHeap;
@@ -95,7 +108,7 @@ public class MaxHeap<T extends Comparable<T>> implements PriorityQueueADT<T> {
         while (index > 1) {
             int parent = index / 2;
 
-            if (heap[index].compareTo(heap[parent]) > 0) {
+            if (compare(heap[index], heap[parent]) > 0) {
                 swap(index, parent);
                 index = parent;
             } else {
@@ -110,17 +123,31 @@ public class MaxHeap<T extends Comparable<T>> implements PriorityQueueADT<T> {
             int right = left + 1;
             int largerChild = left;
 
-            if (right <= size && heap[right].compareTo(heap[left]) > 0) {
+            if (right <= size && compare(heap[right], heap[left]) > 0) {
                 largerChild = right;
             }
-            
-            if (heap[largerChild].compareTo(heap[index]) > 0) {
+
+            if (compare(heap[largerChild], heap[index]) > 0) {
                 swap(index, largerChild);
                 index = largerChild;
             } else {
                 break;
             }
         }
+    }
+
+    @SuppressWarnings("unchecked")
+    private int compare(T first, T second) {
+        if (comparator != null) {
+            return comparator.compare(first, second);
+        }
+
+        if (first instanceof Comparable) {
+            return ((Comparable<? super T>) first).compareTo(second);
+        }
+
+        throw new IllegalStateException(
+                "A Comparator is required when heap entries do not implement Comparable.");
     }
 
     private void swap(int i, int j) {
@@ -131,7 +158,7 @@ public class MaxHeap<T extends Comparable<T>> implements PriorityQueueADT<T> {
 
     @SuppressWarnings("unchecked")
     private void expandCapacity() {
-        T[] newHeap = (T[]) new Comparable[heap.length * 2];
+        T[] newHeap = (T[]) new Object[heap.length * 2];
         System.arraycopy(heap, 1, newHeap, 1, size);
         heap = newHeap;
     }
