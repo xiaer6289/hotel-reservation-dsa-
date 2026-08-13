@@ -282,6 +282,119 @@ public class VipPriorityController {
     }
 
     /**
+     * Counts rooms that an incoming VIP can currently access after protecting
+     * one suitable room for every waiting VIP who has higher priority, or the
+     * same tier but arrived earlier. Lower-tier waiting VIPs do not reduce the
+     * incoming VIP's count because the MaxHeap will place the higher-tier guest
+     * ahead of them for allocation.
+     */
+    public int getReadyRoomCountForIncomingVip(
+            String roomType,
+            int numberOfGuests,
+            LoyaltyTier incomingTier) {
+
+        if (roomType == null || roomType.isBlank()
+                || numberOfGuests <= 0 || incomingTier == null) {
+            return 0;
+        }
+
+        Room[] currentRooms = roomDao.loadOrSeed();
+        boolean[] reservedForHigherOrEarlierVip
+                = new boolean[currentRooms.length];
+
+        PriorityQueueADT<WalkInRegistration> copiedQueue
+                = PRIORITY_QUEUE.copy();
+
+        while (!copiedQueue.isEmpty()) {
+            WalkInRegistration waitingRegistration = copiedQueue.dequeue();
+            LoyaltyTier waitingTier = getLoyaltyTier(waitingRegistration);
+
+            if (waitingTier == null
+                    || waitingTier.getPriority() < incomingTier.getPriority()) {
+                continue;
+            }
+
+            /*
+             * Any already-waiting VIP of the same tier arrived before the new
+             * registration, so that guest also remains ahead in the MaxHeap.
+             * One waiting VIP protects only one suitable ready room.
+             */
+            for (int i = 0; i < currentRooms.length; i++) {
+                if (!reservedForHigherOrEarlierVip[i]
+                        && isRoomSuitableForRegistration(
+                                currentRooms[i],
+                                waitingRegistration)) {
+
+                    reservedForHigherOrEarlierVip[i] = true;
+                    break;
+                }
+            }
+        }
+
+        int availableCount = 0;
+
+        for (int i = 0; i < currentRooms.length; i++) {
+            Room room = currentRooms[i];
+
+            if (!reservedForHigherOrEarlierVip[i]
+                    && room != null
+                    && room.isAssignable()
+                    && room.getRoomType() != null
+                    && room.getRoomType().equalsIgnoreCase(roomType.trim())
+                    && room.getNoOfGuest() >= numberOfGuests) {
+
+                availableCount++;
+            }
+        }
+
+        return availableCount;
+    }
+
+    public boolean isRoomReservedForWaitingVip(Room targetRoom) {
+        if (targetRoom == null || !targetRoom.isAssignable()) {
+            return false;
+        }
+
+        Room[] currentRooms = roomDao.loadOrSeed();
+        boolean[] reserved = new boolean[currentRooms.length];
+
+        PriorityQueueADT<WalkInRegistration> copiedQueue
+                = PRIORITY_QUEUE.copy();
+
+        while (!copiedQueue.isEmpty()) {
+
+            WalkInRegistration registration
+                    = copiedQueue.dequeue();
+
+            for (int i = 0; i < currentRooms.length; i++) {
+
+                if (!reserved[i]
+                        && isRoomSuitableForRegistration(
+                                currentRooms[i],
+                                registration)) {
+
+                    // One VIP registration only protects one room
+                    reserved[i] = true;
+                    break;
+                }
+            }
+        }
+
+        for (int i = 0; i < currentRooms.length; i++) {
+
+            if (reserved[i]
+                    && currentRooms[i].getRoomNumber()
+                            .equalsIgnoreCase(
+                                    targetRoom.getRoomNumber())) {
+
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
      * Finds the highest-priority VIP who can currently be assigned a room.
      * A higher-priority VIP who needs a different unavailable room remains in
      * the heap and does not prevent another VIP from using a suitable room.

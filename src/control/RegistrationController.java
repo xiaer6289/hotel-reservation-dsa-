@@ -9,6 +9,7 @@ import dao.WalkInRegistrationDao;
 import entity.Booking;
 import entity.Guest;
 import entity.LoyaltyProfile;
+import entity.LoyaltyTier;
 import entity.RegistrationStatus;
 import entity.Room;
 import entity.RoomStatus;
@@ -371,6 +372,21 @@ public class RegistrationController {
     }
 
     /**
+     * Counts rooms currently available to an incoming VIP after respecting
+     * higher-tier and earlier same-tier VIPs already waiting in the MaxHeap.
+     */
+    public int getReadyRoomCountForVipRequest(
+            String roomType,
+            int numberOfGuests,
+            LoyaltyTier incomingTier) {
+
+        return vipPriorityController.getReadyRoomCountForIncomingVip(
+                roomType,
+                numberOfGuests,
+                incomingTier);
+    }
+
+    /**
      * Counts rooms a Standard guest could currently use after respecting the
      * assignment rule that waiting VIPs receive first access to suitable rooms.
      */
@@ -382,9 +398,13 @@ public class RegistrationController {
         int count = 0;
 
         for (Room room : rooms) {
-            if (isSuitableRoomForRequest(room, roomType, numberOfGuests)
+            if (isSuitableRoomForRequest(
+                    room,
+                    roomType,
+                    numberOfGuests)
                     && !vipPriorityController
-                            .hasWaitingVipEligibleForRoom(room)) {
+                            .isRoomReservedForWaitingVip(room)) {
+
                 count++;
             }
         }
@@ -434,7 +454,8 @@ public class RegistrationController {
         for (Room room : rooms) {
             if (isSuitableRoom(room, registration)
                     && !vipPriorityController
-                            .hasWaitingVipEligibleForRoom(room)) {
+                            .isRoomReservedForWaitingVip(room)) {
+
                 suitableCount++;
             }
         }
@@ -445,7 +466,8 @@ public class RegistrationController {
         for (Room room : rooms) {
             if (isSuitableRoom(room, registration)
                     && !vipPriorityController
-                            .hasWaitingVipEligibleForRoom(room)) {
+                            .isRoomReservedForWaitingVip(room)) {
+
                 suitableRooms[index++] = room;
             }
         }
@@ -480,7 +502,7 @@ public class RegistrationController {
          * when a waiting VIP can actually use this selected vacant room.
          */
         if (vipPriorityController
-                .hasWaitingVipEligibleForRoom(selectedRoom)) {
+                .isRoomReservedForWaitingVip(selectedRoom)) {
             return null;
         }
 

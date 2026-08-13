@@ -199,7 +199,9 @@ public class RegistrationUI {
                 1,
                 maximumOccupancy);
 
-        String roomType = readRoomType(numberOfGuests);
+        String roomType = readRoomType(
+                numberOfGuests,
+                loyaltyProfile);
 
         if (roomType == null) {
             Utility.printError(
@@ -223,8 +225,10 @@ public class RegistrationUI {
         int readyRoomCount = loyaltyProfile == null
                 ? controller.getReadyRoomCountForStandardRequest(
                         roomType, numberOfGuests)
-                : controller.getReadyRoomCountForRequest(
-                        roomType, numberOfGuests);
+                : controller.getReadyRoomCountForVipRequest(
+                        roomType,
+                        numberOfGuests,
+                        loyaltyProfile.getTier());
 
         System.out.println("\n===== REGISTRATION SUMMARY =====");
         System.out.println("Guest Name        : "
@@ -940,7 +944,9 @@ public class RegistrationUI {
         return digits;
     }
 
-    private String readRoomType(int numberOfGuests) {
+    private String readRoomType(
+            int numberOfGuests,
+            LoyaltyProfile loyaltyProfile) {
         RoomType[] allTypes = RoomType.values();
         RoomType[] eligibleTypes = new RoomType[allTypes.length];
         int eligibleCount = 0;
@@ -973,8 +979,12 @@ public class RegistrationUI {
                         = controller.getMaximumCapacityForRoomType(
                                 roomType.name());
 
-                int readyNow
-                        = controller.getReadyRoomCountForStandardRequest(
+                int readyNow = loyaltyProfile != null
+                        ? controller.getReadyRoomCountForVipRequest(
+                                roomType.name(),
+                                numberOfGuests,
+                                loyaltyProfile.getTier())
+                        : controller.getReadyRoomCountForStandardRequest(
                                 roomType.name(),
                                 numberOfGuests);
 
