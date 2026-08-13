@@ -105,8 +105,8 @@ public class RegistrationUI {
         System.out.println(" WALK-IN REGISTRATION & STANDARD BOOKING");
         System.out.println("============================================");
         System.out.println("1. Register Walk-In Guest");
-        System.out.println("2. View Standard Waiting Queue (FIFO)");
-        System.out.println("3. View Next Standard Guest (FIFO Head)");
+        System.out.println("2. View Standard Waiting Queue");
+        System.out.println("3. View Next Standard Guest");
         System.out.println("4. Assign Ready Room & Check In Next Standard Guest");
         System.out.println("5. Search Walk-In Registration by ID");
         System.out.println("6. Cancel Waiting Standard Registration");
@@ -155,7 +155,7 @@ public class RegistrationUI {
             System.out.println("A new guest profile will be created after the walk-in details are confirmed.");
 
             newGuestName = readGuestName(
-                    "Enter Guest Full Name (e.g. Tan Wei Jie): ");
+                    "Enter Guest Full Name: ");
             phoneNumber = readPhoneNumber();
 
             Guest guestWithSamePhone = controller.searchGuestByPhoneNo(phoneNumber);
@@ -351,9 +351,7 @@ public class RegistrationUI {
     }
 
     private void viewWaitingQueue() {
-        System.out.println("\n===== STANDARD WAITING QUEUE (FIFO) =====");
-        System.out.println(
-                "FIFO rule: earlier Standard registrations stay ahead of later Standard registrations.");
+        System.out.println("\n===== STANDARD WAITING QUEUE  =====");
 
         int waitingCount = controller.getWaitingCount();
 
@@ -389,7 +387,7 @@ public class RegistrationUI {
     }
 
     private void viewNextRegistration() {
-        System.out.println("\n===== NEXT STANDARD GUEST (FIFO HEAD) =====");
+        System.out.println("\n===== NEXT STANDARD GUEST  =====");
 
         WalkInRegistration registration = controller.getNextRegistration();
 
@@ -403,8 +401,7 @@ public class RegistrationUI {
 
     private void checkInNextStandardGuest() {
         System.out.println("\n===== ASSIGN ROOM & CHECK IN NEXT STANDARD GUEST =====");
-        System.out.println(
-                "Only the FIFO head is processed; a later Standard guest cannot bypass it.");
+        
 
         WalkInRegistration registration = controller.getNextRegistration();
 
@@ -494,7 +491,7 @@ public class RegistrationUI {
 
     private void searchRegistration() {
         System.out.println("\n===== SEARCH WALK-IN REGISTRATION =====");
-        System.out.println("Hint: Registration ID format is R followed by 4 digits, e.g. R0001.");
+       
 
         String registrationId = readRegistrationId(
                 "Enter Registration ID (e.g. R0001): ");

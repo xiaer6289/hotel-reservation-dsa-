@@ -10,6 +10,7 @@ public enum RegistrationStatus {
     VIP_WAITING("VIP Waiting"),
     PROCESSED("Processed"),
     CHECKED_IN("Checked-In"),
+    CHECKED_OUT("Checked-Out"),
     CANCELLED("Cancelled");
 
     private final String displayName;

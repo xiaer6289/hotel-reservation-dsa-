@@ -266,11 +266,20 @@ public class RegistrationController {
             boolean sameGuest = registration.getGuest().getGuestId()
                     .equalsIgnoreCase(normalizedGuestId);
 
-            boolean stayReachedCheckout
-                    = registration.getStatus() == RegistrationStatus.CHECKED_IN
-                    && !registration.getCheckOutDateTime().isAfter(now);
+            boolean checkedOut
+                    = registration.getStatus()
+                            == RegistrationStatus.CHECKED_OUT;
 
-            if (sameGuest && stayReachedCheckout) {
+            boolean oldCompletedStay
+                    = registration.getStatus()
+                            == RegistrationStatus.CHECKED_IN
+                    && !registration.getCheckOutDateTime()
+                            .isAfter(now);
+
+            boolean stayCompleted
+                    = checkedOut || oldCompletedStay;
+
+            if (sameGuest && stayCompleted) {
                 historicalCount++;
             }
         }
@@ -624,6 +633,52 @@ public class RegistrationController {
      */
     @Deprecated
     public WalkInRegistration processNextRegistration() {
+        return null;
+    }
+
+    public WalkInRegistration markGuestCheckedOut(String guestId) {
+
+        if (guestId == null || guestId.isBlank()) {
+            return null;
+        }
+
+        String normalizedGuestId = guestId.trim();
+
+        // Search from newest record backwards.
+        for (int i = registrationRecords.size() - 1; i >= 0; i--) {
+
+            WalkInRegistration registration
+                    = registrationRecords.get(i);
+
+            if (registration == null
+                    || registration.getGuest() == null) {
+                continue;
+            }
+
+            boolean sameGuest
+                    = registration.getGuest()
+                            .getGuestId()
+                            .equalsIgnoreCase(normalizedGuestId);
+
+            boolean currentlyCheckedIn
+                    = registration.getStatus()
+                            == RegistrationStatus.CHECKED_IN;
+
+            if (sameGuest && currentlyCheckedIn) {
+
+                registration.setStatus(
+                        RegistrationStatus.CHECKED_OUT);
+
+                registrationDao.upsert(registration);
+
+                // Refresh loyalty progress after a completed stay.
+                refreshLoyaltyProfileByGuestId(
+                        normalizedGuestId);
+
+                return registration;
+            }
+        }
+
         return null;
     }
 

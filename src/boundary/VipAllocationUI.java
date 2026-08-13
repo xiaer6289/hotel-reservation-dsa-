@@ -4,6 +4,8 @@ import control.VipPriorityController;
 import control.report.VipPriorityQueueRP;
 import control.report.VipRoomReadinessRP;
 import entity.Booking;
+import entity.Guest;
+import entity.LoyaltyProfile;
 import entity.LoyaltyTier;
 import entity.Member;
 import entity.Room;
@@ -52,34 +54,37 @@ public class VipAllocationUI {
         do {
             Utility.clearScreen();
             displayMenu();
-            choice = readMenuChoice("Enter choice (0-9): ", 0, 9);
+            choice = readMenuChoice("Enter choice (0-10): ", 0, 10);
 
             switch (choice) {
                 case 1:
-                    displayNextHighestPriorityVip();
+                    displayAllVipGuests();
                     break;
                 case 2:
-                    displayPriorityQueue();
+                    displayNextHighestPriorityVip();
                     break;
                 case 3:
-                    searchVipRegistration();
+                    displayPriorityQueue();
                     break;
                 case 4:
-                    updateVipRoomRequest();
+                    searchVipRegistration();
                     break;
                 case 5:
-                    cancelVipRegistration();
+                    updateVipRoomRequest();
                     break;
                 case 6:
-                    displayReadyRooms();
+                    cancelVipRegistration();
                     break;
                 case 7:
-                    allocateRoom();
+                    displayReadyRooms();
                     break;
                 case 8:
-                    generatePriorityQueueReport();
+                    allocateRoom();
                     break;
                 case 9:
+                    generatePriorityQueueReport();
+                    break;
+                case 10:
                     generateRoomReadinessReport();
                     break;
                 case 0:
@@ -100,27 +105,72 @@ public class VipAllocationUI {
         System.out.println("==============================================");
         System.out.println(" VIP & LOYALTY TIER PRIORITY ROOM ALLOCATION");
         System.out.println("==============================================");
-        System.out.println("PRIORITY OPERATIONS");
-        System.out.println("1. View Next Highest-Priority VIP");
-        System.out.println("2. View VIP Priority Heap");
+        System.out.println("VIP INFORMATION");
+        System.out.println("1. View All VIP Guests");
+        System.out.println("2. View Next VIP in Priority");
+        System.out.println("3. View VIP Waiting List");
         System.out.println();
-        System.out.println("VIP WAITING REQUEST MAINTENANCE");
-        System.out.println("3. Search VIP Registration");
-        System.out.println("4. Update VIP Room Request");
-        System.out.println("5. Cancel VIP Waiting Registration");
+        System.out.println("VIP WAITING REGISTRATION");
+        System.out.println("4. Find VIP Waiting Registration");
+        System.out.println("5. Update VIP Room Request");
+        System.out.println("6. Cancel VIP Waiting Registration");
         System.out.println();
-        System.out.println("ROOM ALLOCATION");
-        System.out.println("6. View Available / Ready Rooms");
-        System.out.println("7. Allocate Room to Highest-Priority Eligible VIP");
+        System.out.println("ROOM ASSIGNMENT");
+        System.out.println("7. View Ready Rooms");
+        System.out.println("8. Assign Room & Check In VIP");
         System.out.println();
         System.out.println("REPORTS");
-        System.out.println("8. VIP Priority Queue Analysis Report");
-        System.out.println("9. VIP Room Allocation Readiness Report");
+        System.out.println("9. VIP Waiting List Report");
+        System.out.println("10. VIP Room Readiness Report");
         System.out.println("0. Return to Main Menu");
     }
 
+    private void displayAllVipGuests() {
+        System.out.println("\n===== ALL VIP GUESTS =====");
+        System.out.println("VIP guests are guests who currently hold an ELITE, PLATINUM or DIAMOND loyalty tier.");
+
+        LoyaltyProfile[] profiles = controller.getAllVipProfiles();
+
+        if (profiles.length == 0) {
+            Utility.printError("No VIP guests were found.");
+            return;
+        }
+
+        System.out.printf(
+                "%-4s %-10s %-20s %-15s %-16s %-10s%n",
+                "No.", "Guest ID", "Guest Name", "Phone", "Completed Stays", "Tier");
+        System.out.println("----------------------------------------------------------------------------------");
+
+        int displayed = 0;
+        for (LoyaltyProfile profile : profiles) {
+            Guest guest = controller.findGuestById(profile.getGuestId());
+
+            if (guest == null) {
+                continue;
+            }
+
+            displayed++;
+            System.out.printf(
+                    "%-4d %-10s %-20s %-15s %-16d %-10s%n",
+                    displayed,
+                    guest.getGuestId(),
+                    shorten(guest.getName(), 20),
+                    guest.getPhoneNo(),
+                    profile.getCompletedStays(),
+                    profile.getTier());
+        }
+
+        if (displayed == 0) {
+            Utility.printError("VIP loyalty profiles exist, but no matching guest records were found.");
+            return;
+        }
+
+        System.out.println("\nTotal VIP Guests: " + displayed);
+        System.out.println("Note: This list shows all VIP guests, not only VIPs currently waiting for a room.");
+    }
+
     private void displayNextHighestPriorityVip() {
-        System.out.println("\n===== NEXT HIGHEST-PRIORITY VIP =====");
+        System.out.println("\n===== NEXT VIP IN PRIORITY =====");
 
         Member member = controller.peekNextVip();
 
@@ -144,11 +194,11 @@ public class VipAllocationUI {
         Member[] members = controller.getMembersByPriority();
 
         if (members.length == 0) {
-            Utility.printError("VIP priority heap is empty.");
+            Utility.printError("No VIP guests are currently waiting for a room.");
             return;
         }
 
-        System.out.println("\n=== VIP HEAP: HIGHEST PRIORITY FIRST ===");
+        System.out.println("\n=== VIP WAITING LIST: HIGHEST PRIORITY FIRST ===");
         System.out.printf(
                 "%-4s %-7s %-10s %-18s %-10s %-17s %-6s%n",
                 "No.", "Reg ID", "Guest ID", "Guest Name", "Tier", "Requested Room", "Party");
@@ -169,14 +219,13 @@ public class VipAllocationUI {
         }
 
         System.out.println(
-                "\nHeap Root / Next Priority: " + members[0].getRegistration().getRegistrationId()
+                "\nNext VIP in Priority: " + members[0].getRegistration().getRegistrationId()
                 + " / " + members[0].getGuest().getGuestId() + " (" + members[0].getTier() + ")");
-        System.out
-                .println("Display note: priority order is read from a copied MaxHeap; the original heap is unchanged.");
+        System.out.println("Priority order: DIAMOND first, followed by PLATINUM, then ELITE.");
     }
 
     private void searchVipRegistration() {
-        System.out.println("\n===== SEARCH VIP REGISTRATION =====");
+        System.out.println("\n===== FIND VIP WAITING REGISTRATION =====");
         System.out.println("Hint: VIP registration IDs use the format R followed by 4 digits, e.g. R0001.");
         System.out.println("Enter 0 to return without searching.");
 
@@ -316,7 +365,7 @@ public class VipAllocationUI {
         boolean confirm = readYesNo("Confirm cancellation? (Y/N, e.g. N): ");
 
         if (!confirm) {
-            System.out.println("Cancellation aborted. The VIP remains in the priority heap.");
+            System.out.println("Cancellation aborted. The VIP remains in the waiting list.");
             return;
         }
 
@@ -342,7 +391,7 @@ public class VipAllocationUI {
             return;
         }
 
-        System.out.println("\n=== AVAILABLE / READY ROOMS ===");
+        System.out.println("\n=== READY ROOMS ===");
         System.out.printf(
                 "%-8s %-18s %-8s %-10s %-12s%n",
                 "Room", "Type", "Floor", "Capacity", "Status");
@@ -360,7 +409,7 @@ public class VipAllocationUI {
     }
 
     private void allocateRoom() {
-        System.out.println("\n===== VIP PRIORITY ROOM ALLOCATION =====");
+        System.out.println("\n===== ASSIGN ROOM TO NEXT SUITABLE VIP =====");
 
         if (!controller.hasWaitingVip()) {
             Utility.printError("No VIP registrations are waiting.");
@@ -373,7 +422,7 @@ public class VipAllocationUI {
         if (nextMember == null) {
             Utility.printError(
                     "VIP registrations are waiting, but none currently has a clean/ready room matching the requested room type and capacity.");
-            System.out.println("All VIPs remain in the MaxHeap with their original priority.");
+            System.out.println("All VIPs remain in the waiting list with their original priority.");
             return;
         }
 
@@ -383,10 +432,10 @@ public class VipAllocationUI {
                     + " (Guest " + heapRoot.getGuest().getGuestId() + ")"
                     + " cannot currently be matched to a suitable ready room.");
             System.out.println(
-                    "The system therefore selects the highest-priority VIP who CAN use an available suitable room.");
+                    "The system will serve the next highest-priority VIP who can use a ready room.");
         }
 
-        System.out.println("\nVIP Selected by Priority Logic:");
+        System.out.println("\nVIP Selected for Room Assignment:");
         displayMemberDetails(nextMember);
 
         Room suggestedRoom = controller.findReadyRoomForMember(nextMember);
@@ -394,17 +443,17 @@ public class VipAllocationUI {
             System.out.println("Suggested Ready Room: " + suggestedRoom.getRoomNumber());
         }
 
-        boolean confirm = readYesNo("Proceed with this automatic priority allocation? (Y/N, e.g. Y): ");
+        boolean confirm = readYesNo("Proceed with this room assignment? (Y/N, e.g. Y): ");
 
         if (!confirm) {
-            System.out.println("Allocation cancelled. No VIP was removed from the heap.");
+            System.out.println("Room assignment cancelled. The VIP remains in the waiting list.");
             return;
         }
 
         Booking booking = controller.allocateNextVipBooking();
 
         if (booking == null) {
-            Utility.printError("Unable to complete VIP allocation. Waiting VIPs remain in the heap.");
+            Utility.printError("Unable to complete room assignment. Waiting VIPs remain in the waiting list.");
             return;
         }
 
@@ -434,7 +483,7 @@ public class VipAllocationUI {
             return;
         }
 
-        System.out.println("\n=== VIP PRIORITY QUEUE REPORT FILTERS ===");
+        System.out.println("\n=== VIP WAITING LIST REPORT FILTERS ===");
         String keyword = readOptionalString("Search keyword (e.g. R0001, G0001 or guest name; Enter for ALL): ");
         LoyaltyTier tierFilter = readTierFilter();
         String roomTypeFilter = readRoomTypeFilter();
