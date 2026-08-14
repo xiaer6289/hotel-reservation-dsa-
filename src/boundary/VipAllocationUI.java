@@ -10,8 +10,8 @@ import entity.LoyaltyTier;
 import entity.Room;
 import entity.RoomType;
 import entity.WalkInRegistration;
-import java.time.DateTimeException;
 import java.time.LocalDateTime;
+import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
 import java.util.Scanner;
 import utility.Utility;
@@ -21,7 +21,7 @@ import utility.Utility;
  *
  * VIP creation is automatic through Walk-In Registration when a guest meets
  * the loyalty requirement. This menu focuses on MaxHeap priority viewing,
- * VIP waiting-request maintenance, room readiness and priority allocation.
+ * VIP waiting-request maintenance, current VIP occupancy and priority allocation.
  *
  * @author Low Enn Toong
  */
@@ -75,7 +75,7 @@ public class VipAllocationUI {
                     cancelVipRegistration();
                     break;
                 case 7:
-                    displayReadyRooms();
+                    displayCurrentVipRooms();
                     break;
                 case 8:
                     allocateRoom();
@@ -115,7 +115,7 @@ public class VipAllocationUI {
         System.out.println("6. Cancel VIP Waiting Registration");
         System.out.println();
         System.out.println("ROOM ASSIGNMENT");
-        System.out.println("7. View Ready Rooms");
+        System.out.println("7. View Current VIP Rooms");
         System.out.println("8. Assign Room & Check In VIP");
         System.out.println();
         System.out.println("REPORTS");
@@ -381,29 +381,44 @@ public class VipAllocationUI {
         System.out.println("VIPs Still Waiting: " + controller.getWaitingCount());
     }
 
-    private void displayReadyRooms() {
-        Room[] readyRooms = controller.getVacantRooms();
+    private void displayCurrentVipRooms() {
+        Booking[] currentVipBookings = controller.getCurrentVipRoomBookings();
 
-        if (readyRooms.length == 0) {
-            Utility.printError("No clean/ready rooms are currently available for assignment.");
+        if (currentVipBookings.length == 0) {
+            Utility.printError("No VIP guests are currently checked in.");
             return;
         }
 
-        System.out.println("\n=== READY ROOMS ===");
+        System.out.println("\n===== CURRENT VIP ROOMS =====");
+        System.out.println("Shows VIP guests who are currently checked in and occupying a room.");
         System.out.printf(
-                "%-8s %-18s %-8s %-10s %-12s%n",
-                "Room", "Type", "Floor", "Capacity", "Status");
-        System.out.println("--------------------------------------------------------------");
+                "%-4s %-10s %-18s %-10s %-8s %-18s %-17s %-17s%n",
+                "No.", "Guest ID", "Guest Name", "Tier", "Room",
+                "Room Type", "Check-In", "Expected Check-Out");
+        System.out.println("----------------------------------------------------------------------------------------------------------------");
 
-        for (Room room : readyRooms) {
+        for (int i = 0; i < currentVipBookings.length; i++) {
+            Booking booking = currentVipBookings[i];
+            Guest guest = booking.getGuest();
+            Room room = controller.getCurrentRoomForBooking(booking);
+            LoyaltyProfile profile = controller.searchLoyaltyProfileByGuestId(
+                    guest.getGuestId());
+
             System.out.printf(
-                    "%-8s %-18s %-8s %-10d %-12s%n",
-                    room.getRoomNumber(),
-                    formatRoomType(room.getRoomType()),
-                    room.getFloor(),
-                    room.getNoOfGuest(),
-                    room.getStatusLabel());
+                    "%-4d %-10s %-18s %-10s %-8s %-18s %-17s %-17s%n",
+                    i + 1,
+                    guest.getGuestId(),
+                    shorten(guest.getName(), 18),
+                    profile == null ? "-" : profile.getTier(),
+                    room == null ? "-" : room.getRoomNumber(),
+                    room == null ? "-" : formatRoomType(room.getRoomType()),
+                    room == null ? "-" : formatDateTime(room.getCheckInDateTime()),
+                    room == null ? "-" : formatDateTime(room.getCheckOutDateTime()));
         }
+
+        System.out.println("\nCurrent VIP Rooms Occupied: "
+                + currentVipBookings.length);
+        System.out.println("Note: Ready-room supply is still checked automatically during VIP assignment and in the demand report.");
     }
 
     private void allocateRoom() {
@@ -673,21 +688,59 @@ public class VipAllocationUI {
     }
 
     private LocalDateTime readDateTimeParts(String label) {
+        System.out.println("\nEnter " + label + " Date and Time");
+        System.out.println("Hint example: 2026-08-15 12:00");
+
+        int currentYear = LocalDateTime.now().getYear();
+        int year = readIntegerInRange(
+                "Enter Year (yyyy, e.g. 2026): ",
+                currentYear,
+                9999,
+                "Year must be between " + currentYear + " and 9999.");
+
+        int month = readIntegerInRange(
+                "Enter Month (1-12, e.g. 8): ",
+                1,
+                12,
+                "Month must be between 1 and 12.");
+
+        int maximumDay = YearMonth.of(year, month).lengthOfMonth();
+        int day = readIntegerInRange(
+                "Enter Day (1-" + maximumDay + ", e.g. 15): ",
+                1,
+                maximumDay,
+                "Day must be between 1 and " + maximumDay
+                + " for " + year + "-" + String.format("%02d", month) + ".");
+
+        int hour = readIntegerInRange(
+                "Enter Hour (0-23, e.g. 12): ",
+                0,
+                23,
+                "Hour must be between 0 and 23.");
+
+        int minute = readIntegerInRange(
+                "Enter Minute (0-59, e.g. 0): ",
+                0,
+                59,
+                "Minute must be between 0 and 59.");
+
+        return LocalDateTime.of(year, month, day, hour, minute);
+    }
+
+    private int readIntegerInRange(
+            String message,
+            int minimum,
+            int maximum,
+            String errorMessage) {
+
         while (true) {
-            System.out.println("\nEnter " + label + " Date and Time");
-            System.out.println("Hint example: 2026-08-15 12:00");
+            int value = readInteger(message);
 
-            int year = readInteger("Enter Year (yyyy, e.g. 2026): ");
-            int month = readInteger("Enter Month (1-12, e.g. 8): ");
-            int day = readInteger("Enter Day (1-31, e.g. 15): ");
-            int hour = readInteger("Enter Hour (0-23, e.g. 12): ");
-            int minute = readInteger("Enter Minute (0-59, e.g. 0): ");
-
-            try {
-                return LocalDateTime.of(year, month, day, hour, minute);
-            } catch (DateTimeException exception) {
-                Utility.printError("Invalid date/time combination. Please enter a real calendar date and valid time.");
+            if (value >= minimum && value <= maximum) {
+                return value;
             }
+
+            Utility.printError(errorMessage);
         }
     }
 

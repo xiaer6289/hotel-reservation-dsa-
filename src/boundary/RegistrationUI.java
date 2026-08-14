@@ -784,19 +784,24 @@ public class RegistrationUI {
         System.out.println("Registration ID : " + registration.getRegistrationId());
         System.out.println("Guest ID        : " + registration.getGuest().getGuestId());
         System.out.println("Guest Name      : " + registration.getGuest().getName());
-        System.out.println("Phone Number    : "
-                + formatPhoneNo(registration.getGuest().getPhoneNo()));
-        System.out.println("Requested Room  : "
-                + formatRoomType(registration.getRequestedRoomType()));
+        System.out.println("Phone Number    : " + formatPhoneNo(registration.getGuest().getPhoneNo()));
+        System.out.println("Requested Room  : " + formatRoomType(registration.getRequestedRoomType()));
+
+        Booking booking = controller.getBookingForRegistration(registration);
+
+        String assignedRoom = "Not assigned yet";
+
+        if (booking != null && booking.getRoom() != null) {
+
+                assignedRoom = booking.getRoom().getRoomNumber();
+        }
+
+        System.out.println("Assigned Room   : "
+                + assignedRoom);
         System.out.println("Number of Guests: " + registration.getNumberOfGuests());
-        System.out.println("Registration Time: "
-                + formatDateTime(registration.getRegistrationTime()));
-        System.out.println("Actual Check-In : "
-                + (registration.getCheckInDateTime() == null
-                        ? "Pending room assignment"
-                        : formatDateTime(registration.getCheckInDateTime())));
-        System.out.println("Expected Check-Out: "
-                + formatDateTime(registration.getCheckOutDateTime()));
+        System.out.println("Registration Time: "+ formatDateTime(registration.getRegistrationTime()));
+        System.out.println("Actual Check-In : " + (registration.getCheckInDateTime() == null ? "Pending room assignment" : formatDateTime(registration.getCheckInDateTime())));
+        System.out.println("Expected Check-Out: "+ formatDateTime(registration.getCheckOutDateTime()));
         System.out.println("Status           : " + registration.getStatus());
     }
 

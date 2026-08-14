@@ -35,6 +35,14 @@ public class VipPriorityController {
     public static final int REGISTRATION_ALREADY_QUEUED = -3;
     public static final int GUEST_ALREADY_QUEUED = -4;
     private static final LoyaltyProfileDao PRIORITY_LOYALTY_DAO = new LoyaltyProfileDao();
+    /*
+     * Heap comparisons happen many times during enqueue/dequeue. Keep an
+     * in-memory snapshot of loyalty master data so a single comparison never
+     * performs file I/O. The cache is refreshed whenever loyalty data may have
+     * changed and before new VIP entries are enqueued.
+     */
+    private static LoyaltyProfile[] priorityProfileCache
+            = PRIORITY_LOYALTY_DAO.loadOrSeed();
     private static final PriorityQueueADT<WalkInRegistration> PRIORITY_QUEUE
             = new MaxHeap<>(VipPriorityController::compareVipPriority);
     private static boolean waitingVipRegistrationsLoaded = false;
@@ -54,6 +62,7 @@ public class VipPriorityController {
         loyaltyProfileDao = new LoyaltyProfileDao();
         rooms = roomDao.loadOrSeed();
         bookings = loadExistingBookings();
+        refreshPriorityProfileCache();
         loadWaitingVipRegistrationsOnce();
     }
 
@@ -101,6 +110,7 @@ public class VipPriorityController {
             if (before != existingProfile.getCompletedStays()
                     || beforeTier != existingProfile.getTier()) {
                 loyaltyProfileDao.saveToFile(profiles);
+                refreshPriorityProfileCache();
             }
 
             return existingProfile;
@@ -117,6 +127,50 @@ public class VipPriorityController {
         System.arraycopy(profiles, 0, updatedProfiles, 0, profiles.length);
         updatedProfiles[profiles.length] = newProfile;
         loyaltyProfileDao.saveToFile(updatedProfiles);
+        refreshPriorityProfileCache();
+
+        return newProfile;
+    }
+
+    /**
+     * Records one newly completed stay after Front Desk successfully checks a
+     * guest out. Existing loyalty profiles are incremented by exactly one.
+     * Standard guests continue to use checked-out registration history until
+     * they qualify for ELITE, when a loyalty profile is created automatically.
+     */
+    public LoyaltyProfile recordCompletedStay(String guestId) {
+        if (guestId == null || guestId.isBlank()) {
+            return null;
+        }
+
+        String normalizedGuestId = guestId.trim();
+        LoyaltyProfile[] profiles = loyaltyProfileDao.loadOrSeed();
+        LoyaltyProfile existingProfile
+                = findLoyaltyProfile(profiles, normalizedGuestId);
+
+        if (existingProfile != null) {
+            existingProfile.updateCompletedStays(
+                    existingProfile.getCompletedStays() + 1);
+            loyaltyProfileDao.saveToFile(profiles);
+            refreshPriorityProfileCache();
+            return existingProfile;
+        }
+
+        int completedStays = countCheckedOutRegistrations(normalizedGuestId);
+        LoyaltyTier qualifiedTier = LoyaltyProfile.determineTier(completedStays);
+
+        if (qualifiedTier == null) {
+            return null;
+        }
+
+        LoyaltyProfile newProfile
+                = new LoyaltyProfile(normalizedGuestId, completedStays);
+        LoyaltyProfile[] updatedProfiles
+                = new LoyaltyProfile[profiles.length + 1];
+        System.arraycopy(profiles, 0, updatedProfiles, 0, profiles.length);
+        updatedProfiles[profiles.length] = newProfile;
+        loyaltyProfileDao.saveToFile(updatedProfiles);
+        refreshPriorityProfileCache();
 
         return newProfile;
     }
@@ -131,29 +185,36 @@ public class VipPriorityController {
         }
 
         String normalizedGuestId = guestId.trim();
-        WalkInRegistration[] registrations = registrationDao.loadExisting();
-        int historicalCount = 0;
-
-        for (WalkInRegistration registration : registrations) {
-            if (registration == null || registration.getGuest() == null) {
-                continue;
-            }
-
-            boolean sameGuest = registration.getGuest().getGuestId() != null
-                    && registration.getGuest().getGuestId()
-                            .equalsIgnoreCase(normalizedGuestId);
-            boolean stayCompleted = registration.getStatus()
-                    == RegistrationStatus.CHECKED_OUT;
-
-            if (sameGuest && stayCompleted) {
-                historicalCount++;
-            }
-        }
+        int historicalCount = countCheckedOutRegistrations(normalizedGuestId);
 
         LoyaltyProfile profile = searchLoyaltyProfileByGuestId(normalizedGuestId);
         int storedCount = profile == null ? 0 : profile.getCompletedStays();
 
         return Math.max(historicalCount, storedCount);
+    }
+
+    private int countCheckedOutRegistrations(String guestId) {
+        WalkInRegistration[] registrations = registrationDao.loadExisting();
+        int completedCount = 0;
+
+        for (WalkInRegistration registration : registrations) {
+            if (registration == null
+                    || registration.getGuest() == null
+                    || registration.getGuest().getGuestId() == null) {
+                continue;
+            }
+
+            boolean sameGuest = registration.getGuest().getGuestId()
+                    .equalsIgnoreCase(guestId);
+            boolean stayCompleted = registration.getStatus()
+                    == RegistrationStatus.CHECKED_OUT;
+
+            if (sameGuest && stayCompleted) {
+                completedCount++;
+            }
+        }
+
+        return completedCount;
     }
 
     private LoyaltyProfile findLoyaltyProfile(
@@ -239,6 +300,7 @@ public class VipPriorityController {
         }
 
         registration.setStatus(RegistrationStatus.VIP_WAITING);
+        refreshPriorityProfileCache();
         PRIORITY_QUEUE.enqueue(registration);
 
         registrationDao.upsert(registration);
@@ -632,35 +694,110 @@ public class VipPriorityController {
         return vacantRooms;
     }
 
+    /**
+     * Returns bookings for VIP guests who are currently occupying rooms.
+     * Current RoomDao state is checked so old booking snapshots are not treated
+     * as active stays after checkout or later room reuse.
+     */
+    public Booking[] getCurrentVipRoomBookings() {
+        rooms = roomDao.loadOrSeed();
+        bookings = loadExistingBookings();
+
+        int currentVipCount = 0;
+        for (Booking booking : bookings) {
+            if (isCurrentVipRoomBooking(booking)) {
+                currentVipCount++;
+            }
+        }
+
+        Booking[] currentVipBookings = new Booking[currentVipCount];
+        int index = 0;
+
+        for (Booking booking : bookings) {
+            if (isCurrentVipRoomBooking(booking)) {
+                currentVipBookings[index++] = booking;
+            }
+        }
+
+        return currentVipBookings;
+    }
+
+    private boolean isCurrentVipRoomBooking(Booking booking) {
+        if (booking == null
+                || booking.getGuest() == null
+                || booking.getGuest().getGuestId() == null
+                || booking.getRoom() == null
+                || booking.getRoom().getRoomNumber() == null) {
+            return false;
+        }
+
+        LoyaltyProfile profile = searchLoyaltyProfileByGuestId(
+                booking.getGuest().getGuestId());
+        if (profile == null || profile.getTier() == null) {
+            return false;
+        }
+
+        Room currentRoom = findRoomByNumber(booking.getRoom().getRoomNumber());
+        if (currentRoom == null
+                || currentRoom.getRoomStatus() != RoomStatus.OCCUPIED) {
+            return false;
+        }
+
+        LocalDateTime bookingCheckIn = booking.getRoom().getCheckInDateTime();
+        LocalDateTime currentCheckIn = currentRoom.getCheckInDateTime();
+
+        return bookingCheckIn != null
+                && currentCheckIn != null
+                && bookingCheckIn.equals(currentCheckIn);
+    }
+
+    public Room getCurrentRoomForBooking(Booking booking) {
+        if (booking == null
+                || booking.getRoom() == null
+                || booking.getRoom().getRoomNumber() == null) {
+            return null;
+        }
+
+        rooms = roomDao.loadOrSeed();
+        return findRoomByNumber(booking.getRoom().getRoomNumber());
+    }
+
+    private Room findRoomByNumber(String roomNumber) {
+        if (roomNumber == null) {
+            return null;
+        }
+
+        for (Room room : rooms) {
+            if (room != null
+                    && room.getRoomNumber() != null
+                    && room.getRoomNumber().equalsIgnoreCase(roomNumber)) {
+                return room;
+            }
+        }
+
+        return null;
+    }
+
     public WalkInRegistration cancelVipRegistrationById(String registrationId) {
         if (registrationId == null || registrationId.isBlank()) {
             return null;
         }
 
-        PriorityQueueADT<WalkInRegistration> retainedRegistrations
-                = new MaxHeap<>(VipPriorityController::compareVipPriority);
-        WalkInRegistration removedRegistration = null;
+        /*
+         * Find through a structural copy so the original priority order is not
+         * disturbed, then use the MaxHeap's direct remove operation. This avoids
+         * draining and rebuilding the whole heap for one cancellation.
+         */
+        WalkInRegistration removedRegistration
+                = findWaitingVipRegistrationById(registrationId);
 
-        while (!PRIORITY_QUEUE.isEmpty()) {
-            WalkInRegistration registration = PRIORITY_QUEUE.dequeue();
-
-            if (removedRegistration == null
-                    && registration.getRegistrationId().equalsIgnoreCase(registrationId.trim())) {
-                removedRegistration = registration;
-            } else {
-                retainedRegistrations.enqueue(registration);
-            }
+        if (removedRegistration == null
+                || !PRIORITY_QUEUE.remove(removedRegistration)) {
+            return null;
         }
 
-        while (!retainedRegistrations.isEmpty()) {
-            PRIORITY_QUEUE.enqueue(retainedRegistrations.dequeue());
-        }
-
-        if (removedRegistration != null) {
-            removedRegistration.setStatus(RegistrationStatus.CANCELLED);
-            registrationDao.upsert(removedRegistration);
-        }
-
+        removedRegistration.setStatus(RegistrationStatus.CANCELLED);
+        registrationDao.upsert(removedRegistration);
         return removedRegistration;
     }
 
@@ -777,10 +914,9 @@ public class VipPriorityController {
             return 0;
         }
 
-        LoyaltyProfile[] profiles = PRIORITY_LOYALTY_DAO.loadOrSeed();
         String guestId = registration.getGuest().getGuestId();
 
-        for (LoyaltyProfile profile : profiles) {
+        for (LoyaltyProfile profile : priorityProfileCache) {
             if (profile != null
                     && profile.getGuestId() != null
                     && profile.getGuestId().equalsIgnoreCase(guestId)) {
@@ -790,6 +926,11 @@ public class VipPriorityController {
         }
 
         return 0;
+    }
+
+    private static synchronized void refreshPriorityProfileCache() {
+        LoyaltyProfile[] profiles = PRIORITY_LOYALTY_DAO.loadOrSeed();
+        priorityProfileCache = profiles == null ? new LoyaltyProfile[0] : profiles;
     }
 
     private Room findSuitableVacantRoom(WalkInRegistration registration) {

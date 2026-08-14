@@ -35,39 +35,29 @@ public class HousekeepingController {
                 taskLog.addLast(entry);
             }
         }
-        syncRoomsFromTaskLog(false);
+
+        /*
+         * IMPORTANT:
+         * Do not rebuild the current Room status from historical housekeeping
+         * tasks here. room.dat is the shared source of truth for the room's
+         * CURRENT state. Replaying an old "Ready" task could otherwise change
+         * a room that has since been assigned to a VIP/Standard guest from
+         * OCCUPIED back to READY.
+         *
+         * Room status is still updated immediately when a NEW housekeeping
+         * task is created or when an existing task is advanced/rolled back.
+         */
     }
 
     private void persistTaskLog() {
         TaskLogEntry[] entries = new TaskLogEntry[taskLog.size()];
-        for (int i = 0; i < taskLog.size(); i++) {
-            entries[i] = taskLog.get(i);
-        }
+        final int[] index = {0};
+        taskLog.traverse(entry -> entries[index[0]++] = entry);
         housekeepingDao.saveToFile(entries);
     }
 
     private void persistRooms() {
         roomDao.saveToFile(rooms);
-    }
-
-    /**
-     * Synchronizes the status of all rooms based on the active Housekeeping Task Log.
-     * This iterates through the entire task log sequentially. The most recent task for 
-     * each room will naturally overwrite any previous state, ensuring that the room's 
-     * final status perfectly reflects its latest housekeeping state without blindly
-     * wiping active guests (Occupied status).
-     * 
-     * @param notifyFrontDesk If true, informs the Front Desk when a room becomes 'Ready'
-     */
-    private void syncRoomsFromTaskLog(boolean notifyFrontDesk) {
-        // Only apply the statuses sequentially from the log so the latest task overrides
-        for (int i = 0; i < taskLog.size(); i++) {
-            TaskLogEntry task = taskLog.get(i);
-            if (task != null) {
-                applyTaskStatusToRoom(task, notifyFrontDesk);
-            }
-        }
-        persistRooms();
     }
 
     /**
@@ -123,6 +113,7 @@ public class HousekeepingController {
     }
 
     private Room findRoomByNumber(String roomNumber) {
+        refreshRooms();
         for (Room room : rooms) {
             if (room != null && room.getRoomNumber() != null && room.getRoomNumber().equals(roomNumber)) {
                 return room;
@@ -358,6 +349,7 @@ public class HousekeepingController {
     }
 
     public void displayRoomStatus() {
+        refreshRooms();
         System.out.println("\n=== ROOM HOUSEKEEPING STATUS ===");
         System.out.printf("%-8s | %-22s | %-10s | %-22s%n", "Room", "Room Status", "Available", "Housekeeping");
         System.out.println("--------------------------------------------------------------------------");
@@ -384,6 +376,7 @@ public class HousekeepingController {
     }
 
     private void displayRoomsByStatus(char status, String title) {
+        refreshRooms();
         System.out.println("\n=== " + title + " ===");
         System.out.printf("%-8s | %-22s | %-10s%n", "Room", "Room Status", "Available");
         System.out.println("-----------------------------------------------");
@@ -424,7 +417,12 @@ public class HousekeepingController {
     }
 
     public Room[] getRooms() {
+        refreshRooms();
         return rooms;
+    }
+
+    private void refreshRooms() {
+        rooms = roomDao.loadOrSeed();
     }
 
     // Getter for UI access if needed

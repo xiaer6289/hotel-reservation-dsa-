@@ -433,7 +433,7 @@ public class RegistrationController {
             return null;
         }
 
-        return registrationQueue.get(0);
+        return registrationQueue.peekFirst();
     }
 
     /**
@@ -485,7 +485,7 @@ public class RegistrationController {
             return null;
         }
 
-        WalkInRegistration registration = registrationQueue.get(0);
+        WalkInRegistration registration = registrationQueue.peekFirst();
         rooms = roomDao.loadOrSeed();
         bookings = loadExistingBookings();
 
@@ -534,6 +534,50 @@ public class RegistrationController {
         return booking;
     }
 
+    public Booking getBookingForRegistration(
+            WalkInRegistration registration) {
+
+        if (registration == null
+                || registration.getGuest() == null
+                || registration.getCheckInDateTime() == null) {
+
+            return null;
+        }
+
+        bookings = loadExistingBookings();
+
+        String guestId
+                = registration.getGuest().getGuestId();
+
+        for (Booking booking : bookings) {
+
+            if (booking == null
+                    || booking.getGuest() == null
+                    || booking.getRoom() == null
+                    || booking.getRoom().getCheckInDateTime() == null) {
+
+                continue;
+            }
+
+            boolean sameGuest
+                    = booking.getGuest()
+                            .getGuestId()
+                            .equalsIgnoreCase(guestId);
+
+            boolean sameCheckInTime
+                    = booking.getRoom()
+                            .getCheckInDateTime()
+                            .equals(
+                                    registration.getCheckInDateTime());
+
+            if (sameGuest && sameCheckInTime) {
+                return booking;
+            }
+        }
+
+        return null;
+    }
+    
     /**
      * Retained only for compatibility. A real check-in should not complete
      * without an assigned room and booking.
@@ -578,8 +622,8 @@ public class RegistrationController {
 
                 registrationDao.upsert(registration);
 
-                // Notify the VIP/Loyalty module after a completed stay.
-                vipPriorityController.refreshLoyaltyProfileByGuestId(
+                // Record exactly one newly completed stay after checkout.
+                vipPriorityController.recordCompletedStay(
                         normalizedGuestId);
 
                 return registration;

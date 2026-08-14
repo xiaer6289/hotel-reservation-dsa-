@@ -3,23 +3,30 @@ package adt.heap;
 import java.util.Comparator;
 
 /**
- * Array-based MaxHeap ADT implementation.
+ * Array-based generic MaxHeap implementation of PriorityQueueADT.
  *
- * This heap uses an array, so a separate HeapNode class is not required.
- * Parent and child positions are calculated by index:
- * parent = index / 2, left = index * 2, right = index * 2 + 1.
+ * <p>The heap uses 1-based indexing:</p>
+ * <pre>
+ * parent = index / 2
+ * left   = index * 2
+ * right  = index * 2 + 1
+ * </pre>
  *
- * A Comparator can be supplied when the stored entity should not implement
- * Comparable itself. This keeps VIP-priority rules inside the VIP module
- * instead of placing that business rule in WalkInRegistration.
+ * <p>A Comparator may be supplied for business-specific priority rules. If no
+ * Comparator is supplied, entries must implement Comparable. This design lets
+ * the VIP module keep loyalty-tier priority rules outside the registration
+ * entity while the ADT remains reusable for other data types.</p>
  *
+ * @param <T> type of entry stored in the heap
  * @author Low Enn Toong
  */
 public class MaxHeap<T> implements PriorityQueueADT<T> {
+
+    private static final int DEFAULT_CAPACITY = 20;
+
     private T[] heap;
     private int size;
     private final Comparator<? super T> comparator;
-    private static final int DEFAULT_CAPACITY = 20;
 
     public MaxHeap() {
         this(null);
@@ -34,17 +41,13 @@ public class MaxHeap<T> implements PriorityQueueADT<T> {
 
     @Override
     public void enqueue(T data) {
-        if (data == null) {
-            throw new IllegalArgumentException("Heap entry cannot be null.");
-        }
+        requireData(data);
 
         if (size == heap.length - 1) {
             expandCapacity();
         }
 
-        size++;
-        heap[size] = data;
-        // Automatically reorganise the heap.
+        heap[++size] = data;
         reheapUp(size);
     }
 
@@ -54,24 +57,30 @@ public class MaxHeap<T> implements PriorityQueueADT<T> {
             return null;
         }
 
-        T highest = heap[1];
-        heap[1] = heap[size];
-        heap[size] = null;
-        size--;
-
-        if (size > 0) {
-            reheapDown(1);
-        }
-
-        return highest;
+        T highestPriority = heap[1];
+        removeAtIndex(1);
+        return highestPriority;
     }
 
     @Override
     public T peek() {
-        if (isEmpty()) {
-            return null;
+        return isEmpty() ? null : heap[1];
+    }
+
+    @Override
+    public boolean remove(T data) {
+        if (data == null) {
+            return false;
         }
-        return heap[1];
+
+        for (int index = 1; index <= size; index++) {
+            if (sameEntry(heap[index], data)) {
+                removeAtIndex(index);
+                return true;
+            }
+        }
+
+        return false;
     }
 
     @Override
@@ -86,13 +95,16 @@ public class MaxHeap<T> implements PriorityQueueADT<T> {
 
     @Override
     public void clear() {
-        for (int i = 1; i <= size; i++) {
-            heap[i] = null;
+        for (int index = 1; index <= size; index++) {
+            heap[index] = null;
         }
-
         size = 0;
     }
 
+    /**
+     * Copies the internal heap layout directly in O(n), rather than repeatedly
+     * enqueueing O(n log n). The copy has a separate backing array.
+     */
     @Override
     @SuppressWarnings("unchecked")
     public PriorityQueueADT<T> copy() {
@@ -103,36 +115,65 @@ public class MaxHeap<T> implements PriorityQueueADT<T> {
         return copiedHeap;
     }
 
-    // ===== Helper methods =====
     private void reheapUp(int index) {
-        while (index > 1) {
-            int parent = index / 2;
+        int current = index;
 
-            if (compare(heap[index], heap[parent]) > 0) {
-                swap(index, parent);
-                index = parent;
-            } else {
+        while (current > 1) {
+            int parent = current / 2;
+
+            if (compare(heap[current], heap[parent]) <= 0) {
                 break;
             }
+
+            swap(current, parent);
+            current = parent;
         }
     }
 
     private void reheapDown(int index) {
-        while (index * 2 <= size) {
-            int left = index * 2;
-            int right = left + 1;
-            int largerChild = left;
+        int current = index;
 
-            if (right <= size && compare(heap[right], heap[left]) > 0) {
-                largerChild = right;
+        while (current * 2 <= size) {
+            int leftChild = current * 2;
+            int rightChild = leftChild + 1;
+            int largerChild = leftChild;
+
+            if (rightChild <= size
+                    && compare(heap[rightChild], heap[leftChild]) > 0) {
+                largerChild = rightChild;
             }
 
-            if (compare(heap[largerChild], heap[index]) > 0) {
-                swap(index, largerChild);
-                index = largerChild;
-            } else {
+            if (compare(heap[largerChild], heap[current]) <= 0) {
                 break;
             }
+
+            swap(current, largerChild);
+            current = largerChild;
+        }
+    }
+
+    /**
+     * Removes an arbitrary heap slot in O(log n) after its index is known.
+     * The replacement can violate the heap property upward or downward, so the
+     * direction is selected from its relationship with the parent.
+     */
+    private void removeAtIndex(int index) {
+        if (index < 1 || index > size) {
+            return;
+        }
+
+        heap[index] = heap[size];
+        heap[size] = null;
+        size--;
+
+        if (index > size) {
+            return; // Removed the last entry; no reheap is required.
+        }
+
+        if (index > 1 && compare(heap[index], heap[index / 2]) > 0) {
+            reheapUp(index);
+        } else {
+            reheapDown(index);
         }
     }
 
@@ -142,7 +183,7 @@ public class MaxHeap<T> implements PriorityQueueADT<T> {
             return comparator.compare(first, second);
         }
 
-        if (first instanceof Comparable) {
+        if (first instanceof Comparable<?>) {
             return ((Comparable<? super T>) first).compareTo(second);
         }
 
@@ -150,16 +191,26 @@ public class MaxHeap<T> implements PriorityQueueADT<T> {
                 "A Comparator is required when heap entries do not implement Comparable.");
     }
 
-    private void swap(int i, int j) {
-        T temp = heap[i];
-        heap[i] = heap[j];
-        heap[j] = temp;
+    private boolean sameEntry(T first, T second) {
+        return first == second || (first != null && first.equals(second));
+    }
+
+    private void swap(int firstIndex, int secondIndex) {
+        T temp = heap[firstIndex];
+        heap[firstIndex] = heap[secondIndex];
+        heap[secondIndex] = temp;
     }
 
     @SuppressWarnings("unchecked")
     private void expandCapacity() {
-        T[] newHeap = (T[]) new Object[heap.length * 2];
-        System.arraycopy(heap, 1, newHeap, 1, size);
-        heap = newHeap;
+        T[] expandedHeap = (T[]) new Object[heap.length * 2];
+        System.arraycopy(heap, 1, expandedHeap, 1, size);
+        heap = expandedHeap;
+    }
+
+    private void requireData(T data) {
+        if (data == null) {
+            throw new IllegalArgumentException("Heap entry cannot be null.");
+        }
     }
 }
