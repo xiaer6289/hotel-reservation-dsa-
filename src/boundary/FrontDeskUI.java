@@ -235,7 +235,6 @@ public class FrontDeskUI {
         Booking[] allBookings = control.sortBooking();
         Booking[] report = roomOccupancy.generateReport(
                 allBookings,
-                control.getCurrentRooms(),
                 roomTypeFilter,
                 availabilityFilter);
         
