@@ -6,8 +6,6 @@ package control;
 
 import adt.bst.Bst;
 import adt.bst.BstInterface;
-import adt.linear.DoublyLinkedList;
-import adt.linear.LinearADT;
 import dao.BookingDao;
 import dao.GuestDao;
 import dao.PaymentDao;
@@ -33,7 +31,6 @@ public class FrontDeskControl implements RoomAvailabilityNotifier.RoomReadyListe
     private Room[] rooms;
     private RegistrationController registrationController;
     private final HousekeepingController housekeepingController;
-    private final LinearADT<Room> readyRoomInbox;
     
     public FrontDeskControl() {
         guestDao = new GuestDao();
@@ -42,7 +39,6 @@ public class FrontDeskControl implements RoomAvailabilityNotifier.RoomReadyListe
         bookingDao = new BookingDao();
         registrationController = new RegistrationController();
         housekeepingController = new HousekeepingController();
-        readyRoomInbox = new DoublyLinkedList<>();
 
         RoomAvailabilityNotifier.registerListener(this);
 
@@ -90,6 +86,7 @@ public class FrontDeskControl implements RoomAvailabilityNotifier.RoomReadyListe
     }
 
     public Room[] getAssignableRooms() {
+        refreshRooms();
         int count = 0;
 
         for (Room room : rooms) {
@@ -123,14 +120,27 @@ public class FrontDeskControl implements RoomAvailabilityNotifier.RoomReadyListe
             return null;
         }
 
-        Room room = booking.getRoom();
-        room.setRoomStatus(RoomStatus.DIRTY);
-        roomDao.saveToFile(rooms);
+        if (booking.getRoom() == null || booking.getRoom().getRoomNumber() == null) {
+            return null;
+        }
 
-        TaskLogEntry task = housekeepingController.createCheckoutTask(room.getRoomNumber(), staffId, remarks);
+        /*
+         * Booking.room is a serialized snapshot of the room at booking time.
+         * Never use that snapshot as the current room-state object. The
+         * Housekeeping controller updates the shared RoomDao room instead.
+         */
+        String roomNumber = booking.getRoom().getRoomNumber();
+        Room currentRoom = findRoomByNumber(roomNumber);
+        if (currentRoom == null) {
+            return null;
+        }
+
+        TaskLogEntry task = housekeepingController.createCheckoutTask(roomNumber, staffId, remarks);
         if (task == null) {
             return null;
         }
+
+        refreshRooms();
         
         if (booking.getGuest() != null) {
             registrationController.markGuestCheckedOut(
@@ -153,6 +163,7 @@ public class FrontDeskControl implements RoomAvailabilityNotifier.RoomReadyListe
     public boolean save() {
         Booking[] bookings = sortBooking();
         Guest[] guests = new Guest[bookings.length];
+        refreshRooms();
         Room[] roomsToSave = rooms;
         Payment[] payments = new Payment[bookings.length];
         
@@ -174,25 +185,56 @@ public class FrontDeskControl implements RoomAvailabilityNotifier.RoomReadyListe
             return;
         }
 
-        readyRoomInbox.addLast(room);
         System.out.println("[Front Desk Notification] Room " + room.getRoomNumber()
                 + " is READY and can be assigned to a new guest.");
     }
 
     public Room[] getNotifiedReadyRooms() {
-        Room[] readyRooms = new Room[readyRoomInbox.size()];
-        for (int i = 0; i < readyRoomInbox.size(); i++) {
-            readyRooms[i] = readyRoomInbox.get(i);
+        refreshRooms();
+        Room[] notifications = RoomAvailabilityNotifier.getReadyRoomNotifications();
+        Room[] temp = new Room[notifications.length];
+        int count = 0;
+
+        for (Room notification : notifications) {
+            if (notification == null || notification.getRoomNumber() == null) {
+                continue;
+            }
+
+            Room currentRoom = findRoomByNumberWithoutRefresh(notification.getRoomNumber());
+            if (currentRoom != null && currentRoom.isAssignable()) {
+                temp[count++] = currentRoom;
+            }
         }
+
+        Room[] readyRooms = new Room[count];
+        System.arraycopy(temp, 0, readyRooms, 0, count);
         return readyRooms;
     }
 
+    public Room[] getCurrentRooms() {
+        refreshRooms();
+        return rooms;
+    }
+
     private Room findRoomByNumber(String roomNumber) {
+        refreshRooms();
+        return findRoomByNumberWithoutRefresh(roomNumber);
+    }
+
+    private Room findRoomByNumberWithoutRefresh(String roomNumber) {
+        if (roomNumber == null) {
+            return null;
+        }
+
         for (Room room : rooms) {
             if (room != null && room.getRoomNumber().equalsIgnoreCase(roomNumber)) {
                 return room;
             }
         }
         return null;
+    }
+
+    private void refreshRooms() {
+        rooms = roomDao.loadOrSeed();
     }
 }

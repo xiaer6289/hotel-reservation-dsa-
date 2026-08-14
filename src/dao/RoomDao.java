@@ -25,6 +25,12 @@ public class RoomDao {
     private static Room[] cachedRooms;
     
     public void saveToFile(Room[] room) {
+        // Keep every module on the same in-memory room state.  Room status is
+        // shared by Registration, VIP Allocation, Front Desk and Housekeeping,
+        // so the latest saved array must also become the cache used by any
+        // controller created afterwards.
+        cachedRooms = room;
+
         File file = new File(fileName);
         System.out.println("saving to: " + file.getAbsolutePath());
         try {

@@ -189,8 +189,16 @@ public class FrontDeskUI {
         System.out.println("Phone Number: " + booking.getGuest().getPhoneNo());
         System.out.println("Room Number: " + booking.getRoom().getRoomNumber());
         System.out.println("Room Type: " + booking.getRoom().getRoomType());
-        System.out.println("Payment Amount: " + booking.getPayment().getAmount());
-        System.out.println("Payment Status: " + booking.getPayment().getStatus());
+        if (booking.getPayment() == null) {
+            // Walk-in Standard/VIP check-in currently does not create a
+            // Payment object. Keep Front Desk search usable instead of
+            // throwing NullPointerException for those bookings.
+            System.out.println("Payment Amount: N/A");
+            System.out.println("Payment Status: N/A");
+        } else {
+            System.out.println("Payment Amount: " + booking.getPayment().getAmount());
+            System.out.println("Payment Status: " + booking.getPayment().getStatus());
+        }
     }
     
     private void roomOccupancyRP() {
@@ -225,7 +233,11 @@ public class FrontDeskUI {
         boolean availabilityFilter = status.equals("A");
         
         Booking[] allBookings = control.sortBooking();
-        Booking[] report = roomOccupancy.generateReport(allBookings, roomTypeFilter, availabilityFilter);
+        Booking[] report = roomOccupancy.generateReport(
+                allBookings,
+                control.getCurrentRooms(),
+                roomTypeFilter,
+                availabilityFilter);
         
         System.out.println("\nFilter: Room Type = " + (roomTypeFilter == null ? "ALL" : roomTypeFilter) 
         + " | Status = " + (availabilityFilter ? "AVAILABLE" : "OCCUPIED"));
