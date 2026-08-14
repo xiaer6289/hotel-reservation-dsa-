@@ -123,10 +123,24 @@ public class FrontDeskUI {
     }
     
     private void processCheckout() {
-        System.out.print("Enter Confirmation Number: ");
+        System.out.print("Enter Confirmation Number (8 digits): ");
         String confirmationNo = scanner.nextLine().trim();
-        System.out.print("Enter Staff ID: ");
-        String staffId = scanner.nextLine().trim();
+
+        if (!Utility.isValidConfirmationNo(confirmationNo)) {
+            Utility.printError("Invalid Confirmation number format. Please try again...");
+            return;
+        }
+
+        Booking booking = control.searchBookingByConfirmationNo(confirmationNo);
+        if (booking == null) {
+            Utility.printError("No booking found for " + confirmationNo);
+            return;
+        }
+        
+        String staff = selectStaff(scanner);
+        if (staff == null) {
+            return;
+        }
         System.out.println("Select checkout reason: 1. Standard  2. Late Check-Out  3. Special Request");
         System.out.print("Enter choice: ");
         String reasonChoice = scanner.nextLine().trim();
@@ -145,7 +159,7 @@ public class FrontDeskUI {
                 break;
         }
 
-        entity.TaskLogEntry task = control.processCheckout(confirmationNo, staffId, remarks);
+        entity.TaskLogEntry task = control.processCheckout(confirmationNo, staff, remarks);
         if (task == null) {
             Utility.printError("Unable to process check-out.");
             return;
@@ -257,5 +271,22 @@ public class FrontDeskUI {
         }
         System.out.printf("Total Revenue: RM %.2f | Bookings count: %d%n", total, report.length);
             
+    }
+
+    private String selectStaff(Scanner scanner) {
+        System.out.println("\n---Select Staff---");
+        System.out.println("1. S001 Tan");
+        System.out.println("2. S002 Choo");
+        System.out.println("3. S003 Michelle");
+        System.out.print("Enter staff choice: ");
+        int choice = getMenuChoice();
+        switch (choice) {
+            case 1: return "S001";
+            case 2: return "S002";
+            case 3: return "S003";
+            default:
+                Utility.printError("Invalid staff selection. Please try again...");
+                return null;
+        }
     }
 }

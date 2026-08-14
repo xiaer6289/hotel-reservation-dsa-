@@ -180,11 +180,11 @@ public class FrontDeskControl implements RoomAvailabilityNotifier.RoomReadyListe
     }
 
     public Room[] getNotifiedReadyRooms() {
-        Room[] rooms = new Room[readyRoomInbox.size()];
+        Room[] readyRooms = new Room[readyRoomInbox.size()];
         for (int i = 0; i < readyRoomInbox.size(); i++) {
-            rooms[i] = readyRoomInbox.get(i);
+            readyRooms[i] = readyRoomInbox.get(i);
         }
-        return rooms;
+        return readyRooms;
     }
 
     private Room findRoomByNumber(String roomNumber) {
