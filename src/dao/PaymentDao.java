@@ -19,7 +19,7 @@ import java.time.LocalDateTime;
  * @author Lee Cheng Xuan
  */
 public class PaymentDao {
-    private String fileName = "room.dat";
+    private String fileName = "payment.dat";
     
     public void saveToFile(Payment[] payment) {
         File file = new File(fileName);

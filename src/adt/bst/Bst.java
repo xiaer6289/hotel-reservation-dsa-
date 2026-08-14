@@ -8,118 +8,171 @@ import java.io.Serializable;
 
 
 /**
+ * Generic Binary Search Tree implementation.
  *
+ * The tree separates the ordering key (K) from the stored business object (T).
+ * In the Front Desk module, K is the booking confirmation number and T is the
+ * Booking. Insertion and deletion use recursion because each operation works on
+ * a subtree, while search is iterative to avoid unnecessary call-stack usage.
+ * 
  * @author Lee Cheng Xuan
  */
-public class Bst<K extends Comparable<K>, T> implements BstInterface<K, T>, Serializable{ // binary search tree
+public class Bst<K extends Comparable<? super K>, T>
+        implements BstInterface<K, T> {
+
     private Node<K, T> root;
     private int size;
-    
+
     public Bst() {
         root = null;
         size = 0;
     }
-    
+
     @Override
     public void insert(K key, T data) {
-        root = insertHelper(root, key, data); // recursion by using helper method
+        requireKey(key);
+        root = insertHelper(root, key, data);
     }
-    
+
+    /**
+     * Recursive insertion. Duplicate keys replace their associated data so the
+     * BST continues to contain one node per unique key.
+     */
     private Node<K, T> insertHelper(Node<K, T> node, K key, T data) {
         if (node == null) {
             size++;
             return new Node<>(key, data);
         }
-        int cmp = key.compareTo(node.getKey());
-        if (cmp < 0) node.setLeft(insertHelper(node.getLeft(), key, data));
-        else if (cmp > 0) node.setRight(insertHelper(node.getRight(), key, data));
+
+        int comparison = key.compareTo(node.getKey());
+
+        if (comparison < 0) {
+            node.setLeft(insertHelper(node.getLeft(), key, data));
+        } else if (comparison > 0) {
+            node.setRight(insertHelper(node.getRight(), key, data));
+        } else {
+            // Unique-key BST semantics: update the existing value.
+            node.setData(data);
+        }
+
         return node;
     }
-    
-//    public void display() {
-//        displayHelper(root);
-//    }
-//    
-//    private void displayHelper(Node root) {
-//        if (root != null) {
-//            displayHelper(root.left);
-//            System.out.println(root.data);
-//            displayHelper(root.right); // display in non-increasing order
-//        }
-//    }
-    
+
     @Override
     public T search(K key) {
-        return searchHelper(root, key);
+        requireKey(key);
+
+        // Iterative search demonstrates the same BST ordering without recursion.
+        Node<K, T> current = root;
+
+        while (current != null) {
+            int comparison = key.compareTo(current.getKey());
+
+            if (comparison == 0) {
+                return current.getData();
+            }
+
+            current = comparison < 0 ? current.getLeft() : current.getRight();
+        }
+
+        return null;
     }
-    
-    private T searchHelper(Node<K, T> node, K key) {
-        if (node == null) return null;
-        int cmp = key.compareTo(node.getKey());
-        if (cmp == 0) return node.getData();
-        return (cmp < 0) ? searchHelper(node.getLeft(), key) : searchHelper(node.getRight(), key);
-    }
-    
+
     @Override
     public void delete(K key) {
+        requireKey(key);
         root = deleteHelper(root, key);
     }
-    
-    public Node<K, T> deleteHelper(Node<K, T> node, K key) {
-        if (node == null) return root;
-        int cmp = key.compareTo(node.getKey());
-        if (cmp < 0) {
-            node.setLeft(deleteHelper(node.getLeft(), key));
-        } else if (cmp > 0) {
-            node.setRight(deleteHelper(node.getRight(), key));
-        } else {
-            if (node.getLeft() == null && node.getRight() == null) {
-                size--;
-                return null;
-            } else if (node.getRight() != null) {
-                Node<K,T> successor = findMin(node.getRight());
-                node.setKey(successor.getKey());
-                node.setData(successor.getData());
-                node.setRight(deleteHelper(node.getLeft(), successor.getKey()));
-            } else {
-                Node<K,T> predecessor = findMax(node.getLeft());
-                node.setKey(predecessor.getKey());
-                node.setData(predecessor.getData());
-                node.setLeft(deleteHelper(node.getLeft(), predecessor.getKey()));
-            }
+
+    /**
+     * Recursive BST deletion supporting all three cases:
+     * 1) leaf, 2) one child, and 3) two children.
+     *
+     * For two children, the node is replaced by the in-order successor (the
+     * smallest node in the right subtree), then that successor is removed from
+     * the right subtree. The size is therefore reduced exactly once.
+     */
+    private Node<K, T> deleteHelper(Node<K, T> node, K key) {
+        if (node == null) {
+            return null;
         }
+
+        int comparison = key.compareTo(node.getKey());
+
+        if (comparison < 0) {
+            node.setLeft(deleteHelper(node.getLeft(), key));
+            return node;
+        }
+
+        if (comparison > 0) {
+            node.setRight(deleteHelper(node.getRight(), key));
+            return node;
+        }
+
+        // Key found: zero or one child.
+        if (node.getLeft() == null) {
+            size--;
+            return node.getRight();
+        }
+
+        if (node.getRight() == null) {
+            size--;
+            return node.getLeft();
+        }
+
+        // Two children: replace with the in-order successor from RIGHT subtree.
+        Node<K, T> successor = findMin(node.getRight());
+        node.setKey(successor.getKey());
+        node.setData(successor.getData());
+        node.setRight(deleteHelper(node.getRight(), successor.getKey()));
         return node;
     }
-    
+
     private Node<K, T> findMin(Node<K, T> node) {
-        while (node.getLeft() != null) node = node.getLeft();
-        return node;
+        Node<K, T> current = node;
+        while (current.getLeft() != null) {
+            current = current.getLeft();
+        }
+        return current;
     }
-    
-    private Node<K, T> findMax(Node<K, T> node) {
-        while (node.getRight() != null) node = node.getRight();
-        return node;
-    }
-    
+
     @Override
     public boolean isEmpty() {
-        return root == null;
+        return size == 0;
     }
-    
-    @Override 
+
+    @Override
     public int size() {
         return size;
     }
-    
+
+    @Override
+    public void clear() {
+        root = null;
+        size = 0;
+    }
+
+    @Override
     public void inorderTraversal(BstVisitor<T> visitor) {
+        if (visitor == null) {
+            throw new IllegalArgumentException("BST visitor cannot be null.");
+        }
         inorderHelper(root, visitor);
     }
-    
+
     private void inorderHelper(Node<K, T> node, BstVisitor<T> visitor) {
-        if (node != null) {
-            inorderHelper(node.getLeft(), visitor);
-            visitor.visit(node.getData());
-            inorderHelper(node.getRight(), visitor);
+        if (node == null) {
+            return;
+        }
+
+        inorderHelper(node.getLeft(), visitor);
+        visitor.visit(node.getData());
+        inorderHelper(node.getRight(), visitor);
+    }
+
+    private void requireKey(K key) {
+        if (key == null) {
+            throw new IllegalArgumentException("BST key cannot be null.");
         }
     }
 }

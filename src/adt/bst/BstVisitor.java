@@ -4,10 +4,11 @@
  */
 package adt.bst;
 
-/** visitor enhance reusability by using same inorderTraversal without touching ADT
- *
+/** Callback used by BST traversal so report/control code can process stored
+ * objects without exposing the BST's internal Node structure.
  * @author Lee Cheng Xuan
  */
+@FunctionalInterface
 public interface BstVisitor<T> {
     void visit(T data);
 }

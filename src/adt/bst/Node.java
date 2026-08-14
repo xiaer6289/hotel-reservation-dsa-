@@ -7,51 +7,51 @@ package adt.bst;
 import java.io.Serializable;
 
 /**
- *
+ * Internal BST node. Package-private visibility prevents business modules from
+ * depending on tree links; clients interact only through BstInterface.
  * @author Lee Cheng Xuan
  */
-public class Node<K extends Comparable<K>, T> implements Serializable{
+final class Node<K extends Comparable<? super K>, T> {
+
     private K key;
     private T data;
     private Node<K, T> left;
     private Node<K, T> right;
-    
-    public Node(K key, T data) {
+
+    Node(K key, T data) {
         this.key = key;
         this.data = data;
     }
 
-    public K getKey() {
+    K getKey() {
         return key;
     }
 
-    public void setKey(K key) {
+    void setKey(K key) {
         this.key = key;
     }
 
-    public T getData() {
+    T getData() {
         return data;
     }
 
-    public void setData(T data) {
+    void setData(T data) {
         this.data = data;
     }
 
-    public Node<K, T> getLeft() {
+    Node<K, T> getLeft() {
         return left;
     }
 
-    public void setLeft(Node<K, T> left) {
+    void setLeft(Node<K, T> left) {
         this.left = left;
     }
 
-    public Node<K, T> getRight() {
+    Node<K, T> getRight() {
         return right;
     }
 
-    public void setRight(Node<K, T> right) {
+    void setRight(Node<K, T> right) {
         this.right = right;
     }
-    
-    
 }

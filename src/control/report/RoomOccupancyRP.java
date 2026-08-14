@@ -36,10 +36,10 @@ public class RoomOccupancyRP {
                 if (bookings[j].getRoom().getRoomNumber().compareTo(bookings[minIndex].getRoom().getRoomNumber()) < 0) {
                     minIndex = j;
                 }
-                Booking temp = bookings[i];
-                bookings[i] = bookings[minIndex];
-                bookings[minIndex] = temp;
             }
+            Booking temp = bookings[i];
+            bookings[i] = bookings[minIndex];
+            bookings[minIndex] = temp;
         }
     }
 }
