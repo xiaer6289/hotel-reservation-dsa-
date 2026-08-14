@@ -10,7 +10,9 @@ import entity.LoyaltyTier;
 import entity.Room;
 import entity.RoomType;
 import entity.WalkInRegistration;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
 import java.util.Scanner;
@@ -26,6 +28,8 @@ import utility.Utility;
  * @author Low Enn Toong
  */
 public class VipAllocationUI {
+    private static final int MAX_STAY_NIGHTS = 30;
+    private static final LocalTime STANDARD_CHECKOUT_TIME = LocalTime.NOON;
     private static final DateTimeFormatter DATE_TIME_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
     private final VipPriorityController controller;
     private final Scanner scanner;
@@ -275,7 +279,7 @@ public class VipAllocationUI {
         System.out.println("\nSelect the field to update:");
         System.out.println("1. Requested Room Type");
         System.out.println("2. Number of Guests");
-        System.out.println("3. Expected Check-Out Date & Time");
+        System.out.println("3. Length of Stay / Expected Check-Out Date");
         System.out.println("4. Update All Request Fields");
         System.out.println("0. Cancel Update");
 
@@ -306,13 +310,14 @@ public class VipAllocationUI {
         }
 
         if (choice == 3 || choice == 4) {
-            newCheckOut = readFutureCheckOutDateTime(registration);
+            newCheckOut = readFutureCheckOutDate(registration);
         }
 
         System.out.println("\nProposed Updated Request:");
         System.out.println("Requested Room Type : " + formatRoomType(newRoomType));
         System.out.println("Number of Guests    : " + newGuestCount);
         System.out.println("Expected Check-Out  : " + formatDateTime(newCheckOut));
+        System.out.println("Hotel Check-Out Time: 12:00 PM (automatic)");
 
         boolean confirm = readYesNo("Save these changes? (Y/N, e.g. Y): ");
 
@@ -325,7 +330,7 @@ public class VipAllocationUI {
                 newCheckOut);
 
         if (!updated) {
-            Utility.printError("Unable to update the VIP request. Check room capacity, status and check-out time.");
+            Utility.printError("Unable to update the VIP request. Check room capacity, status and expected check-out date.");
             return;
         }
 
@@ -667,64 +672,61 @@ public class VipAllocationUI {
         }
     }
 
-    private LocalDateTime readFutureCheckOutDateTime(WalkInRegistration registration) {
+    private LocalDateTime readFutureCheckOutDate(WalkInRegistration registration) {
         while (true) {
-            LocalDateTime value = readDateTimeParts("New Expected Check-Out");
-            LocalDateTime now = LocalDateTime.now().withSecond(0).withNano(0);
-            LocalDateTime registrationTime = registration.getRegistrationTime();
+            System.out.println("\nEnter New Expected Check-Out Date");
+            System.out.println("Hotel standard check-out time is fixed at 12:00 PM.");
+            System.out.println("Maximum stay: " + MAX_STAY_NIGHTS + " nights from the registration/arrival date.");
+            System.out.println("Hint example: 2026-08-15");
 
-            if (!value.isAfter(now)) {
-                Utility.printError("Expected check-out must be in the future.");
+            int currentYear = LocalDate.now().getYear();
+            int year = readIntegerInRange(
+                    "Enter Year (yyyy, e.g. 2026): ",
+                    currentYear,
+                    9999,
+                    "Year must be between " + currentYear + " and 9999.");
+
+            int month = readIntegerInRange(
+                    "Enter Month (1-12, e.g. 8): ",
+                    1,
+                    12,
+                    "Month must be between 1 and 12.");
+
+            int maximumDay = YearMonth.of(year, month).lengthOfMonth();
+            int day = readIntegerInRange(
+                    "Enter Day (1-" + maximumDay + ", e.g. 15): ",
+                    1,
+                    maximumDay,
+                    "Day must be between 1 and " + maximumDay
+                    + " for " + year + "-" + String.format("%02d", month) + ".");
+
+            LocalDate newCheckOutDate = LocalDate.of(year, month, day);
+            LocalDate arrivalDate = registration.getRegistrationTime() == null
+                    ? LocalDate.now()
+                    : registration.getRegistrationTime().toLocalDate();
+            LocalDate latestAllowedDate = arrivalDate.plusDays(MAX_STAY_NIGHTS);
+
+            if (!newCheckOutDate.isAfter(arrivalDate)) {
+                Utility.printError("Expected check-out date must be after the registration/arrival date ("
+                        + arrivalDate + ").");
                 continue;
             }
 
-            if (registrationTime != null && !value.isAfter(registrationTime)) {
-                Utility.printError("Expected check-out must be after the registration/arrival time.");
+            if (newCheckOutDate.isAfter(latestAllowedDate)) {
+                Utility.printError("Expected check-out date cannot exceed " + MAX_STAY_NIGHTS
+                        + " nights from the registration/arrival date. Latest allowed date: "
+                        + latestAllowedDate + ".");
+                continue;
+            }
+
+            LocalDateTime value = LocalDateTime.of(newCheckOutDate, STANDARD_CHECKOUT_TIME);
+            if (!value.isAfter(LocalDateTime.now().withSecond(0).withNano(0))) {
+                Utility.printError("Expected check-out must still be in the future.");
                 continue;
             }
 
             return value;
         }
-    }
-
-    private LocalDateTime readDateTimeParts(String label) {
-        System.out.println("\nEnter " + label + " Date and Time");
-        System.out.println("Hint example: 2026-08-15 12:00");
-
-        int currentYear = LocalDateTime.now().getYear();
-        int year = readIntegerInRange(
-                "Enter Year (yyyy, e.g. 2026): ",
-                currentYear,
-                9999,
-                "Year must be between " + currentYear + " and 9999.");
-
-        int month = readIntegerInRange(
-                "Enter Month (1-12, e.g. 8): ",
-                1,
-                12,
-                "Month must be between 1 and 12.");
-
-        int maximumDay = YearMonth.of(year, month).lengthOfMonth();
-        int day = readIntegerInRange(
-                "Enter Day (1-" + maximumDay + ", e.g. 15): ",
-                1,
-                maximumDay,
-                "Day must be between 1 and " + maximumDay
-                + " for " + year + "-" + String.format("%02d", month) + ".");
-
-        int hour = readIntegerInRange(
-                "Enter Hour (0-23, e.g. 12): ",
-                0,
-                23,
-                "Hour must be between 0 and 23.");
-
-        int minute = readIntegerInRange(
-                "Enter Minute (0-59, e.g. 0): ",
-                0,
-                59,
-                "Minute must be between 0 and 59.");
-
-        return LocalDateTime.of(year, month, day, hour, minute);
     }
 
     private int readIntegerInRange(

@@ -17,7 +17,9 @@ import entity.RoomStatus;
 import entity.RoomType;
 import entity.WalkInRegistration;
 import java.io.File;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import utility.Utility;
 
 /**
@@ -34,6 +36,8 @@ public class VipPriorityController {
     public static final int INVALID_INPUT = -1;
     public static final int REGISTRATION_ALREADY_QUEUED = -3;
     public static final int GUEST_ALREADY_QUEUED = -4;
+    private static final int MAX_STAY_NIGHTS = 30;
+    private static final LocalTime STANDARD_CHECKOUT_TIME = LocalTime.NOON;
     private static final LoyaltyProfileDao PRIORITY_LOYALTY_DAO = new LoyaltyProfileDao();
     /*
      * Heap comparisons happen many times during enqueue/dequeue. Keep an
@@ -619,20 +623,28 @@ public class VipPriorityController {
             return false;
         }
 
-        LocalDateTime now = LocalDateTime.now().withSecond(0).withNano(0);
+        LocalDate arrivalDate = registration.getRegistrationTime() == null
+                ? LocalDate.now()
+                : registration.getRegistrationTime().toLocalDate();
+        LocalDate requestedCheckOutDate = checkOutDateTime.toLocalDate();
 
-        if (!checkOutDateTime.isAfter(now)) {
+        if (!requestedCheckOutDate.isAfter(arrivalDate)
+                || requestedCheckOutDate.isAfter(arrivalDate.plusDays(MAX_STAY_NIGHTS))) {
             return false;
         }
 
-        if (registration.getRegistrationTime() != null
-                && !checkOutDateTime.isAfter(registration.getRegistrationTime())) {
+        // VIP request maintenance can change the departure date only. The hotel
+        // standard check-out time remains fixed at 12:00 PM, matching RegistrationUI.
+        LocalDateTime normalizedCheckOutDateTime
+                = LocalDateTime.of(requestedCheckOutDate, STANDARD_CHECKOUT_TIME);
+
+        if (!normalizedCheckOutDateTime.isAfter(LocalDateTime.now().withSecond(0).withNano(0))) {
             return false;
         }
 
         registration.setRequestedRoomType(normalizedRoomType);
         registration.setNumberOfGuests(numberOfGuests);
-        registration.setCheckOutDateTime(checkOutDateTime);
+        registration.setCheckOutDateTime(normalizedCheckOutDateTime);
 
         registrationDao.upsert(registration);
         return true;
