@@ -217,32 +217,31 @@ public class RegistrationUI {
         String guestName = newGuest ? newGuestName : controller.getGuestName(guestId);
 
         System.out.println("\n===== REGISTRATION SUMMARY =====");
-        System.out.println("Guest Name        : " + guestName);
-        System.out.println("Phone Number      : " + formatPhoneNo(phoneDisplay));
-        System.out.println("Guest Category    : "
-                + (loyaltyTier == null ? "STANDARD" : "VIP - " + loyaltyTier));
-        System.out.println("Requested Room    : " + formatRoomType(roomType));
-        System.out.println("Number of Guests  : " + numberOfGuests);
-        System.out.println("Length of Stay    : " + numberOfNights + " night(s)");
-        System.out.println("Arrival Time      : " + formatDateTime(arrivalTime));
-        System.out.println("Expected Check-Out: " + formatDateTime(expectedCheckOut));
-        System.out.println("Hotel Check-Out   : 12:00 PM");
-        System.out.println("Suitable Ready Rooms Now: " + readyRoomCount);
+        System.out.printf("%-20s: %s%n", "Guest Name", guestName);
+        System.out.printf("%-20s: %s%n", "Phone Number", formatPhoneNo(phoneDisplay));
+        System.out.printf("%-20s: %s%n", "Guest Category",
+                loyaltyTier == null ? "STANDARD" : "VIP - " + loyaltyTier);
 
-        if (readyRoomCount == 0) {
-            if (loyaltyTier == null) {
-                System.out.println(
-                        "Room Status        : No suitable room is ready now; guest will wait in the Standard FIFO queue.");
-            } else {
-                System.out.println(
-                        "Room Status        : No suitable room is ready now; guest will wait in the VIP priority heap.");
-            }
-        } else if (loyaltyTier == null) {
-            System.out.println(
-                    "Room Status        : Suitable room exists, but existing Standard FIFO order still applies.");
+        System.out.println();
+
+        System.out.printf("%-20s: %s%n", "Requested Room", formatRoomType(roomType));
+        System.out.printf("%-20s: %d%n", "Number of Guests", numberOfGuests);
+        System.out.printf("%-20s: %d night(s)%n", "Length of Stay", numberOfNights);
+        System.out.printf("%-20s: %s%n", "Arrival Time", formatDateTime(arrivalTime));
+        System.out.printf("%-20s: %s%n", "Expected Check-Out", formatDateTime(expectedCheckOut));
+
+        System.out.println();
+
+        System.out.printf("%-20s: %d%n", "Ready Rooms Now", readyRoomCount);
+
+        if (loyaltyTier == null) {
+            System.out.printf("%-20s: %s%n",
+                    "Queue Policy",
+                    "Standard FIFO order applies");
         } else {
-            System.out.println(
-                    "Room Status        : Suitable room exists; allocation will follow VIP tier priority.");
+            System.out.printf("%-20s: %s%n",
+                    "Allocation Policy",
+                    "VIP tier priority applies");
         }
 
         if (!readYesNo("Confirm this walk-in registration? (Y/N): ")) {
@@ -259,8 +258,7 @@ public class RegistrationUI {
                 return;
             }
 
-            Utility.printSuccess("New guest profile created successfully.");
-            System.out.println("Generated Guest ID: " + guestId);
+            
         }
 
         String registrationId = controller.generateRegistrationId();
@@ -292,13 +290,16 @@ public class RegistrationUI {
                 return;
             }
 
-            Utility.printSuccess(
-                    "Standard walk-in registered and appended to the FIFO queue.");
-            System.out.println("Registration ID : " + registrationId);
-            System.out.println("Queue Position  : " + controller.getWaitingCount());
-            System.out.println("Status          : " + controller.getRegistrationStatusName(registrationId));
-            System.out.println(
-                    "Next step: Process the FIFO head using menu option 4 when a suitable room is ready.");
+            System.out.println("\n===== REGISTRATION SUCCESSFUL =====");
+            System.out.printf("%-18s: %s%n", "Guest ID", guestId);
+            System.out.printf("%-18s: %s%n", "Registration ID", registrationId);
+            System.out.printf("%-18s: %d%n", "Queue Position", controller.getWaitingCount());
+            System.out.printf("%-18s: %s%n",
+                    "Status",
+                    controller.getRegistrationStatusName(registrationId));
+
+            System.out.println();
+            
         }
     }
 
@@ -318,8 +319,7 @@ public class RegistrationUI {
             System.out.println("Category       : VIP LOYALTY MEMBER");
             System.out.println("Loyalty Tier   : " + loyaltyTier);
             System.out.println("Completed Stays: " + controller.getLoyaltyCompletedStays(guestId));
-            System.out.println(
-                    "Routing        : VIP priority heap (not the Standard FIFO queue)");
+            
             return;
         }
 
@@ -329,7 +329,7 @@ public class RegistrationUI {
         System.out.println("Category       : STANDARD");
         System.out.println("Completed Stays: " + completedStays);
         System.out.println("Stays to ELITE : " + staysNeeded);
-        System.out.println("Routing        : Standard FIFO queue");
+        
     }
 
     private void viewWaitingQueue() {
@@ -400,10 +400,10 @@ public class RegistrationUI {
 
         if (suitableRooms.length == 0) {
             Utility.printError(
-                    "No suitable ready room can currently be assigned to the FIFO head.");
+                    "No suitable ready room can currently be assigned.");
             System.out.println(
                     "Possible reasons: matching rooms are occupied/not ready, or a waiting VIP has priority for the room.");
-            System.out.println("The Standard registration remains at the FIFO head.");
+            
             return;
         }
 
@@ -685,17 +685,18 @@ public class RegistrationUI {
             return;
         }
 
-        System.out.println("Registration ID : " + registration[0]);
-        System.out.println("Guest ID        : " + registration[1]);
-        System.out.println("Guest Name      : " + registration[2]);
-        System.out.println("Phone Number    : " + formatPhoneNo(registration[3]));
-        System.out.println("Requested Room  : " + formatRoomType(registration[4]));
-        System.out.println("Assigned Room   : " + registration[5]);
-        System.out.println("Number of Guests: " + registration[6]);
-        System.out.println("Registration Time: " + registration[7]);
-        System.out.println("Actual Check-In : " + registration[8]);
+        System.out.println("Registration ID   : " + registration[0]);
+        System.out.println("Guest ID          : " + registration[1]);
+        System.out.println("Guest Name        : " + registration[2]);
+        System.out.println("Phone Number      : " + formatPhoneNo(registration[3]));
+        System.out.println("Requested Room    : " + formatRoomType(registration[4]));
+        System.out.println("Assigned Room     : " + registration[5]);
+        System.out.println("Number of Guests  : " + registration[6]);
+        System.out.println("Registration Time : " + registration[7]);
+        System.out.println("Actual Check-In   : " + registration[8]);
         System.out.println("Expected Check-Out: " + registration[9]);
-        System.out.println("Status           : " + registration[10]);
+        System.out.println("Actual Check-Out  : " + registration[10]);
+        System.out.println("Status            : " + registration[11]);
     }
 
     /**

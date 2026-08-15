@@ -161,7 +161,7 @@ public class StandardFifoWaitingTimeRP {
                 "MANAGEMENT SUMMARY");
 
         System.out.println(
-                "Total Standard Waiting     : "
+                "Total Standard Waiting      : "
                 + controller.getWaitingCount());
 
         System.out.println(

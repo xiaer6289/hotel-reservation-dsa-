@@ -653,12 +653,19 @@ public class RegistrationController {
 
             if (sameGuest && currentlyCheckedIn) {
 
+                LocalDateTime actualCheckOutTime
+                        = LocalDateTime.now()
+                                .withSecond(0)
+                                .withNano(0);
+
+                registration.setActualCheckOutDateTime(
+                        actualCheckOutTime);
+
                 registration.setStatus(
                         RegistrationStatus.CHECKED_OUT);
 
                 registrationDao.upsert(registration);
 
-                // Record exactly one newly completed stay after checkout.
                 vipPriorityController.recordCompletedStay(
                         normalizedGuestId);
 
@@ -1143,6 +1150,7 @@ public class RegistrationController {
                     ? "Pending room assignment"
                     : formatBoundaryDateTime(registration.getCheckInDateTime()),
             formatBoundaryDateTime(registration.getCheckOutDateTime()),
+            formatBoundaryDateTime(registration.getActualCheckOutDateTime()), 
             String.valueOf(registration.getStatus())
         };
     }

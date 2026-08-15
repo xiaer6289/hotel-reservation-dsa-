@@ -12,8 +12,7 @@ import java.time.format.DateTimeFormatter;
 public class WalkInRegistration implements Serializable {
 
     private static final long serialVersionUID = 1L;
-    private static final DateTimeFormatter DATE_TIME_FORMAT
-            = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+    private static final DateTimeFormatter DATE_TIME_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
 
     private String registrationId;
     private Guest guest;
@@ -22,6 +21,7 @@ public class WalkInRegistration implements Serializable {
     private LocalDateTime registrationTime;
     private LocalDateTime checkInDateTime;
     private LocalDateTime checkOutDateTime;
+    private LocalDateTime actualCheckOutDateTime;  
     private RegistrationStatus status;
 
     public WalkInRegistration(
@@ -96,6 +96,14 @@ public class WalkInRegistration implements Serializable {
 
     public void setCheckOutDateTime(LocalDateTime checkOutDateTime) {
         this.checkOutDateTime = checkOutDateTime;
+    }
+
+    public LocalDateTime getActualCheckOutDateTime() {
+        return actualCheckOutDateTime;
+    }
+
+    public void setActualCheckOutDateTime(LocalDateTime actualCheckOutDateTime) {
+        this.actualCheckOutDateTime = actualCheckOutDateTime;
     }
 
     public RegistrationStatus getStatus() {
