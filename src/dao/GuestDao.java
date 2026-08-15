@@ -61,17 +61,32 @@ public class GuestDao {
         File file = new File(fileName);
         if (file.exists()) {
             Guest[] loaded = retrieveFromFile();
-            if (loaded.length > 0) return loaded;
+            if (loaded.length > 0) {
+                return loaded;
+            }
         }
-        return seedSampleData();
+
+        // Persist the seeded guest master immediately so Registration, VIP,
+        // Front Desk and any future bookings all read the same guest identity
+        // instead of creating separate in-memory sample copies.
+        Guest[] seeded = seedSampleData();
+        saveToFile(seeded);
+        return seeded;
     }
     
+    /**
+     * Demo guest master data shared by all modules.
+     * G0001-G0003 intentionally match LoyaltyProfileDao sample profiles:
+     * G0001 Ali   -> DIAMOND (10 completed stays)
+     * G0002 Aiman -> PLATINUM (6 completed stays)
+     * G0003 Mei   -> ELITE (3 completed stays)
+     */
     public Guest[] seedSampleData() {
         return new Guest[] {
-            new Guest("G0001", "Alex Tan", 60123456789L),
-            new Guest("G0002", "Brenda Lee", 60123456788L),
-            new Guest("G0003", "Chloe Wong", 60123456787L),
-            new Guest("G0004", "Daniel Lim", 60123456786L),
+            new Guest("G0001", "Ali", 60123456789L),
+            new Guest("G0002", "Aiman", 60123456788L),
+            new Guest("G0003", "Mei", 60123456787L),
+            new Guest("G0004", "Daniel Lim", 60123456786L)
         };
     }
 }
