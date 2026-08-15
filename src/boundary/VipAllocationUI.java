@@ -13,7 +13,6 @@ import entity.WalkInRegistration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
-import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
 import java.util.Scanner;
 import utility.Utility;
@@ -233,7 +232,7 @@ public class VipAllocationUI {
         System.out.println("  DIAMOND > PLATINUM > ELITE; for the same tier, the earlier registration is served first.");
         System.out.println("-".repeat(104));
 
-        displayVipRegistrationDetails(registration);
+        displayVipRegistrationDetails(registration, false);
 
         int matchingRooms = countMatchingReadyRooms(registration);
         Room suggestedRoom = controller.findReadyRoomForRegistration(registration);
@@ -763,8 +762,11 @@ public class VipAllocationUI {
     }
 
     private void displayVipRegistrationDetails(WalkInRegistration registration) {
+        displayVipRegistrationDetails(registration, true);
+    }
+
+    private void displayVipRegistrationDetails(WalkInRegistration registration, boolean showSuitableRooms) {
         LoyaltyTier tier = controller.getLoyaltyTier(registration);
-        int readyMatches = countMatchingReadyRooms(registration);
 
         System.out.println("VIP PROFILE");
         System.out.println("  Guest ID              : " + registration.getGuest().getGuestId());
@@ -782,7 +784,9 @@ public class VipAllocationUI {
         System.out.println("  Number of Guests      : " + registration.getNumberOfGuests());
         System.out.println("  Expected Check-Out    : " + formatDateTime(registration.getCheckOutDateTime()));
         System.out.println("  Standard Check-Out    : 12:00 PM");
-        System.out.println("  Suitable Rooms Now    : " + formatRoomAvailability(readyMatches));
+        if (showSuitableRooms) {
+            System.out.println("  Suitable Rooms Now    : " + formatRoomAvailability(countMatchingReadyRooms(registration)));
+        }
     }
 
 
@@ -1012,77 +1016,41 @@ public class VipAllocationUI {
     }
 
     private LocalDateTime readFutureCheckOutDate(WalkInRegistration registration) {
-        while (true) {
-            System.out.println("\nEnter New Expected Check-Out Date");
-            System.out.println("Hotel standard check-out time is fixed at 12:00 PM.");
-            System.out.println("Maximum stay: " + MAX_STAY_NIGHTS + " nights from the registration/arrival date.");
-            System.out.println("Hint example: 2026-08-15");
+        LocalDate arrivalDate = registration.getRegistrationTime() == null
+                ? LocalDate.now()
+                : registration.getRegistrationTime().toLocalDate();
 
-            int currentYear = LocalDate.now().getYear();
-            int year = readIntegerInRange(
-                    "Enter Year (yyyy, e.g. 2026): ",
-                    currentYear,
-                    9999,
-                    "Year must be between " + currentYear + " and 9999.");
+        LocalDate latestAllowedDate = arrivalDate.plusDays(MAX_STAY_NIGHTS);
 
-            int month = readIntegerInRange(
-                    "Enter Month (1-12, e.g. 8): ",
-                    1,
-                    12,
-                    "Month must be between 1 and 12.");
+        LocalDateTime now = LocalDateTime.now().withSecond(0).withNano(0);
+        LocalDate earliestFutureCheckOutDate = now.toLocalDate();
 
-            int maximumDay = YearMonth.of(year, month).lengthOfMonth();
-            int day = readIntegerInRange(
-                    "Enter Day (1-" + maximumDay + ", e.g. 15): ",
-                    1,
-                    maximumDay,
-                    "Day must be between 1 and " + maximumDay
-                    + " for " + year + "-" + String.format("%02d", month) + ".");
-
-            LocalDate newCheckOutDate = LocalDate.of(year, month, day);
-            LocalDate arrivalDate = registration.getRegistrationTime() == null
-                    ? LocalDate.now()
-                    : registration.getRegistrationTime().toLocalDate();
-            LocalDate latestAllowedDate = arrivalDate.plusDays(MAX_STAY_NIGHTS);
-
-            if (!newCheckOutDate.isAfter(arrivalDate)) {
-                Utility.printError("Expected check-out date must be after the registration/arrival date ("
-                        + arrivalDate + ").");
-                continue;
-            }
-
-            if (newCheckOutDate.isAfter(latestAllowedDate)) {
-                Utility.printError("Expected check-out date cannot exceed " + MAX_STAY_NIGHTS
-                        + " nights from the registration/arrival date. Latest allowed date: "
-                        + latestAllowedDate + ".");
-                continue;
-            }
-
-            LocalDateTime value = LocalDateTime.of(newCheckOutDate, STANDARD_CHECKOUT_TIME);
-            if (!value.isAfter(LocalDateTime.now().withSecond(0).withNano(0))) {
-                Utility.printError("Expected check-out must still be in the future.");
-                continue;
-            }
-
-            return value;
+        if (!LocalDateTime.of(earliestFutureCheckOutDate, STANDARD_CHECKOUT_TIME).isAfter(now)) {
+            earliestFutureCheckOutDate = earliestFutureCheckOutDate.plusDays(1);
         }
-    }
 
-    private int readIntegerInRange(
-            String message,
-            int minimum,
-            int maximum,
-            String errorMessage) {
-
-        while (true) {
-            int value = readInteger(message);
-
-            if (value >= minimum && value <= maximum) {
-                return value;
-            }
-
-            Utility.printError(errorMessage);
+        LocalDate earliestAllowedDate = arrivalDate.plusDays(1);
+        if (earliestFutureCheckOutDate.isAfter(earliestAllowedDate)) {
+            earliestAllowedDate = earliestFutureCheckOutDate;
         }
+
+        System.out.println("\nEnter New Expected Check-Out Date");
+        System.out.println("Hotel standard check-out time is fixed at 12:00 PM.");
+        System.out.println("Maximum stay: " + MAX_STAY_NIGHTS + " nights from the registration/arrival date.");
+
+        if (earliestAllowedDate.isAfter(latestAllowedDate)) {
+            Utility.printError(
+                    "No valid future check-out date remains within the "
+                    + MAX_STAY_NIGHTS + "-night stay limit.");
+            return registration.getCheckOutDateTime();
+        }
+
+        LocalDate newCheckOutDate = Utility.readCheckOutDateInRange(
+                scanner,
+                earliestAllowedDate,
+                latestAllowedDate);
+
+        return LocalDateTime.of(newCheckOutDate, STANDARD_CHECKOUT_TIME);
     }
 
     private String readRegistrationIdOrCancel(String message) {

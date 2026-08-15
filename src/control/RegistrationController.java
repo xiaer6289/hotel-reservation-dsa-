@@ -189,6 +189,8 @@ public class RegistrationController {
 
     /**
      * Prevents duplicate active registrations and duplicate concurrent stays.
+     * Historical Booking.room objects are serialized snapshots, so their old
+     * room status must not be treated as the hotel's current room status.
      */
     public boolean hasActiveRegistrationOrStay(String guestId) {
         if (guestId == null || guestId.isBlank()) {
@@ -208,31 +210,65 @@ public class RegistrationController {
                     .equalsIgnoreCase(normalizedGuestId);
 
             RegistrationStatus status = registration.getStatus();
-            boolean stillWaiting = status == RegistrationStatus.WAITING
-                    || status == RegistrationStatus.VIP_WAITING;
+            boolean activeRegistrationOrStay
+                    = status == RegistrationStatus.WAITING
+                    || status == RegistrationStatus.VIP_WAITING
+                    || status == RegistrationStatus.CHECKED_IN;
 
-            if (sameGuest && stillWaiting) {
+            if (sameGuest && activeRegistrationOrStay) {
                 return true;
             }
         }
 
+        /*
+         * Legacy/fallback protection for bookings that may not have a matching
+         * registration record. Check the live RoomDao state instead of the
+         * room-status snapshot stored inside booking.dat. The room number and
+         * check-in time must both still match the booking before that booking
+         * can represent the current stay.
+         */
         bookings = loadExistingBookings();
+        rooms = roomDao.loadOrSeed();
 
         for (Booking booking : bookings) {
             if (booking == null
                     || booking.getGuest() == null
-                    || booking.getRoom() == null) {
+                    || booking.getRoom() == null
+                    || booking.getRoom().getRoomNumber() == null) {
                 continue;
             }
 
             boolean sameGuest = booking.getGuest().getGuestId()
                     .equalsIgnoreCase(normalizedGuestId);
 
-            boolean currentlyCheckedIn
-                    = booking.getRoom().getRoomStatus() == RoomStatus.OCCUPIED;
+            if (!sameGuest) {
+                continue;
+            }
 
-            if (sameGuest && currentlyCheckedIn) {
-                return true;
+            Room bookingRoom = booking.getRoom();
+
+            for (Room currentRoom : rooms) {
+                if (currentRoom == null
+                        || currentRoom.getRoomNumber() == null
+                        || !currentRoom.getRoomNumber().equalsIgnoreCase(
+                                bookingRoom.getRoomNumber())) {
+                    continue;
+                }
+
+                boolean liveRoomOccupied
+                        = currentRoom.getRoomStatus() == RoomStatus.OCCUPIED;
+
+                boolean sameCheckInTime
+                        = bookingRoom.getCheckInDateTime() != null
+                        && currentRoom.getCheckInDateTime() != null
+                        && bookingRoom.getCheckInDateTime().equals(
+                                currentRoom.getCheckInDateTime());
+
+                if (liveRoomOccupied && sameCheckInTime) {
+                    return true;
+                }
+
+                break;
             }
         }
 

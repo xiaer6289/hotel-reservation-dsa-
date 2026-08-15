@@ -162,17 +162,14 @@ public class FrontDeskControl implements RoomAvailabilityNotifier.RoomReadyListe
     
     public boolean save() {
         Booking[] bookings = sortBooking();
-        Guest[] guests = new Guest[bookings.length];
         refreshRooms();
         Room[] roomsToSave = rooms;
         Payment[] payments = new Payment[bookings.length];
         
         for (int i = 0; i < bookings.length; i++) {
-            guests[i] = bookings[i].getGuest();
             payments[i] = bookings[i].getPayment();
         }
         
-        guestDao.saveToFile(guests);
         roomDao.saveToFile(roomsToSave);
         paymentDao.saveToFile(payments);
         bookingDao.saveToFile(bookings);

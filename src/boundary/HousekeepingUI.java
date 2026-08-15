@@ -30,17 +30,16 @@ public class HousekeepingUI {
             System.out.println("=========================================");
             System.out.println("1. Log New Housekeeping Task");
             System.out.println("2. Update Task Status");
-            System.out.println("3. Advance Task to Next Status");
-            System.out.println("4. Rollback Task Status");
-            System.out.println("5. Search Task by Room Number");
-            System.out.println("6. Generate Cleaning Status Report");
-            System.out.println("7. Generate Daily Performance Report");
-            System.out.println("8. Display All Tasks");
-            System.out.println("9. Display Room Housekeeping Status");
-            System.out.println("10. Show Only Dirty Rooms");
-            System.out.println("11. Show Only Ready Rooms");
-            System.out.println("12. Show Tasks for a Selected Room");
-            System.out.println("13. Reset All Rooms to Default Ready Data");
+            System.out.println("3. Rollback Task Status");
+            System.out.println("4. Search Task by Room Number");
+            System.out.println("5. Generate Cleaning Status Report");
+            System.out.println("6. Generate Daily Performance Report");
+            System.out.println("7. Display All Tasks");
+            System.out.println("8. Display Room Housekeeping Status");
+            System.out.println("9. Show Only Dirty Rooms");
+            System.out.println("10. Show Only Ready Rooms");
+            System.out.println("11. Show Tasks for a Selected Room");
+            System.out.println("12. Reset All Rooms to Default Ready Data");
             System.out.println("0. Exit Module");
             System.out.println("=========================================");
             System.out.print("Enter your choice: ");
@@ -55,37 +54,34 @@ public class HousekeepingUI {
                     updateTaskStatus();
                     break;
                 case 3:
-                    advanceTaskStatus();
-                    break;
-                case 4:
                     rollbackTask();
                     break;
-                case 5:
+                case 4:
                     searchByRoom();
                     break;
-                case 6:
+                case 5:
                     new CleaningStatusFlowRP().generateReport(controller.getTaskLog());
                     break;
-                case 7:
+                case 6:
                     new DailyPerformanceRP().generateReport(controller.getTaskLog());
                     break;
-                case 8:
+                case 7:
                     System.out.println("\n=== ALL TASKS ===");
                     controller.getTaskLog().display();
                     break;
-                case 9:
+                case 8:
                     controller.displayRoomStatus();
                     break;
-                case 10:
+                case 9:
                     controller.displayDirtyRooms();
                     break;
-                case 11:
+                case 10:
                     controller.displayReadyRooms();
                     break;
-                case 12:
+                case 11:
                     showTasksForSelectedRoom();
                     break;
-                case 13:
+                case 12:
                     resetAllRooms();
                     break;
                 case 0:
@@ -211,13 +207,6 @@ public class HousekeepingUI {
         }
         
         controller.updateTaskStatus(taskId, status);
-    }
-
-    private void advanceTaskStatus() {
-        String taskId = selectTask();
-        if (taskId == null) return;
-        
-        controller.advanceTaskStatus(taskId);
     }
 
     private void rollbackTask() {

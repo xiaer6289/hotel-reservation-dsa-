@@ -262,22 +262,6 @@ public class HousekeepingController {
         return false;
     }
 
-    public boolean advanceTaskStatus(String taskId) {
-        TaskLogEntry task = findTaskById(taskId);
-        if (task == null) {
-            System.out.println("❌ Task not found: " + taskId);
-            return false;
-        }
-
-        String nextStatus = getNextStatus(task.getStatus());
-        if (nextStatus == null) {
-            System.out.println("❌ Task " + taskId + " is already at the final status.");
-            return false;
-        }
-
-        return updateTaskStatus(taskId, nextStatus);
-    }
-
     /**
      * Reverts a task to its previous logical status in case a housekeeper made a mistake.
      * Prevents rolling back past the initial 'Dirty' state.

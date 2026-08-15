@@ -1,6 +1,11 @@
 package utility;
 
 
+import java.time.LocalDate;
+import java.time.Month;
+import java.time.YearMonth;
+import java.time.format.TextStyle;
+import java.util.Locale;
 import java.util.Scanner;
 
 /*
@@ -53,6 +58,111 @@ public class Utility {
         return String.valueOf(number);
     }
 
+    public static LocalDate readCheckOutDateInRange(
+            Scanner scanner,
+            LocalDate minimumDate,
+            LocalDate maximumDate) {
+
+        if (scanner == null || minimumDate == null || maximumDate == null) {
+            throw new IllegalArgumentException("Scanner and date range cannot be null.");
+        }
+
+        if (minimumDate.isAfter(maximumDate)) {
+            throw new IllegalArgumentException("Minimum date cannot be after maximum date.");
+        }
+
+        System.out.println("Allowed check-out date: " + minimumDate + " to " + maximumDate + ".");
+
+        int minimumYear = minimumDate.getYear();
+        int maximumYear = maximumDate.getYear();
+        int year = readWholeNumberInRange(
+                scanner,
+                buildRangePrompt("Year", minimumYear, maximumYear),
+                minimumYear,
+                maximumYear,
+                buildRangeError("year", minimumYear, maximumYear));
+
+        int minimumMonth = year == minimumYear ? minimumDate.getMonthValue() : 1;
+        int maximumMonth = year == maximumYear ? maximumDate.getMonthValue() : 12;
+        int month = readWholeNumberInRange(
+                scanner,
+                buildRangePrompt("Month", minimumMonth, maximumMonth),
+                minimumMonth,
+                maximumMonth,
+                buildRangeError("month", minimumMonth, maximumMonth));
+
+        YearMonth selectedMonth = YearMonth.of(year, month);
+        int minimumDay = selectedMonth.equals(YearMonth.from(minimumDate))
+                ? minimumDate.getDayOfMonth()
+                : 1;
+        int maximumDay = selectedMonth.equals(YearMonth.from(maximumDate))
+                ? maximumDate.getDayOfMonth()
+                : selectedMonth.lengthOfMonth();
+
+        String monthName = Month.of(month)
+                .getDisplayName(TextStyle.FULL, Locale.ENGLISH);
+
+        int day = readWholeNumberInRange(
+                scanner,
+                buildRangePrompt("Day", minimumDay, maximumDay),
+                minimumDay,
+                maximumDay,
+                "Invalid day. " + monthName + " " + year
+                + " only allows day " + formatRangeForMessage(minimumDay, maximumDay)
+                + " for this stay.");
+
+        return LocalDate.of(year, month, day);
+    }
+
+    private static int readWholeNumberInRange(
+            Scanner scanner,
+            String prompt,
+            int minimum,
+            int maximum,
+            String errorMessage) {
+
+        while (true) {
+            System.out.print(prompt);
+            String input = scanner.nextLine().trim();
+
+            try {
+                int value = Integer.parseInt(input);
+                if (value >= minimum && value <= maximum) {
+                    return value;
+                }
+            } catch (NumberFormatException ex) {
+                // The same clear validation message is shown below.
+            }
+
+            printError(errorMessage);
+        }
+    }
+
+    private static String buildRangePrompt(String field, int minimum, int maximum) {
+        return "Enter " + field + " (" + formatRange(minimum, maximum) + "): ";
+    }
+
+    private static String buildRangeError(String field, int minimum, int maximum) {
+        if (minimum == maximum) {
+            return "Invalid " + field + ". Please enter " + minimum + " only.";
+        }
+
+        return "Invalid " + field + ". Please enter a " + field
+                + " from " + minimum + " to " + maximum + ".";
+    }
+
+    private static String formatRangeForMessage(int minimum, int maximum) {
+        return minimum == maximum
+                ? String.valueOf(minimum)
+                : minimum + " to " + maximum;
+    }
+
+    private static String formatRange(int minimum, int maximum) {
+        return minimum == maximum
+                ? String.valueOf(minimum)
+                : minimum + "-" + maximum;
+    }
+    
     public static boolean isValidPersonName(String name) {
         if (name == null) {
             return false;
