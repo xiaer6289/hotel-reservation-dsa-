@@ -267,6 +267,23 @@ public class VipPriorityController {
     }
 
     /**
+     * Returns all persisted registrations for VIP management reporting.
+     * Report classes use the full history instead of only the current MaxHeap.
+     */
+    public WalkInRegistration[] getAllRegistrationsForReport() {
+        WalkInRegistration[] registrations = registrationDao.loadExisting();
+        return registrations == null ? new WalkInRegistration[0] : registrations;
+    }
+
+    /**
+     * Returns all persisted bookings for VIP management reporting.
+     */
+    public Booking[] getAllBookingsForReport() {
+        Booking[] existingBookings = loadExistingBookings();
+        return existingBookings == null ? new Booking[0] : existingBookings;
+    }
+
+    /**
      * Finds the guest master record that belongs to a loyalty profile.
      */
     public Guest findGuestById(String guestId) {
