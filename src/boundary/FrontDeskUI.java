@@ -5,14 +5,6 @@
 package boundary;
 
 import control.FrontDeskControl;
-import control.report.BillSummaryRP;
-import control.report.RoomOccupancyRP;
-import entity.Booking;
-import entity.Room;
-import entity.RoomType;
-import entity.WalkInRegistration;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.Scanner;
 import utility.Utility;
 
@@ -21,13 +13,9 @@ import utility.Utility;
  * @author Lee Cheng Xuan
  */
 public class FrontDeskUI {
-    private static final DateTimeFormatter DATE_TIME_FORMAT
-            = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
 
     Scanner scanner = new Scanner(System.in);
     private FrontDeskControl control = new FrontDeskControl();
-    private RoomOccupancyRP roomOccupancy = new RoomOccupancyRP();
-    private BillSummaryRP billSummary = new BillSummaryRP();
     
     public void run() {
         int choice;
@@ -100,7 +88,7 @@ public class FrontDeskUI {
             return;
         }
         
-        Booking booking = control.searchBookingByConfirmationNo(confirmationNo);
+        String[] booking = control.getBookingDisplayData(confirmationNo);
         if (booking == null) {
             Utility.printError("No booking found for " + confirmationNo);
         } else {
@@ -110,11 +98,11 @@ public class FrontDeskUI {
     
     private void viewAllBooking() {
         System.out.println("--- Bookings (sorted by Confirmation No) ---");
-        Booking[] bookings = control.sortBooking();
-        for (Booking booking : bookings) {
-            System.out.println(booking.getConfirmationNo() + " | "
-            + booking.getGuest() + " | Room " 
-            + booking.getRoom().getRoomNumber());
+        String[][] bookings = control.getAllBookingDisplayRows();
+        for (String[] booking : bookings) {
+            System.out.println(booking[0] + " | "
+            + booking[1] + " | Room " 
+            + booking[2]);
         }
     }
     
@@ -129,7 +117,7 @@ public class FrontDeskUI {
     }
     
     private void processCheckout() {
-        Booking[] checkedInBookings = control.getCurrentCheckedInBookings();
+        String[][] checkedInBookings = control.getCurrentCheckedInDisplayRows();
 
         System.out.println("\n===== PROCESS GUEST CHECK OUT =====");
 
@@ -144,30 +132,19 @@ public class FrontDeskUI {
                 "Confirmation No.", "Expected Check-Out");
         System.out.println("--------------------------------------------------------------------------------------");
 
-        for (Booking currentBooking : checkedInBookings) {
-            WalkInRegistration registration
-                    = control.getCheckedInRegistrationForBooking(currentBooking);
-
-            String registrationId = registration == null
-                    ? "N/A"
-                    : registration.getRegistrationId();
-
-            LocalDateTime expectedCheckOut = registration == null
-                    ? currentBooking.getRoom().getCheckOutDateTime()
-                    : registration.getCheckOutDateTime();
-
+        for (String[] currentBooking : checkedInBookings) {
             System.out.printf("%-6s %-10s %-20s %-10s %-18s %-18s%n",
-                    currentBooking.getRoom().getRoomNumber(),
-                    currentBooking.getGuest().getGuestId(),
-                    currentBooking.getGuest().getName(),
-                    registrationId,
-                    currentBooking.getConfirmationNo(),
-                    formatDateTime(expectedCheckOut));
+                    currentBooking[0],
+                    currentBooking[1],
+                    currentBooking[2],
+                    currentBooking[3],
+                    currentBooking[4],
+                    currentBooking[5]);
         }
 
-        Booking booking = null;
+        String[] selectedStay = null;
 
-        while (booking == null) {
+        while (selectedStay == null) {
             System.out.print("\nEnter Room Number to check out (0 = Cancel): ");
             String roomNumber = scanner.nextLine().trim();
 
@@ -176,40 +153,22 @@ public class FrontDeskUI {
                 return;
             }
 
-            for (Booking currentBooking : checkedInBookings) {
-                if (currentBooking.getRoom().getRoomNumber()
-                        .equalsIgnoreCase(roomNumber)) {
-                    booking = currentBooking;
-                    break;
-                }
-            }
+            selectedStay = control.getCurrentCheckedInStayDisplayData(roomNumber);
 
-            if (booking == null) {
+            if (selectedStay == null) {
                 Utility.printError("Please enter a room number from the checked-in list above.");
             }
         }
 
-        WalkInRegistration selectedRegistration
-                = control.getCheckedInRegistrationForBooking(booking);
-
         System.out.println("\nSELECTED CHECKED-IN STAY");
-        System.out.println("Room Number         : " + booking.getRoom().getRoomNumber());
-        System.out.println("Guest ID            : " + booking.getGuest().getGuestId());
-        System.out.println("Guest Name          : " + booking.getGuest().getName());
-        System.out.println("Phone Number        : " + booking.getGuest().getPhoneNo());
-        System.out.println("Registration ID     : "
-                + (selectedRegistration == null
-                        ? "N/A"
-                        : selectedRegistration.getRegistrationId()));
-        System.out.println("Confirmation Number : " + booking.getConfirmationNo());
-        System.out.println("Check-In Time       : "
-                + formatDateTime(selectedRegistration == null
-                        ? booking.getRoom().getCheckInDateTime()
-                        : selectedRegistration.getCheckInDateTime()));
-        System.out.println("Expected Check-Out  : "
-                + formatDateTime(selectedRegistration == null
-                        ? booking.getRoom().getCheckOutDateTime()
-                        : selectedRegistration.getCheckOutDateTime()));
+        System.out.println("Room Number         : " + selectedStay[0]);
+        System.out.println("Guest ID            : " + selectedStay[1]);
+        System.out.println("Guest Name          : " + selectedStay[2]);
+        System.out.println("Phone Number        : " + selectedStay[3]);
+        System.out.println("Registration ID     : " + selectedStay[4]);
+        System.out.println("Confirmation Number : " + selectedStay[5]);
+        System.out.println("Check-In Time       : " + selectedStay[6]);
+        System.out.println("Expected Check-Out  : " + selectedStay[7]);
 
         String confirmationNo;
 
@@ -227,7 +186,7 @@ public class FrontDeskUI {
                 continue;
             }
 
-            if (!booking.getConfirmationNo().equals(confirmationNo)) {
+            if (!selectedStay[5].equals(confirmationNo)) {
                 Utility.printError("Confirmation number does not match the selected room/guest.");
                 continue;
             }
@@ -257,50 +216,38 @@ public class FrontDeskUI {
                 break;
         }
 
-        entity.TaskLogEntry task = control.processCheckout(confirmationNo, staff, remarks);
-        if (task == null) {
+        String taskId = control.processCheckoutAndGetTaskId(confirmationNo, staff, remarks);
+        if (taskId == null) {
             Utility.printError("Unable to process check-out.");
             return;
         }
 
-        Utility.printSuccess("Check-out completed. Housekeeping task created: " + task.getTaskId());
-    }
-
-    private String formatDateTime(LocalDateTime dateTime) {
-        return dateTime == null ? "N/A" : dateTime.format(DATE_TIME_FORMAT);
+        Utility.printSuccess("Check-out completed. Housekeeping task created: " + taskId);
     }
 
     private void viewReadyRoomNotifications() {
-        Room[] rooms = control.getNotifiedReadyRooms();
+        String[][] rooms = control.getReadyRoomNotificationDisplayRows();
         if (rooms.length == 0) {
             Utility.printError("No ready-room notifications yet.");
             return;
         }
 
         System.out.println("--- READY ROOMS FOR FRONT DESK ---");
-        for (Room room : rooms) {
+        for (String[] room : rooms) {
             if (room != null) {
-                System.out.println("Room " + room.getRoomNumber() + " | " + room.getStatusLabel());
+                System.out.println("Room " + room[0] + " | " + room[1]);
             }
         }
     }
     
-    private void displayAllBooking(Booking booking) {
-        System.out.println("Confirmation No: " + booking.getConfirmationNo());
-        System.out.println("Guest Name: " + booking.getGuest().getName());
-        System.out.println("Phone Number: " + booking.getGuest().getPhoneNo());
-        System.out.println("Room Number: " + booking.getRoom().getRoomNumber());
-        System.out.println("Room Type: " + booking.getRoom().getRoomType());
-        if (booking.getPayment() == null) {
-            // Walk-in Standard/VIP check-in currently does not create a
-            // Payment object. Keep Front Desk search usable instead of
-            // throwing NullPointerException for those bookings.
-            System.out.println("Payment Amount: N/A");
-            System.out.println("Payment Status: N/A");
-        } else {
-            System.out.println("Payment Amount: " + booking.getPayment().getAmount());
-            System.out.println("Payment Status: " + booking.getPayment().getStatus());
-        }
+    private void displayAllBooking(String[] booking) {
+        System.out.println("Confirmation No: " + booking[0]);
+        System.out.println("Guest Name: " + booking[1]);
+        System.out.println("Phone Number: " + booking[2]);
+        System.out.println("Room Number: " + booking[3]);
+        System.out.println("Room Type: " + booking[4]);
+        System.out.println("Payment Amount: " + booking[5]);
+        System.out.println("Payment Status: " + booking[6]);
     }
     
     private void roomOccupancyRP() {
@@ -311,16 +258,16 @@ public class FrontDeskUI {
         String roomTypeFilter;
         switch (type) {
             case 1:
-                roomTypeFilter = RoomType.DELUXE.name();
+                roomTypeFilter = "DELUXE";
                 break;
             case 2:
-                roomTypeFilter = RoomType.DELUXE_TWIN.name();
+                roomTypeFilter = "DELUXE_TWIN";
                 break;
             case 3:
-                roomTypeFilter = RoomType.SUPERIOR.name();
+                roomTypeFilter = "SUPERIOR";
                 break;
             case 4:
-                roomTypeFilter = RoomType.SUPERIOR_TWIN.name();
+                roomTypeFilter = "SUPERIOR_TWIN";
                 break;
             case 5:
                 roomTypeFilter = null;
@@ -334,9 +281,7 @@ public class FrontDeskUI {
         String status = scanner.nextLine().trim().toUpperCase();
         boolean availabilityFilter = status.equals("A");
         
-        Booking[] allBookings = control.sortBooking();
-        Booking[] report = roomOccupancy.generateReport(
-                allBookings,
+        String[][] report = control.generateRoomOccupancyReportDisplay(
                 roomTypeFilter,
                 availabilityFilter);
         
@@ -344,14 +289,14 @@ public class FrontDeskUI {
         + " | Status = " + (availabilityFilter ? "AVAILABLE" : "OCCUPIED"));
         System.out.printf("\n%-8s %-14s %-6s %15s %-17s %-17s%n", 
                 "Room No", "Type", "Floor", "Guest Name", "Check-In", "Check-Out");
-        for (Booking booking : report) {
+        for (String[] booking : report) {
             System.out.printf("\n%-8s %-14s %-6s %-15s %-17s %-17s%n", 
-                    booking.getRoom().getRoomNumber(), 
-                    booking.getRoom().getRoomType(), 
-                    booking.getRoom().getFloor(), 
-                    booking.getGuest().getName(), 
-                    booking.getRoom().getCheckInDateTime(), 
-                    booking.getRoom().getCheckOutDateTime());
+                    booking[0],
+                    booking[1],
+                    booking[2],
+                    booking[3],
+                    booking[4],
+                    booking[5]);
         }
         System.out.println("Total matching rooms: " + report.length);
     }
@@ -367,20 +312,19 @@ public class FrontDeskUI {
             return;
         }
 
-        Booking[] allBookings = control.sortBooking();
-        Booking[] report = billSummary.generateReport(allBookings, status);
-        double total = billSummary.calcTotalRevenue(report);
+        String[][] report = control.generateBillingSummaryReportDisplay(status);
+        double total = control.getBillingSummaryTotal(status);
         
         System.out.println("\nFilter: Status = " + status);
         System.out.printf("\n%-12s %-15s %-14s %-10s %-10s%n", 
                 "Conf. No", "Guest Name", "Room Type", "Amount", "Status");
-        for (Booking booking : report) {
+        for (String[] booking : report) {
             System.out.printf("\n%-12s %-15s %-14s %-10.2f %-10s%n", 
-                    booking.getConfirmationNo(),
-                    booking.getGuest().getName(), 
-                    booking.getRoom().getRoomType(), 
-                    booking.getPayment().getAmount(), 
-                    booking.getPayment().getStatus());
+                    booking[0],
+                    booking[1],
+                    booking[2],
+                    Double.parseDouble(booking[3]),
+                    booking[4]);
         }
         System.out.printf("Total Revenue: RM %.2f | Bookings count: %d%n", total, report.length);
             

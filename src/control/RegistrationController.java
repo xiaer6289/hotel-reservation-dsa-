@@ -963,4 +963,240 @@ public class RegistrationController {
         updated[safeOriginal.length] = newBooking;
         return updated;
     }
+
+    // ===== Boundary display/input helpers (ECB: Boundary does not access Entity objects) =====
+    public String[] getGuestDisplayDataById(String guestId) {
+        Guest guest = searchGuestById(guestId);
+        if (guest == null) {
+            return null;
+        }
+        LoyaltyProfile profile = searchLoyaltyProfileByGuestId(guest.getGuestId());
+        return new String[] {
+            guest.getGuestId(),
+            guest.getName(),
+            String.valueOf(guest.getPhoneNo()),
+            profile == null ? "STANDARD" : "VIP - " + profile.getTier()
+        };
+    }
+
+    public String[][] searchGuestDisplayDataByName(String guestName) {
+        Guest[] matches = searchGuestsByName(guestName);
+        String[][] rows = new String[matches.length][4];
+        for (int i = 0; i < matches.length; i++) {
+            Guest guest = matches[i];
+            LoyaltyProfile profile = searchLoyaltyProfileByGuestId(guest.getGuestId());
+            rows[i][0] = guest.getGuestId();
+            rows[i][1] = guest.getName();
+            rows[i][2] = String.valueOf(guest.getPhoneNo());
+            rows[i][3] = profile == null ? "STANDARD" : "VIP - " + profile.getTier();
+        }
+        return rows;
+    }
+
+    public String[] searchGuestDisplayDataByPhoneNo(Long phoneNumber) {
+        Guest guest = searchGuestByPhoneNo(phoneNumber);
+        return guest == null ? null : getGuestDisplayDataById(guest.getGuestId());
+    }
+
+    public String getGuestPhoneRaw(String guestId) {
+        Guest guest = searchGuestById(guestId);
+        return guest == null || guest.getPhoneNo() == null ? null : String.valueOf(guest.getPhoneNo());
+    }
+
+    public String getGuestName(String guestId) {
+        Guest guest = searchGuestById(guestId);
+        return guest == null ? null : guest.getName();
+    }
+
+    public String getLoyaltyTierNameByGuestId(String guestId) {
+        LoyaltyProfile profile = searchLoyaltyProfileByGuestId(guestId);
+        return profile == null ? null : profile.getTier().name();
+    }
+
+    public String refreshLoyaltyTierNameByGuestId(String guestId) {
+        LoyaltyProfile profile = refreshLoyaltyProfileByGuestId(guestId);
+        return profile == null ? null : profile.getTier().name();
+    }
+
+    public int getLoyaltyCompletedStays(String guestId) {
+        LoyaltyProfile profile = searchLoyaltyProfileByGuestId(guestId);
+        return profile == null ? 0 : profile.getCompletedStays();
+    }
+
+    public String addNewGuestAndReturnId(String guestName, Long phoneNumber) {
+        Guest guest = addNewGuest(guestName, phoneNumber);
+        return guest == null ? null : guest.getGuestId();
+    }
+
+    public String[] getRoomTypeNames() {
+        entity.RoomType[] roomTypes = entity.RoomType.values();
+        String[] names = new String[roomTypes.length];
+        for (int i = 0; i < roomTypes.length; i++) {
+            names[i] = roomTypes[i].name();
+        }
+        return names;
+    }
+
+    public double getRoomTypePricePerDay(String roomTypeName) {
+        if (roomTypeName == null) {
+            return 0.0;
+        }
+        try {
+            return entity.RoomType.valueOf(roomTypeName.trim().toUpperCase()).getPricePerDay();
+        } catch (IllegalArgumentException ex) {
+            return 0.0;
+        }
+    }
+
+    public int getReadyRoomCountForVipRequest(String roomType, int numberOfGuests, String loyaltyTierName) {
+        if (loyaltyTierName == null) {
+            return 0;
+        }
+        try {
+            LoyaltyTier tier = LoyaltyTier.valueOf(loyaltyTierName.trim().toUpperCase());
+            return getReadyRoomCountForVipRequest(roomType, numberOfGuests, tier);
+        } catch (IllegalArgumentException ex) {
+            return 0;
+        }
+    }
+
+    /**
+     * Creates the WalkInRegistration entity inside Control and routes it to
+     * Standard FIFO or VIP MaxHeap based on the guest's current loyalty data.
+     */
+    public int createAndRouteWalkInRegistration(
+            String registrationId,
+            String guestId,
+            String roomType,
+            int numberOfGuests,
+            LocalDateTime arrivalTime,
+            LocalDateTime expectedCheckOut) {
+
+        Guest guest = searchGuestById(guestId);
+        if (guest == null) {
+            return VipPriorityController.INVALID_INPUT;
+        }
+
+        WalkInRegistration registration = new WalkInRegistration(
+                registrationId,
+                guest,
+                roomType,
+                numberOfGuests,
+                null,
+                expectedCheckOut);
+        registration.setRegistrationTime(arrivalTime);
+
+        LoyaltyProfile profile = searchLoyaltyProfileByGuestId(guestId);
+        if (profile != null) {
+            return addVipRegistration(registration, profile);
+        }
+
+        addStandardRegistration(registration);
+        return VipPriorityController.ADD_SUCCESS;
+    }
+
+    public String getRegistrationStatusName(String registrationId) {
+        WalkInRegistration registration = searchRegistrationById(registrationId);
+        return registration == null || registration.getStatus() == null
+                ? null : registration.getStatus().name();
+    }
+
+    public String[][] getStandardWaitingQueueDisplayData() {
+        String[][] rows = new String[registrationQueue.size()][6];
+        for (int i = 0; i < registrationQueue.size(); i++) {
+            WalkInRegistration registration = registrationQueue.get(i);
+            rows[i][0] = registration.getRegistrationId();
+            rows[i][1] = registration.getGuest().getGuestId();
+            rows[i][2] = registration.getGuest().getName();
+            rows[i][3] = registration.getRequestedRoomType();
+            rows[i][4] = String.valueOf(registration.getNumberOfGuests());
+            rows[i][5] = formatBoundaryDateTime(registration.getRegistrationTime());
+        }
+        return rows;
+    }
+
+    public String getNextRegistrationId() {
+        WalkInRegistration registration = getNextRegistration();
+        return registration == null ? null : registration.getRegistrationId();
+    }
+
+    public String[] getRegistrationDisplayData(String registrationId) {
+        WalkInRegistration registration = searchRegistrationById(registrationId);
+        if (registration == null) {
+            return null;
+        }
+
+        Booking booking = getBookingForRegistration(registration);
+        String assignedRoom = booking != null && booking.getRoom() != null
+                ? booking.getRoom().getRoomNumber() : "Not assigned yet";
+
+        return new String[] {
+            registration.getRegistrationId(),
+            registration.getGuest().getGuestId(),
+            registration.getGuest().getName(),
+            String.valueOf(registration.getGuest().getPhoneNo()),
+            registration.getRequestedRoomType(),
+            assignedRoom,
+            String.valueOf(registration.getNumberOfGuests()),
+            formatBoundaryDateTime(registration.getRegistrationTime()),
+            registration.getCheckInDateTime() == null
+                    ? "Pending room assignment"
+                    : formatBoundaryDateTime(registration.getCheckInDateTime()),
+            formatBoundaryDateTime(registration.getCheckOutDateTime()),
+            String.valueOf(registration.getStatus())
+        };
+    }
+
+    public boolean registrationExists(String registrationId) {
+        return searchRegistrationById(registrationId) != null;
+    }
+
+    public String[][] getSuitableRoomsForNextStandardDisplayData() {
+        Room[] suitableRooms = getSuitableRoomsForNextStandard();
+        String[][] rows = new String[suitableRooms.length][5];
+        for (int i = 0; i < suitableRooms.length; i++) {
+            Room room = suitableRooms[i];
+            rows[i][0] = room.getRoomNumber();
+            rows[i][1] = room.getRoomType();
+            rows[i][2] = String.valueOf(room.getFloor());
+            rows[i][3] = String.valueOf(room.getNoOfGuest());
+            rows[i][4] = room.getStatusLabel();
+        }
+        return rows;
+    }
+
+    public String[] checkInNextStandardDisplayData(String selectedRoomNumber) {
+        String registrationId = getNextRegistrationId();
+        Booking booking = checkInNextStandard(selectedRoomNumber);
+        if (booking == null || registrationId == null) {
+            return null;
+        }
+        WalkInRegistration registration = searchRegistrationById(registrationId);
+        return new String[] {
+            booking.getConfirmationNo(),
+            booking.getGuest().getName(),
+            booking.getRoom().getRoomNumber(),
+            booking.getRoom().getRoomType(),
+            formatBoundaryDateTime(booking.getRoom().getCheckInDateTime()),
+            formatBoundaryDateTime(booking.getRoom().getCheckOutDateTime()),
+            registration == null ? "N/A" : String.valueOf(registration.getStatus())
+        };
+    }
+
+    public String[] cancelStandardRegistrationDisplayData(String registrationId) {
+        WalkInRegistration cancelled = cancelRegistrationById(registrationId);
+        if (cancelled == null) {
+            return null;
+        }
+        return new String[] {
+            cancelled.getRegistrationId(),
+            cancelled.getGuest().getName(),
+            String.valueOf(cancelled.getStatus())
+        };
+    }
+
+    private String formatBoundaryDateTime(LocalDateTime dateTime) {
+        return dateTime == null ? "N/A"
+                : dateTime.format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"));
+    }
 }

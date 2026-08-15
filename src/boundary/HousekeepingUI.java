@@ -6,8 +6,6 @@ package boundary;
  */
 
 import control.HousekeepingController;
-import control.report.CleaningStatusFlowRP;
-import control.report.DailyPerformanceRP;
 import java.util.Scanner;
 import utility.Utility;
 
@@ -60,14 +58,14 @@ public class HousekeepingUI {
                     searchByRoom();
                     break;
                 case 5:
-                    new CleaningStatusFlowRP().generateReport(controller.getTaskLog());
+                    controller.generateCleaningStatusReport();
                     break;
                 case 6:
-                    new DailyPerformanceRP().generateReport(controller.getTaskLog());
+                    controller.generateDailyPerformanceReport();
                     break;
                 case 7:
                     System.out.println("\n=== ALL TASKS ===");
-                    controller.getTaskLog().display();
+                    controller.displayAllTasks();
                     break;
                 case 8:
                     controller.displayRoomStatus();
@@ -99,7 +97,7 @@ public class HousekeepingUI {
     }
 
     private String selectRoom() {
-        entity.Room[] rooms = controller.getRooms();
+        String[][] rooms = controller.getRoomSelectionDisplayData();
         if (rooms == null || rooms.length == 0) {
             System.out.println("No rooms available.");
             return null;
@@ -107,14 +105,15 @@ public class HousekeepingUI {
 
         System.out.println("\n--- Select Room ---");
         for (int i = 0; i < rooms.length; i++) {
-            if (rooms[i] != null) {
-                System.out.printf("%d. Room %s (%s)%n", (i + 1), rooms[i].getRoomNumber(), rooms[i].getStatusLabel());
+            if (rooms[i] != null && rooms[i][0] != null) {
+                System.out.printf("%d. Room %s (%s)%n", (i + 1), rooms[i][0], rooms[i][1]);
             }
         }
         System.out.print("Enter room choice: ");
         int choice = readChoice();
-        if (choice > 0 && choice <= rooms.length && rooms[choice - 1] != null) {
-            return rooms[choice - 1].getRoomNumber();
+        if (choice > 0 && choice <= rooms.length && rooms[choice - 1] != null
+                && rooms[choice - 1][0] != null) {
+            return rooms[choice - 1][0];
         }
         System.out.println("❌ Invalid choice.");
         return null;
@@ -138,25 +137,25 @@ public class HousekeepingUI {
     }
 
     private String selectTask() {
-        adt.linear.LinearADT<entity.TaskLogEntry> tasks = controller.getTaskLog();
-        if (tasks == null || tasks.size() == 0) {
+        String[][] tasks = controller.getTaskSelectionDisplayData();
+        if (tasks == null || tasks.length == 0) {
             System.out.println("No tasks available.");
             return null;
         }
 
         System.out.println("\n--- Select Task ---");
-        for (int i = 0; i < tasks.size(); i++) {
-            entity.TaskLogEntry task = tasks.get(i);
-            if (task != null) {
-                System.out.printf("%d. Task %s (Room %s) - %s%n", (i + 1), task.getTaskId(), task.getRoomNumber(), task.getStatus());
+        for (int i = 0; i < tasks.length; i++) {
+            String[] task = tasks[i];
+            if (task != null && task[0] != null) {
+                System.out.printf("%d. Task %s (Room %s) - %s%n", (i + 1), task[0], task[1], task[2]);
             }
         }
         System.out.print("Enter task choice: ");
         int choice = readChoice();
-        if (choice > 0 && choice <= tasks.size()) {
-            entity.TaskLogEntry selected = tasks.get(choice - 1);
-            if (selected != null) {
-                return selected.getTaskId();
+        if (choice > 0 && choice <= tasks.length) {
+            String[] selected = tasks[choice - 1];
+            if (selected != null && selected[0] != null) {
+                return selected[0];
             }
         }
         System.out.println("❌ Invalid task selection.");

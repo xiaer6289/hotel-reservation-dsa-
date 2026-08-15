@@ -354,4 +354,139 @@ public class FrontDeskControl implements RoomAvailabilityNotifier.RoomReadyListe
     private void refreshRooms() {
         rooms = roomDao.loadOrSeed();
     }
+
+    // ===== Boundary display helpers (ECB: Boundary does not access Entity objects) =====
+    public String[] getBookingDisplayData(String confirmationNo) {
+        Booking booking = searchBookingByConfirmationNo(confirmationNo);
+        if (booking == null) {
+            return null;
+        }
+
+        String paymentAmount = booking.getPayment() == null
+                ? "N/A" : String.valueOf(booking.getPayment().getAmount());
+        String paymentStatus = booking.getPayment() == null
+                ? "N/A" : String.valueOf(booking.getPayment().getStatus());
+
+        return new String[] {
+            booking.getConfirmationNo(),
+            booking.getGuest() == null ? "null" : booking.getGuest().getName(),
+            booking.getGuest() == null ? "null" : String.valueOf(booking.getGuest().getPhoneNo()),
+            booking.getRoom() == null ? "null" : booking.getRoom().getRoomNumber(),
+            booking.getRoom() == null ? "null" : String.valueOf(booking.getRoom().getRoomType()),
+            paymentAmount,
+            paymentStatus
+        };
+    }
+
+    public String[][] getAllBookingDisplayRows() {
+        Booking[] bookings = sortBooking();
+        String[][] rows = new String[bookings.length][3];
+        for (int i = 0; i < bookings.length; i++) {
+            Booking booking = bookings[i];
+            rows[i][0] = booking.getConfirmationNo();
+            rows[i][1] = String.valueOf(booking.getGuest());
+            rows[i][2] = booking.getRoom() == null ? "null" : booking.getRoom().getRoomNumber();
+        }
+        return rows;
+    }
+
+    public String[][] getCurrentCheckedInDisplayRows() {
+        Booking[] bookings = getCurrentCheckedInBookings();
+        String[][] rows = new String[bookings.length][6];
+        for (int i = 0; i < bookings.length; i++) {
+            Booking booking = bookings[i];
+            WalkInRegistration registration = findCheckedInRegistrationForBooking(booking);
+            rows[i][0] = booking.getRoom().getRoomNumber();
+            rows[i][1] = booking.getGuest().getGuestId();
+            rows[i][2] = booking.getGuest().getName();
+            rows[i][3] = registration == null ? "N/A" : registration.getRegistrationId();
+            rows[i][4] = booking.getConfirmationNo();
+            rows[i][5] = formatBoundaryDateTime(registration == null
+                    ? booking.getRoom().getCheckOutDateTime()
+                    : registration.getCheckOutDateTime());
+        }
+        return rows;
+    }
+
+    public String[] getCurrentCheckedInStayDisplayData(String roomNumber) {
+        Booking[] bookings = getCurrentCheckedInBookings();
+        for (Booking booking : bookings) {
+            if (booking != null && booking.getRoom() != null
+                    && booking.getRoom().getRoomNumber().equalsIgnoreCase(roomNumber)) {
+                WalkInRegistration registration = findCheckedInRegistrationForBooking(booking);
+                return new String[] {
+                    booking.getRoom().getRoomNumber(),
+                    booking.getGuest().getGuestId(),
+                    booking.getGuest().getName(),
+                    String.valueOf(booking.getGuest().getPhoneNo()),
+                    registration == null ? "N/A" : registration.getRegistrationId(),
+                    booking.getConfirmationNo(),
+                    formatBoundaryDateTime(registration == null
+                            ? booking.getRoom().getCheckInDateTime()
+                            : registration.getCheckInDateTime()),
+                    formatBoundaryDateTime(registration == null
+                            ? booking.getRoom().getCheckOutDateTime()
+                            : registration.getCheckOutDateTime())
+                };
+            }
+        }
+        return null;
+    }
+
+    public String processCheckoutAndGetTaskId(String confirmationNo, String staffId, String remarks) {
+        TaskLogEntry task = processCheckout(confirmationNo, staffId, remarks);
+        return task == null ? null : task.getTaskId();
+    }
+
+    public String[][] getReadyRoomNotificationDisplayRows() {
+        Room[] readyRooms = getNotifiedReadyRooms();
+        String[][] rows = new String[readyRooms.length][2];
+        for (int i = 0; i < readyRooms.length; i++) {
+            rows[i][0] = readyRooms[i].getRoomNumber();
+            rows[i][1] = readyRooms[i].getStatusLabel();
+        }
+        return rows;
+    }
+
+    public String[][] generateRoomOccupancyReportDisplay(String roomTypeFilter, boolean availabilityFilter) {
+        control.report.RoomOccupancyRP reportGenerator = new control.report.RoomOccupancyRP();
+        Booking[] report = reportGenerator.generateReport(sortBooking(), roomTypeFilter, availabilityFilter);
+        String[][] rows = new String[report.length][6];
+        for (int i = 0; i < report.length; i++) {
+            Booking booking = report[i];
+            rows[i][0] = booking.getRoom().getRoomNumber();
+            rows[i][1] = String.valueOf(booking.getRoom().getRoomType());
+            rows[i][2] = String.valueOf(booking.getRoom().getFloor());
+            rows[i][3] = booking.getGuest().getName();
+            rows[i][4] = String.valueOf(booking.getRoom().getCheckInDateTime());
+            rows[i][5] = String.valueOf(booking.getRoom().getCheckOutDateTime());
+        }
+        return rows;
+    }
+
+    public String[][] generateBillingSummaryReportDisplay(char statusFilter) {
+        control.report.BillSummaryRP reportGenerator = new control.report.BillSummaryRP();
+        Booking[] report = reportGenerator.generateReport(sortBooking(), statusFilter);
+        String[][] rows = new String[report.length][5];
+        for (int i = 0; i < report.length; i++) {
+            Booking booking = report[i];
+            rows[i][0] = booking.getConfirmationNo();
+            rows[i][1] = booking.getGuest().getName();
+            rows[i][2] = String.valueOf(booking.getRoom().getRoomType());
+            rows[i][3] = String.valueOf(booking.getPayment().getAmount());
+            rows[i][4] = String.valueOf(booking.getPayment().getStatus());
+        }
+        return rows;
+    }
+
+    public double getBillingSummaryTotal(char statusFilter) {
+        control.report.BillSummaryRP reportGenerator = new control.report.BillSummaryRP();
+        Booking[] report = reportGenerator.generateReport(sortBooking(), statusFilter);
+        return reportGenerator.calcTotalRevenue(report);
+    }
+
+    private String formatBoundaryDateTime(java.time.LocalDateTime value) {
+        return value == null ? "N/A"
+                : value.format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"));
+    }
 }

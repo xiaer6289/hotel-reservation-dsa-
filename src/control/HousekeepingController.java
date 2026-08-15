@@ -413,4 +413,48 @@ public class HousekeepingController {
     public LinearADT<TaskLogEntry> getTaskLog() {
         return taskLog;
     }
+
+    // ===== Boundary display helpers (ECB: Boundary does not access Entity/ADT objects) =====
+    public String[][] getRoomSelectionDisplayData() {
+        Room[] currentRooms = getRooms();
+        String[][] rows = new String[currentRooms == null ? 0 : currentRooms.length][2];
+        if (currentRooms == null) {
+            return rows;
+        }
+        for (int i = 0; i < currentRooms.length; i++) {
+            if (currentRooms[i] != null) {
+                rows[i][0] = currentRooms[i].getRoomNumber();
+                rows[i][1] = currentRooms[i].getStatusLabel();
+            }
+        }
+        return rows;
+    }
+
+    public String[][] getTaskSelectionDisplayData() {
+        String[][] rows = new String[taskLog == null ? 0 : taskLog.size()][3];
+        if (taskLog == null) {
+            return rows;
+        }
+        for (int i = 0; i < taskLog.size(); i++) {
+            TaskLogEntry task = taskLog.get(i);
+            if (task != null) {
+                rows[i][0] = task.getTaskId();
+                rows[i][1] = task.getRoomNumber();
+                rows[i][2] = task.getStatus();
+            }
+        }
+        return rows;
+    }
+
+    public void generateCleaningStatusReport() {
+        new control.report.CleaningStatusFlowRP().generateReport(taskLog);
+    }
+
+    public void generateDailyPerformanceReport() {
+        new control.report.DailyPerformanceRP().generateReport(taskLog);
+    }
+
+    public void displayAllTasks() {
+        taskLog.display();
+    }
 }

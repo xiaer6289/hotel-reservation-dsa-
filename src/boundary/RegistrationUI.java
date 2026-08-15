@@ -4,13 +4,6 @@ import control.RegistrationController;
 import control.report.StandardFifoWaitingTimeRP;
 import control.report.WalkInArrivalPatternRP;
 import control.VipPriorityController;
-import entity.Booking;
-import entity.Guest;
-import entity.LoyaltyProfile;
-import entity.RegistrationStatus;
-import entity.Room;
-import entity.RoomType;
-import entity.WalkInRegistration;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -125,27 +118,27 @@ public class RegistrationUI {
     private void addWalkInRegistration() {
         System.out.println("\n===== REGISTER WALK-IN GUEST =====");
         System.out.println("Guest ID and Registration ID are generated automatically.");
-        
 
         boolean existingGuestOrMember = readYesNo(
                 "Is this an existing guest or loyalty member? (Y/N): ");
 
-        Guest guest = null;
+        String guestId = null;
         boolean newGuest = !existingGuestOrMember;
         String newGuestName = null;
         Long phoneNumber = null;
+        String phoneDisplay = null;
 
         if (existingGuestOrMember) {
-            guest = selectExistingGuestByName();
+            guestId = selectExistingGuestByName();
 
-            if (guest == null) {
+            if (guestId == null) {
                 System.out.println("Registration cancelled. No booking request was created.");
                 return;
             }
 
-            phoneNumber = guest.getPhoneNo();
+            phoneDisplay = controller.getGuestPhoneRaw(guestId);
 
-            if (controller.hasActiveRegistrationOrStay(guest.getGuestId())) {
+            if (controller.hasActiveRegistrationOrStay(guestId)) {
                 Utility.printError(
                         "This guest already has a waiting registration or is currently checked in.");
                 return;
@@ -154,38 +147,35 @@ public class RegistrationUI {
             System.out.println("\n===== NEW GUEST REGISTRATION =====");
             System.out.println("A new guest profile will be created after the walk-in details are confirmed.");
 
-            newGuestName = readGuestName(
-                    "Enter Guest Full Name: ");
+            newGuestName = readGuestName("Enter Guest Full Name: ");
             phoneNumber = readPhoneNumber();
+            phoneDisplay = String.valueOf(phoneNumber);
 
-            Guest guestWithSamePhone = controller.searchGuestByPhoneNo(phoneNumber);
+            String[] guestWithSamePhone = controller.searchGuestDisplayDataByPhoneNo(phoneNumber);
             if (guestWithSamePhone != null) {
                 Utility.printError(
                         "This phone number is already linked to an existing guest profile.");
-                System.out.println("Guest ID     : " + guestWithSamePhone.getGuestId());
-                System.out.println("Guest Name   : " + guestWithSamePhone.getName());
-                System.out.println("Phone Number : " + formatPhoneNo(guestWithSamePhone.getPhoneNo()));
+                System.out.println("Guest ID     : " + guestWithSamePhone[0]);
+                System.out.println("Guest Name   : " + guestWithSamePhone[1]);
+                System.out.println("Phone Number : " + formatPhoneNo(guestWithSamePhone[2]));
                 System.out.println("Please register this person as an existing guest instead of creating a duplicate profile.");
                 return;
             }
         }
 
-        LoyaltyProfile loyaltyProfile = null;
+        String loyaltyTier = null;
 
         if (!newGuest) {
-            LoyaltyProfile beforeRefresh
-                    = controller.searchLoyaltyProfileByGuestId(guest.getGuestId());
+            String beforeRefreshTier = controller.getLoyaltyTierNameByGuestId(guestId);
+            loyaltyTier = controller.refreshLoyaltyTierNameByGuestId(guestId);
 
-            loyaltyProfile
-                    = controller.refreshLoyaltyProfileByGuestId(guest.getGuestId());
-
-            if (beforeRefresh == null && loyaltyProfile != null) {
+            if (beforeRefreshTier == null && loyaltyTier != null) {
                 Utility.printSuccess(
                         "Loyalty requirement reached. VIP membership activated automatically.");
             }
         }
 
-        displayGuestCategory(guest, newGuest, loyaltyProfile);
+        displayGuestCategory(guestId, newGuest, loyaltyTier);
 
         int maximumOccupancy = controller.getMaximumRoomCapacity();
         if (maximumOccupancy <= 0) {
@@ -199,9 +189,7 @@ public class RegistrationUI {
                 1,
                 maximumOccupancy);
 
-        String roomType = readRoomType(
-                numberOfGuests,
-                loyaltyProfile);
+        String roomType = readRoomType(numberOfGuests, loyaltyTier);
 
         if (roomType == null) {
             Utility.printError(
@@ -222,23 +210,17 @@ public class RegistrationUI {
                 arrivalTime.toLocalDate().plusDays(numberOfNights),
                 STANDARD_CHECKOUT_TIME);
 
-        int readyRoomCount = loyaltyProfile == null
-                ? controller.getReadyRoomCountForStandardRequest(
-                        roomType, numberOfGuests)
-                : controller.getReadyRoomCountForVipRequest(
-                        roomType,
-                        numberOfGuests,
-                        loyaltyProfile.getTier());
+        int readyRoomCount = loyaltyTier == null
+                ? controller.getReadyRoomCountForStandardRequest(roomType, numberOfGuests)
+                : controller.getReadyRoomCountForVipRequest(roomType, numberOfGuests, loyaltyTier);
+
+        String guestName = newGuest ? newGuestName : controller.getGuestName(guestId);
 
         System.out.println("\n===== REGISTRATION SUMMARY =====");
-        System.out.println("Guest Name        : "
-                + (newGuest ? newGuestName : guest.getName()));
-        System.out.println("Phone Number      : "
-                + formatPhoneNo(phoneNumber));
+        System.out.println("Guest Name        : " + guestName);
+        System.out.println("Phone Number      : " + formatPhoneNo(phoneDisplay));
         System.out.println("Guest Category    : "
-                + (loyaltyProfile == null
-                        ? "STANDARD"
-                        : "VIP - " + loyaltyProfile.getTier()));
+                + (loyaltyTier == null ? "STANDARD" : "VIP - " + loyaltyTier));
         System.out.println("Requested Room    : " + formatRoomType(roomType));
         System.out.println("Number of Guests  : " + numberOfGuests);
         System.out.println("Length of Stay    : " + numberOfNights + " night(s)");
@@ -248,14 +230,14 @@ public class RegistrationUI {
         System.out.println("Suitable Ready Rooms Now: " + readyRoomCount);
 
         if (readyRoomCount == 0) {
-            if (loyaltyProfile == null) {
+            if (loyaltyTier == null) {
                 System.out.println(
                         "Room Status        : No suitable room is ready now; guest will wait in the Standard FIFO queue.");
             } else {
                 System.out.println(
                         "Room Status        : No suitable room is ready now; guest will wait in the VIP priority heap.");
             }
-        } else if (loyaltyProfile == null) {
+        } else if (loyaltyTier == null) {
             System.out.println(
                     "Room Status        : Suitable room exists, but existing Standard FIFO order still applies.");
         } else {
@@ -269,35 +251,28 @@ public class RegistrationUI {
         }
 
         if (newGuest) {
-            guest = controller.addNewGuest(newGuestName, phoneNumber);
+            guestId = controller.addNewGuestAndReturnId(newGuestName, phoneNumber);
 
-            if (guest == null) {
+            if (guestId == null) {
                 Utility.printError(
                         "Unable to create the new guest profile. The phone number may already be registered.");
                 return;
             }
 
             Utility.printSuccess("New guest profile created successfully.");
-            System.out.println("Generated Guest ID: " + guest.getGuestId());
+            System.out.println("Generated Guest ID: " + guestId);
         }
 
         String registrationId = controller.generateRegistrationId();
-
-        WalkInRegistration registration = new WalkInRegistration(
+        int result = controller.createAndRouteWalkInRegistration(
                 registrationId,
-                guest,
+                guestId,
                 roomType,
                 numberOfGuests,
-                null,
+                arrivalTime,
                 expectedCheckOut);
 
-        registration.setRegistrationTime(arrivalTime);
-
-        if (loyaltyProfile != null) {
-            int result = controller.addVipRegistration(
-                    registration,
-                    loyaltyProfile);
-
+        if (loyaltyTier != null) {
             if (result != VipPriorityController.ADD_SUCCESS) {
                 displayVipAddError(result);
                 return;
@@ -306,28 +281,31 @@ public class RegistrationUI {
             Utility.printSuccess(
                     "VIP walk-in registered and routed to the VIP priority heap.");
             System.out.println("Registration ID : " + registrationId);
-            System.out.println("Loyalty Tier    : " + loyaltyProfile.getTier());
-            System.out.println("Status          : " + registration.getStatus());
+            System.out.println("Loyalty Tier    : " + loyaltyTier);
+            System.out.println("Status          : " + controller.getRegistrationStatusName(registrationId));
             System.out.println("VIPs Waiting    : " + controller.getVipWaitingCount());
             System.out.println(
                     "Next step: Use the VIP Allocation module for tier-priority room assignment.");
         } else {
-            controller.addStandardRegistration(registration);
+            if (result != VipPriorityController.ADD_SUCCESS) {
+                Utility.printError("Unable to register the Standard walk-in request.");
+                return;
+            }
 
             Utility.printSuccess(
                     "Standard walk-in registered and appended to the FIFO queue.");
             System.out.println("Registration ID : " + registrationId);
             System.out.println("Queue Position  : " + controller.getWaitingCount());
-            System.out.println("Status          : " + registration.getStatus());
+            System.out.println("Status          : " + controller.getRegistrationStatusName(registrationId));
             System.out.println(
                     "Next step: Process the FIFO head using menu option 4 when a suitable room is ready.");
         }
     }
 
     private void displayGuestCategory(
-            Guest guest,
+            String guestId,
             boolean newGuest,
-            LoyaltyProfile loyaltyProfile) {
+            String loyaltyTier) {
 
         System.out.println("\n===== GUEST CATEGORY =====");
 
@@ -336,17 +314,17 @@ public class RegistrationUI {
             return;
         }
 
-        if (loyaltyProfile != null) {
+        if (loyaltyTier != null) {
             System.out.println("Category       : VIP LOYALTY MEMBER");
-            System.out.println("Loyalty Tier   : " + loyaltyProfile.getTier());
-            System.out.println("Completed Stays: " + loyaltyProfile.getCompletedStays());
+            System.out.println("Loyalty Tier   : " + loyaltyTier);
+            System.out.println("Completed Stays: " + controller.getLoyaltyCompletedStays(guestId));
             System.out.println(
                     "Routing        : VIP priority heap (not the Standard FIFO queue)");
             return;
         }
 
-        int completedStays = controller.getCompletedStayCount(guest.getGuestId());
-        int staysNeeded = controller.getStaysNeededForElite(guest.getGuestId());
+        int completedStays = controller.getCompletedStayCount(guestId);
+        int staysNeeded = controller.getStaysNeededForElite(guestId);
 
         System.out.println("Category       : STANDARD");
         System.out.println("Completed Stays: " + completedStays);
@@ -357,7 +335,8 @@ public class RegistrationUI {
     private void viewWaitingQueue() {
         System.out.println("\n===== STANDARD WAITING QUEUE  =====");
 
-        int waitingCount = controller.getWaitingCount();
+        String[][] waitingRows = controller.getStandardWaitingQueueDisplayData();
+        int waitingCount = waitingRows.length;
 
         if (waitingCount == 0) {
             System.out.println("No Standard walk-in registrations are waiting.");
@@ -370,54 +349,54 @@ public class RegistrationUI {
         System.out.println(
                 "----------------------------------------------------------------------------------------");
 
-        for (int i = 0; i < waitingCount; i++) {
-            WalkInRegistration registration = controller.getRegistrationAt(i);
-
+        for (int i = 0; i < waitingRows.length; i++) {
+            String[] registration = waitingRows[i];
             System.out.printf(
                     "%-4d %-7s %-10s %-20s %-17s %-6d %-16s%n",
                     i + 1,
-                    registration.getRegistrationId(),
-                    registration.getGuest().getGuestId(),
-                    shorten(registration.getGuest().getName(), 20),
-                    formatRoomType(registration.getRequestedRoomType()),
-                    registration.getNumberOfGuests(),
-                    registration.getRegistrationTime().format(DATE_TIME_FORMAT));
+                    registration[0],
+                    registration[1],
+                    shorten(registration[2], 20),
+                    formatRoomType(registration[3]),
+                    Integer.parseInt(registration[4]),
+                    registration[5]);
         }
 
         System.out.println("\nTotal Standard Guests Waiting: " + waitingCount);
         System.out.println(
                 "FIFO Head / Next Standard Guest: "
-                + controller.getNextRegistration().getRegistrationId());
+                + controller.getNextRegistrationId());
     }
 
     private void viewNextRegistration() {
         System.out.println("\n===== NEXT STANDARD GUEST  =====");
 
-        WalkInRegistration registration = controller.getNextRegistration();
+        String registrationId = controller.getNextRegistrationId();
 
-        if (registration == null) {
+        if (registrationId == null) {
             System.out.println("No Standard walk-in registrations are waiting.");
             return;
         }
 
-        displayRegistrationDetails(registration);
+        displayRegistrationDetails(registrationId);
     }
 
     private void checkInNextStandardGuest() {
         System.out.println("\n===== ASSIGN ROOM & CHECK IN NEXT STANDARD GUEST =====");
-        
 
-        WalkInRegistration registration = controller.getNextRegistration();
+        String registrationId = controller.getNextRegistrationId();
 
-        if (registration == null) {
+        if (registrationId == null) {
             System.out.println("No Standard registration is waiting.");
             return;
         }
 
-        System.out.println("\nNext Standard Guest:");
-        displayRegistrationDetails(registration);
+        String[] registration = controller.getRegistrationDisplayData(registrationId);
 
-        Room[] suitableRooms = controller.getSuitableRoomsForNextStandard();
+        System.out.println("\nNext Standard Guest:");
+        displayRegistrationDetails(registrationId);
+
+        String[][] suitableRooms = controller.getSuitableRoomsForNextStandardDisplayData();
 
         if (suitableRooms.length == 0) {
             Utility.printError(
@@ -431,16 +410,15 @@ public class RegistrationUI {
         System.out.println("\n===== SUITABLE READY ROOMS =====");
 
         for (int i = 0; i < suitableRooms.length; i++) {
-            Room room = suitableRooms[i];
-
+            String[] room = suitableRooms[i];
             System.out.printf(
                     "%d. Room %-5s | Type: %-17s | Floor: %-3s | Max Guests: %d | Status: %s%n",
                     i + 1,
-                    room.getRoomNumber(),
-                    formatRoomType(room.getRoomType()),
-                    room.getFloor(),
-                    room.getNoOfGuest(),
-                    room.getStatusLabel());
+                    room[0],
+                    formatRoomType(room[1]),
+                    room[2],
+                    Integer.parseInt(room[3]),
+                    room[4]);
         }
 
         System.out.println("0. Cancel Room Selection");
@@ -455,21 +433,20 @@ public class RegistrationUI {
             return;
         }
 
-        Room selectedRoom = suitableRooms[choice - 1];
+        String[] selectedRoom = suitableRooms[choice - 1];
 
-        System.out.println("\nSelected Room: " + selectedRoom.getRoomNumber()
-                + " (" + formatRoomType(selectedRoom.getRoomType()) + ")");
+        System.out.println("\nSelected Room: " + selectedRoom[0]
+                + " (" + formatRoomType(selectedRoom[1]) + ")");
 
         if (!readYesNo(
                 "Confirm room assignment and check-in for "
-                + registration.getGuest().getName() + "? (Y/N): ")) {
+                + registration[2] + "? (Y/N): ")) {
 
             System.out.println("Check-in cancelled. The registration remains in the FIFO queue.");
             return;
         }
 
-        Booking booking = controller.checkInNextStandard(
-                selectedRoom.getRoomNumber());
+        String[] booking = controller.checkInNextStandardDisplayData(selectedRoom[0]);
 
         if (booking == null) {
             Utility.printError(
@@ -479,37 +456,30 @@ public class RegistrationUI {
         }
 
         Utility.printSuccess("Room assigned and guest checked in successfully.");
-        System.out.println("Registration ID    : " + registration.getRegistrationId());
-        System.out.println("Confirmation Number: " + booking.getConfirmationNo());
-        System.out.println("Guest Name         : " + booking.getGuest().getName());
-        System.out.println("Room Number        : " + booking.getRoom().getRoomNumber());
-        System.out.println("Room Type          : "
-                + formatRoomType(booking.getRoom().getRoomType()));
-        System.out.println("Actual Check-In    : "
-                + formatDateTime(booking.getRoom().getCheckInDateTime()));
-        System.out.println("Expected Check-Out : "
-                + formatDateTime(booking.getRoom().getCheckOutDateTime()));
-        System.out.println("Registration Status: " + registration.getStatus());
+        System.out.println("Registration ID    : " + registrationId);
+        System.out.println("Confirmation Number: " + booking[0]);
+        System.out.println("Guest Name         : " + booking[1]);
+        System.out.println("Room Number        : " + booking[2]);
+        System.out.println("Room Type          : " + formatRoomType(booking[3]));
+        System.out.println("Actual Check-In    : " + booking[4]);
+        System.out.println("Expected Check-Out : " + booking[5]);
+        System.out.println("Registration Status: " + booking[6]);
         System.out.println("Standard Guests Remaining: " + controller.getWaitingCount());
     }
 
     private void searchRegistration() {
         System.out.println("\n===== SEARCH WALK-IN REGISTRATION =====");
-       
 
         String registrationId = readRegistrationId(
                 "Enter Registration ID (e.g. R0001): ");
 
-        WalkInRegistration registration
-                = controller.searchRegistrationById(registrationId);
-
-        if (registration == null) {
+        if (!controller.registrationExists(registrationId)) {
             Utility.printError("Registration not found.");
             return;
         }
 
         System.out.println("\nRegistration found:");
-        displayRegistrationDetails(registration);
+        displayRegistrationDetails(registrationId);
     }
 
     private void cancelRegistration() {
@@ -519,37 +489,35 @@ public class RegistrationUI {
         String registrationId = readRegistrationId(
                 "Enter Standard Registration ID (e.g. R0001): ");
 
-        WalkInRegistration registration
-                = controller.searchRegistrationById(registrationId);
+        String status = controller.getRegistrationStatusName(registrationId);
 
-        if (registration == null) {
+        if (status == null) {
             Utility.printError("Registration not found.");
             return;
         }
 
-        if (registration.getStatus() == RegistrationStatus.VIP_WAITING) {
+        if ("VIP_WAITING".equals(status)) {
             Utility.printError(
                     "This is a VIP waiting registration. Cancel it from the VIP Allocation module.");
             return;
         }
 
-        if (registration.getStatus() != RegistrationStatus.WAITING) {
+        if (!"WAITING".equals(status)) {
             Utility.printError(
                     "Only a waiting Standard registration can be cancelled. Current status: "
-                    + registration.getStatus());
+                    + status);
             return;
         }
 
         System.out.println("\nStandard Registration to Cancel:");
-        displayRegistrationDetails(registration);
+        displayRegistrationDetails(registrationId);
 
         if (!readYesNo("Confirm cancellation? (Y/N): ")) {
             System.out.println("Cancellation aborted. The guest remains in the FIFO queue.");
             return;
         }
 
-        WalkInRegistration cancelled
-                = controller.cancelRegistrationById(registrationId);
+        String[] cancelled = controller.cancelStandardRegistrationDisplayData(registrationId);
 
         if (cancelled == null) {
             Utility.printError("Unable to cancel the Standard waiting registration.");
@@ -557,98 +525,77 @@ public class RegistrationUI {
         }
 
         Utility.printSuccess("Standard waiting registration cancelled successfully.");
-        System.out.println("Registration ID: " + cancelled.getRegistrationId());
-        System.out.println("Guest Name     : " + cancelled.getGuest().getName());
-        System.out.println("Status         : " + cancelled.getStatus());
+        System.out.println("Registration ID: " + cancelled[0]);
+        System.out.println("Guest Name     : " + cancelled[1]);
+        System.out.println("Status         : " + cancelled[2]);
     }
 
     private void generateStandardFifoWaitingTimeReport() {
+        System.out.println(
+                "\n===== STANDARD FIFO WAITING TIME REPORT OPTIONS =====");
 
+        if (controller.getWaitingCount() == 0) {
             System.out.println(
-                    "\n===== STANDARD FIFO WAITING TIME REPORT OPTIONS =====");
-
-            if (controller.getWaitingCount() == 0) {
-                System.out.println(
-                        "No Standard guests are currently waiting in the FIFO queue.");
-                return;
-            }
-
-            System.out.println(
-                    "Press Enter without typing anything to include all records.");
-
-            System.out.print(
-                    "Search by Registration ID, Guest ID or Guest Name "
-                    + "(Enter = All): ");
-
-            String keyword = scanner.nextLine().trim();
-
-            RoomType[] roomTypes = RoomType.values();
-
-            System.out.println("\nFilter by Room Type:");
-            System.out.println("0. All Room Types");
-
-            for (int i = 0; i < roomTypes.length; i++) {
-                System.out.println(
-                        (i + 1)
-                        + ". "
-                        + formatRoomType(roomTypes[i].name()));
-            }
-
-            int roomTypeChoice = readIntegerInRange(
-                    "Select Room Type (0-"
-                    + roomTypes.length
-                    + "): ",
-                    0,
-                    roomTypes.length);
-
-            String roomTypeFilter = "";
-
-            if (roomTypeChoice > 0) {
-                roomTypeFilter
-                        = roomTypes[roomTypeChoice - 1].name();
-            }
-
-            int maximumOccupancy
-                    = controller.getMaximumRoomCapacity();
-
-            int minimumGuests = readIntegerInRange(
-                    "Minimum Party Size "
-                    + "(0 = All, 1-"
-                    + maximumOccupancy
-                    + "): ",
-                    0,
-                    maximumOccupancy);
-
-            int minimumWaitingMinutes = readNonNegativeInteger(
-                    "Minimum Waiting Time in Minutes (0 = All): ");
-
-            System.out.println("\nSort Report By:");
-            System.out.println(
-                    "1. FIFO Order / Earliest Arrival First");
-            System.out.println(
-                    "2. Longest Waiting Time First");
-            System.out.println(
-                    "3. Largest Party Size First");
-
-            int sortOption = readIntegerInRange(
-                    "Select Sort Option (1-3): ",
-                    1,
-                    3);
-
-            StandardFifoWaitingTimeRP report
-                    = new StandardFifoWaitingTimeRP();
-
-            report.generateReport(
-                    controller,
-                    keyword,
-                    roomTypeFilter,
-                    minimumGuests,
-                    minimumWaitingMinutes,
-                    sortOption);
+                    "No Standard guests are currently waiting in the FIFO queue.");
+            return;
         }
 
-        private void generateWalkInArrivalPatternReport() {
+        System.out.println(
+                "Press Enter without typing anything to include all records.");
 
+        System.out.print(
+                "Search by Registration ID, Guest ID or Guest Name "
+                + "(Enter = All): ");
+
+        String keyword = scanner.nextLine().trim();
+        String[] roomTypes = controller.getRoomTypeNames();
+
+        System.out.println("\nFilter by Room Type:");
+        System.out.println("0. All Room Types");
+
+        for (int i = 0; i < roomTypes.length; i++) {
+            System.out.println((i + 1) + ". " + formatRoomType(roomTypes[i]));
+        }
+
+        int roomTypeChoice = readIntegerInRange(
+                "Select Room Type (0-" + roomTypes.length + "): ",
+                0,
+                roomTypes.length);
+
+        String roomTypeFilter = "";
+        if (roomTypeChoice > 0) {
+            roomTypeFilter = roomTypes[roomTypeChoice - 1];
+        }
+
+        int maximumOccupancy = controller.getMaximumRoomCapacity();
+
+        int minimumGuests = readIntegerInRange(
+                "Minimum Party Size (0 = All, 1-" + maximumOccupancy + "): ",
+                0,
+                maximumOccupancy);
+
+        int minimumWaitingMinutes = readNonNegativeInteger(
+                "Minimum Waiting Time in Minutes (0 = All): ");
+
+        System.out.println("\nSort Report By:");
+        System.out.println("1. FIFO Order / Earliest Arrival First");
+        System.out.println("2. Longest Waiting Time First");
+        System.out.println("3. Largest Party Size First");
+
+        int sortOption = readIntegerInRange(
+                "Select Sort Option (1-3): ", 1, 3);
+
+        StandardFifoWaitingTimeRP report = new StandardFifoWaitingTimeRP();
+        report.generateReport(
+                controller,
+                keyword,
+                roomTypeFilter,
+                minimumGuests,
+                minimumWaitingMinutes,
+                sortOption);
+    }
+
+    private void generateWalkInArrivalPatternReport() {
         System.out.println(
                 "\n===== WALK-IN ARRIVAL PATTERN REPORT OPTIONS =====");
 
@@ -658,100 +605,54 @@ public class RegistrationUI {
             return;
         }
 
-        System.out.println(
-                "Date format: YYYY-MM-DD");
-        System.out.println(
-                "Press Enter to include all dates.");
+        System.out.println("Date format: YYYY-MM-DD");
+        System.out.println("Press Enter to include all dates.");
 
-        LocalDate startDate
-                = readOptionalDate(
-                        "Start Date (Enter = No Start Date): ");
+        LocalDate startDate = readOptionalDate(
+                "Start Date (Enter = No Start Date): ");
+        LocalDate endDate = readOptionalDate(
+                "End Date (Enter = No End Date): ");
 
-        LocalDate endDate
-                = readOptionalDate(
-                        "End Date (Enter = No End Date): ");
-
-        while (startDate != null
-                && endDate != null
-                && endDate.isBefore(startDate)) {
-
-            Utility.printError(
-                    "End Date cannot be earlier than Start Date.");
-
+        while (startDate != null && endDate != null && endDate.isBefore(startDate)) {
+            Utility.printError("End Date cannot be earlier than Start Date.");
             endDate = readOptionalDate(
                     "Re-enter End Date (Enter = No End Date): ");
         }
 
-        RoomType[] roomTypes
-                = RoomType.values();
+        String[] roomTypes = controller.getRoomTypeNames();
 
-        System.out.println(
-                "\nFilter by Room Type:");
-        System.out.println(
-                "0. All Room Types");
+        System.out.println("\nFilter by Room Type:");
+        System.out.println("0. All Room Types");
 
-        for (int i = 0;
-                i < roomTypes.length;
-                i++) {
-
-            System.out.println(
-                    (i + 1)
-                    + ". "
-                    + formatRoomType(
-                            roomTypes[i].name()));
+        for (int i = 0; i < roomTypes.length; i++) {
+            System.out.println((i + 1) + ". " + formatRoomType(roomTypes[i]));
         }
 
-        int roomTypeChoice
-                = readIntegerInRange(
-                        "Select Room Type (0-"
-                        + roomTypes.length
-                        + "): ",
-                        0,
-                        roomTypes.length);
+        int roomTypeChoice = readIntegerInRange(
+                "Select Room Type (0-" + roomTypes.length + "): ",
+                0,
+                roomTypes.length);
 
         String roomTypeFilter = "";
-
         if (roomTypeChoice > 0) {
-
-            roomTypeFilter
-                    = roomTypes[
-                            roomTypeChoice - 1]
-                            .name();
+            roomTypeFilter = roomTypes[roomTypeChoice - 1];
         }
 
-        int maximumOccupancy
-                = controller.getMaximumRoomCapacity();
+        int maximumOccupancy = controller.getMaximumRoomCapacity();
+        int minimumGuests = readIntegerInRange(
+                "Minimum Party Size (0 = All, 1-" + maximumOccupancy + "): ",
+                0,
+                maximumOccupancy);
 
-        int minimumGuests
-                = readIntegerInRange(
-                        "Minimum Party Size "
-                        + "(0 = All, 1-"
-                        + maximumOccupancy
-                        + "): ",
-                        0,
-                        maximumOccupancy);
+        System.out.println("\nSort Report Display By:");
+        System.out.println("1. Arrival Time (Earliest First)");
+        System.out.println("2. Arrival Time (Latest First)");
+        System.out.println("3. Party Size (Largest First)");
 
-        System.out.println(
-                "\nSort Report Display By:");
+        int sortOption = readIntegerInRange(
+                "Select Sort Option (1-3): ", 1, 3);
 
-        System.out.println(
-                "1. Arrival Time (Earliest First)");
-
-        System.out.println(
-                "2. Arrival Time (Latest First)");
-
-        System.out.println(
-                "3. Party Size (Largest First)");
-
-        int sortOption
-                = readIntegerInRange(
-                        "Select Sort Option (1-3): ",
-                        1,
-                        3);
-
-        WalkInArrivalPatternRP report
-                = new WalkInArrivalPatternRP();
-
+        WalkInArrivalPatternRP report = new WalkInArrivalPatternRP();
         report.generateReport(
                 controller,
                 startDate,
@@ -778,31 +679,23 @@ public class RegistrationUI {
         }
     }
 
-    private void displayRegistrationDetails(
-            WalkInRegistration registration) {
-
-        System.out.println("Registration ID : " + registration.getRegistrationId());
-        System.out.println("Guest ID        : " + registration.getGuest().getGuestId());
-        System.out.println("Guest Name      : " + registration.getGuest().getName());
-        System.out.println("Phone Number    : " + formatPhoneNo(registration.getGuest().getPhoneNo()));
-        System.out.println("Requested Room  : " + formatRoomType(registration.getRequestedRoomType()));
-
-        Booking booking = controller.getBookingForRegistration(registration);
-
-        String assignedRoom = "Not assigned yet";
-
-        if (booking != null && booking.getRoom() != null) {
-
-                assignedRoom = booking.getRoom().getRoomNumber();
+    private void displayRegistrationDetails(String registrationId) {
+        String[] registration = controller.getRegistrationDisplayData(registrationId);
+        if (registration == null) {
+            return;
         }
 
-        System.out.println("Assigned Room   : "
-                + assignedRoom);
-        System.out.println("Number of Guests: " + registration.getNumberOfGuests());
-        System.out.println("Registration Time: "+ formatDateTime(registration.getRegistrationTime()));
-        System.out.println("Actual Check-In : " + (registration.getCheckInDateTime() == null ? "Pending room assignment" : formatDateTime(registration.getCheckInDateTime())));
-        System.out.println("Expected Check-Out: "+ formatDateTime(registration.getCheckOutDateTime()));
-        System.out.println("Status           : " + registration.getStatus());
+        System.out.println("Registration ID : " + registration[0]);
+        System.out.println("Guest ID        : " + registration[1]);
+        System.out.println("Guest Name      : " + registration[2]);
+        System.out.println("Phone Number    : " + formatPhoneNo(registration[3]));
+        System.out.println("Requested Room  : " + formatRoomType(registration[4]));
+        System.out.println("Assigned Room   : " + registration[5]);
+        System.out.println("Number of Guests: " + registration[6]);
+        System.out.println("Registration Time: " + registration[7]);
+        System.out.println("Actual Check-In : " + registration[8]);
+        System.out.println("Expected Check-Out: " + registration[9]);
+        System.out.println("Status           : " + registration[10]);
     }
 
     /**
@@ -810,12 +703,12 @@ public class RegistrationUI {
      * the same name, the staff member must select the correct profile before
      * the registration continues.
      */
-    private Guest selectExistingGuestByName() {
+    private String selectExistingGuestByName() {
         while (true) {
             String guestName = readGuestName(
                     "Enter Existing Guest/Member Full Name (e.g. Tan Wei Jie): ");
 
-            Guest[] matches = controller.searchGuestsByName(guestName);
+            String[][] matches = controller.searchGuestDisplayDataByName(guestName);
 
             if (matches.length == 0) {
                 Utility.printError("No existing guest or member was found with that name.");
@@ -828,12 +721,12 @@ public class RegistrationUI {
             }
 
             if (matches.length == 1) {
-                Guest match = matches[0];
+                String[] match = matches[0];
                 System.out.println("\nExisting guest profile found:");
-                displayGuestLookupDetails(match);
+                displayGuestLookupDetails(match[0]);
 
                 if (readYesNo("Use this guest profile? (Y/N): ")) {
-                    return match;
+                    return match[0];
                 }
 
                 System.out.println("Please search again using the guest's full name.");
@@ -849,20 +742,14 @@ public class RegistrationUI {
                     "----------------------------------------------------------------------------");
 
             for (int i = 0; i < matches.length; i++) {
-                Guest match = matches[i];
-                LoyaltyProfile profile
-                        = controller.searchLoyaltyProfileByGuestId(match.getGuestId());
-                String category = profile == null
-                        ? "STANDARD"
-                        : "VIP - " + profile.getTier();
-
+                String[] match = matches[i];
                 System.out.printf(
                         "%-4d %-10s %-24s %-16s %-18s%n",
                         i + 1,
-                        match.getGuestId(),
-                        shorten(match.getName(), 24),
-                        formatPhoneNo(match.getPhoneNo()),
-                        category);
+                        match[0],
+                        shorten(match[1], 24),
+                        formatPhoneNo(match[2]),
+                        match[3]);
             }
 
             int selection = readIntegerInRange(
@@ -870,25 +757,23 @@ public class RegistrationUI {
                     1,
                     matches.length);
 
-            Guest selectedGuest = matches[selection - 1];
+            String selectedGuestId = matches[selection - 1][0];
             System.out.println("\nSelected guest profile:");
-            displayGuestLookupDetails(selectedGuest);
-            return selectedGuest;
+            displayGuestLookupDetails(selectedGuestId);
+            return selectedGuestId;
         }
     }
 
-    private void displayGuestLookupDetails(Guest guest) {
-        LoyaltyProfile profile
-                = controller.searchLoyaltyProfileByGuestId(guest.getGuestId());
-
-        System.out.println("Guest ID     : " + guest.getGuestId());
-        System.out.println("Guest Name   : " + guest.getName());
-        System.out.println("Phone Number : " + formatPhoneNo(guest.getPhoneNo()));
-        System.out.println("Category     : "
-                + (profile == null ? "STANDARD" : "VIP - " + profile.getTier()));
-
-        if (profile != null) {
+    private void displayGuestLookupDetails(String guestId) {
+        String[] guest = controller.getGuestDisplayDataById(guestId);
+        if (guest == null) {
+            return;
         }
+
+        System.out.println("Guest ID     : " + guest[0]);
+        System.out.println("Guest Name   : " + guest[1]);
+        System.out.println("Phone Number : " + formatPhoneNo(guest[2]));
+        System.out.println("Category     : " + guest[3]);
     }
 
     private String readGuestName(String message) {
@@ -931,36 +816,34 @@ public class RegistrationUI {
      * Utility.isValidPhoneNo().
      */
     private String formatPhoneNo(Long phoneNo) {
+        return phoneNo == null ? "N/A" : formatPhoneNo(String.valueOf(phoneNo));
+    }
+    private String formatPhoneNo(String phoneNo) {
         if (phoneNo == null) {
             return "N/A";
         }
 
-        String digits = String.valueOf(phoneNo);
-
+        String digits = phoneNo;
         if (digits.startsWith("60")) {
             return "+" + digits;
         }
-
         if (digits.startsWith("1")
                 && (digits.length() == 9 || digits.length() == 10)) {
             return "0" + digits;
         }
-
         return digits;
     }
 
+
     private String readRoomType(
             int numberOfGuests,
-            LoyaltyProfile loyaltyProfile) {
-        RoomType[] allTypes = RoomType.values();
-        RoomType[] eligibleTypes = new RoomType[allTypes.length];
+            String loyaltyTier) {
+        String[] allTypes = controller.getRoomTypeNames();
+        String[] eligibleTypes = new String[allTypes.length];
         int eligibleCount = 0;
 
-        for (RoomType roomType : allTypes) {
-            int capacity
-                    = controller.getMaximumCapacityForRoomType(
-                            roomType.name());
-
+        for (String roomType : allTypes) {
+            int capacity = controller.getMaximumCapacityForRoomType(roomType);
             if (capacity >= numberOfGuests) {
                 eligibleTypes[eligibleCount++] = roomType;
             }
@@ -977,20 +860,16 @@ public class RegistrationUI {
                     + " Guest(s):");
 
             for (int i = 0; i < eligibleCount; i++) {
+                String roomType = eligibleTypes[i];
+                int capacity = controller.getMaximumCapacityForRoomType(roomType);
 
-                RoomType roomType = eligibleTypes[i];
-
-                int capacity
-                        = controller.getMaximumCapacityForRoomType(
-                                roomType.name());
-
-                int readyNow = loyaltyProfile != null
+                int readyNow = loyaltyTier != null
                         ? controller.getReadyRoomCountForVipRequest(
-                                roomType.name(),
+                                roomType,
                                 numberOfGuests,
-                                loyaltyProfile.getTier())
+                                loyaltyTier)
                         : controller.getReadyRoomCountForStandardRequest(
-                                roomType.name(),
+                                roomType,
                                 numberOfGuests);
 
                 System.out.printf(
@@ -998,9 +877,9 @@ public class RegistrationUI {
                         + " | Rate: RM %.2f/night"
                         + " | Ready Now: %d%n",
                         i + 1,
-                        formatRoomType(roomType.name()),
+                        formatRoomType(roomType),
                         capacity,
-                        roomType.getPricePerDay(),
+                        controller.getRoomTypePricePerDay(roomType),
                         readyNow);
             }
 
@@ -1009,15 +888,11 @@ public class RegistrationUI {
                     + eligibleCount
                     + "): ");
 
-            if (choice >= 1
-                    && choice <= eligibleCount) {
-
-                return eligibleTypes[
-                        choice - 1].name();
+            if (choice >= 1 && choice <= eligibleCount) {
+                return eligibleTypes[choice - 1];
             }
 
-            Utility.printError(
-                    "Invalid room type selection.");
+            Utility.printError("Invalid room type selection.");
         }
     }
 

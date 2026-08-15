@@ -938,4 +938,335 @@ public class VipPriorityController {
 
         return updated;
     }
+
+    // ===== Boundary display/input helpers (ECB: Boundary does not access Entity objects) =====
+    public String[] getVipTierNames() {
+        return new String[] {
+            LoyaltyTier.DIAMOND.name(),
+            LoyaltyTier.PLATINUM.name(),
+            LoyaltyTier.ELITE.name()
+        };
+    }
+
+    public String[] getRoomTypeNames() {
+        RoomType[] roomTypes = RoomType.values();
+        String[] names = new String[roomTypes.length];
+        for (int i = 0; i < roomTypes.length; i++) {
+            names[i] = roomTypes[i].name();
+        }
+        return names;
+    }
+
+    public double getRoomTypePricePerDay(String roomTypeName) {
+        if (roomTypeName == null) {
+            return 0.0;
+        }
+        try {
+            return RoomType.valueOf(roomTypeName.trim().toUpperCase()).getPricePerDay();
+        } catch (IllegalArgumentException ex) {
+            return 0.0;
+        }
+    }
+
+    public int getVipProfileCount() {
+        return getAllVipProfiles().length;
+    }
+
+    public int getVacantRoomCount() {
+        return getVacantRooms().length;
+    }
+
+    public String[][] getAllVipProfileDisplayData() {
+        LoyaltyProfile[] profiles = getAllVipProfiles();
+        String[][] temp = new String[profiles.length][6];
+        int count = 0;
+
+        for (LoyaltyProfile profile : profiles) {
+            Guest guest = findGuestById(profile.getGuestId());
+            if (guest == null) {
+                continue;
+            }
+            temp[count][0] = guest.getGuestId();
+            temp[count][1] = guest.getName();
+            temp[count][2] = String.valueOf(guest.getPhoneNo());
+            temp[count][3] = String.valueOf(profile.getTier());
+            temp[count][4] = String.valueOf(profile.getCompletedStays());
+            temp[count][5] = getVipActivityStatusForBoundary(guest.getGuestId());
+            count++;
+        }
+
+        String[][] rows = new String[count][6];
+        System.arraycopy(temp, 0, rows, 0, count);
+        return rows;
+    }
+
+    public String getNextVipRegistrationId() {
+        WalkInRegistration registration = peekNextVip();
+        return registration == null ? null : registration.getRegistrationId();
+    }
+
+    public String getNextAllocatableVipRegistrationId() {
+        WalkInRegistration registration = peekNextAllocatableVip();
+        return registration == null ? null : registration.getRegistrationId();
+    }
+
+    public boolean waitingVipRegistrationExists(String registrationId) {
+        return findWaitingVipRegistrationById(registrationId) != null;
+    }
+
+    public String[] getWaitingVipRegistrationDisplayData(String registrationId) {
+        WalkInRegistration registration = findWaitingVipRegistrationById(registrationId);
+        if (registration == null) {
+            return null;
+        }
+        LoyaltyTier tier = getLoyaltyTier(registration);
+        return new String[] {
+            registration.getGuest().getGuestId(),
+            registration.getGuest().getName(),
+            String.valueOf(registration.getGuest().getPhoneNo()),
+            String.valueOf(tier),
+            registration.getRegistrationId(),
+            String.valueOf(registration.getStatus()),
+            formatBoundaryDateTime(registration.getRegistrationTime()),
+            registration.getRequestedRoomType(),
+            String.valueOf(registration.getNumberOfGuests()),
+            formatBoundaryDateTime(registration.getCheckOutDateTime()),
+            String.valueOf(countMatchingReadyRoomsForBoundary(registration))
+        };
+    }
+
+    public String[][] getVipPriorityQueueDisplayData() {
+        WalkInRegistration[] registrations = getVipRegistrationsByPriority();
+        String[][] rows = new String[registrations.length][7];
+        for (int i = 0; i < registrations.length; i++) {
+            WalkInRegistration registration = registrations[i];
+            rows[i][0] = registration.getRegistrationId();
+            rows[i][1] = registration.getGuest().getGuestId();
+            rows[i][2] = registration.getGuest().getName();
+            rows[i][3] = String.valueOf(getLoyaltyTier(registration));
+            rows[i][4] = registration.getRequestedRoomType();
+            rows[i][5] = String.valueOf(registration.getNumberOfGuests());
+            rows[i][6] = String.valueOf(countMatchingReadyRoomsForBoundary(registration));
+        }
+        return rows;
+    }
+
+    public int getMatchingReadyRoomCount(String registrationId) {
+        WalkInRegistration registration = findWaitingVipRegistrationById(registrationId);
+        return countMatchingReadyRoomsForBoundary(registration);
+    }
+
+    public String[] getSuggestedReadyRoomDisplayData(String registrationId) {
+        WalkInRegistration registration = findWaitingVipRegistrationById(registrationId);
+        if (registration == null) {
+            return null;
+        }
+        Room room = findReadyRoomForRegistration(registration);
+        if (room == null) {
+            return null;
+        }
+        return new String[] {
+            room.getRoomNumber(),
+            room.getRoomType(),
+            String.valueOf(room.getNoOfGuest()),
+            String.valueOf(room.getFloor()),
+            room.getStatusLabel()
+        };
+    }
+
+    public String getLoyaltyTierNameByRegistrationId(String registrationId) {
+        WalkInRegistration registration = findWaitingVipRegistrationById(registrationId);
+        if (registration == null) {
+            // Historical/cancelled records are not in the heap; search saved records.
+            WalkInRegistration[] records = registrationDao.loadExisting();
+            for (WalkInRegistration record : records) {
+                if (record != null && record.getRegistrationId() != null
+                        && record.getRegistrationId().equalsIgnoreCase(registrationId)) {
+                    registration = record;
+                    break;
+                }
+            }
+        }
+        LoyaltyTier tier = getLoyaltyTier(registration);
+        return tier == null ? null : tier.name();
+    }
+
+    public String getWaitingVipRequestedRoomType(String registrationId) {
+        WalkInRegistration registration = findWaitingVipRegistrationById(registrationId);
+        return registration == null ? null : registration.getRequestedRoomType();
+    }
+
+    public int getWaitingVipGuestCount(String registrationId) {
+        WalkInRegistration registration = findWaitingVipRegistrationById(registrationId);
+        return registration == null ? 0 : registration.getNumberOfGuests();
+    }
+
+    public LocalDateTime getWaitingVipRegistrationTime(String registrationId) {
+        WalkInRegistration registration = findWaitingVipRegistrationById(registrationId);
+        return registration == null ? null : registration.getRegistrationTime();
+    }
+
+    public LocalDateTime getWaitingVipCheckOutDateTime(String registrationId) {
+        WalkInRegistration registration = findWaitingVipRegistrationById(registrationId);
+        return registration == null ? null : registration.getCheckOutDateTime();
+    }
+
+    public String[] cancelVipRegistrationDisplayData(String registrationId) {
+        WalkInRegistration cancelled = cancelVipRegistrationById(registrationId);
+        if (cancelled == null) {
+            return null;
+        }
+        LoyaltyTier tier = getLoyaltyTier(cancelled);
+        return new String[] {
+            cancelled.getRegistrationId(),
+            cancelled.getGuest().getGuestId(),
+            cancelled.getGuest().getName(),
+            String.valueOf(tier),
+            String.valueOf(cancelled.getStatus()),
+            String.valueOf(getWaitingCount())
+        };
+    }
+
+    public String[][] getCurrentVipRoomDisplayData() {
+        Booking[] currentBookings = getCurrentVipRoomBookings();
+        String[][] rows = new String[currentBookings.length][8];
+        for (int i = 0; i < currentBookings.length; i++) {
+            Booking booking = currentBookings[i];
+            Guest guest = booking.getGuest();
+            Room room = getCurrentRoomForBooking(booking);
+            LoyaltyProfile profile = searchLoyaltyProfileByGuestId(guest.getGuestId());
+            rows[i][0] = booking.getConfirmationNo();
+            rows[i][1] = guest.getGuestId();
+            rows[i][2] = guest.getName();
+            rows[i][3] = profile == null ? "-" : String.valueOf(profile.getTier());
+            rows[i][4] = room == null ? "-" : room.getRoomNumber();
+            rows[i][5] = room == null ? "-" : room.getRoomType();
+            rows[i][6] = room == null ? "-" : formatBoundaryDateTimeDash(room.getCheckInDateTime());
+            rows[i][7] = room == null ? "-" : formatBoundaryDateTimeDash(room.getCheckOutDateTime());
+        }
+        return rows;
+    }
+
+    public String[] allocateNextVipBookingDisplayData() {
+        String registrationId = getNextAllocatableVipRegistrationId();
+        if (registrationId == null) {
+            return null;
+        }
+        WalkInRegistration registration = findWaitingVipRegistrationById(registrationId);
+        if (registration == null) {
+            return null;
+        }
+        String guestId = registration.getGuest().getGuestId();
+        String guestName = registration.getGuest().getName();
+        String tier = String.valueOf(getLoyaltyTier(registration));
+
+        Booking booking = allocateNextVipBooking();
+        if (booking == null || booking.getRoom() == null) {
+            return null;
+        }
+        Room room = booking.getRoom();
+        return new String[] {
+            booking.getConfirmationNo(),
+            registrationId,
+            guestId,
+            guestName,
+            tier,
+            room.getRoomNumber(),
+            room.getRoomType(),
+            formatBoundaryDateTime(room.getCheckInDateTime()),
+            formatBoundaryDateTime(room.getCheckOutDateTime()),
+            String.valueOf(getWaitingCount())
+        };
+    }
+
+    public void generatePriorityAllocationPerformanceReport(
+            String keyword,
+            String tierName,
+            String roomTypeFilter,
+            String statusFilter,
+            LocalDate startDate,
+            LocalDate endDate,
+            int minimumGuests,
+            int sortOption) {
+        LoyaltyTier tier = parseBoundaryTier(tierName);
+        new control.report.VipPriorityAllocationPerformanceRP().generateReport(
+                this, keyword, tier, roomTypeFilter, statusFilter,
+                startDate, endDate, minimumGuests, sortOption);
+    }
+
+    public void generateLoyaltyStayPerformanceReport(
+            String keyword,
+            String tierName,
+            String activityFilter,
+            int minimumCompletedStays,
+            String roomTypeFilter,
+            LocalDate startDate,
+            LocalDate endDate,
+            int sortOption) {
+        LoyaltyTier tier = parseBoundaryTier(tierName);
+        new control.report.VipLoyaltyStayPerformanceRP().generateReport(
+                this, keyword, tier, activityFilter, minimumCompletedStays,
+                roomTypeFilter, startDate, endDate, sortOption);
+    }
+
+    private LoyaltyTier parseBoundaryTier(String tierName) {
+        if (tierName == null || tierName.isBlank()) {
+            return null;
+        }
+        try {
+            return LoyaltyTier.valueOf(tierName.trim().toUpperCase());
+        } catch (IllegalArgumentException ex) {
+            return null;
+        }
+    }
+
+    private int countMatchingReadyRoomsForBoundary(WalkInRegistration registration) {
+        if (registration == null) {
+            return 0;
+        }
+        int count = 0;
+        Room[] readyRooms = getVacantRooms();
+        for (Room room : readyRooms) {
+            if (room == null || !room.isAssignable()) {
+                continue;
+            }
+            boolean sameType = room.getRoomType() != null
+                    && registration.getRequestedRoomType() != null
+                    && room.getRoomType().equalsIgnoreCase(registration.getRequestedRoomType());
+            boolean enoughCapacity = room.getNoOfGuest() >= registration.getNumberOfGuests();
+            if (sameType && enoughCapacity) {
+                count++;
+            }
+        }
+        return count;
+    }
+
+    private String getVipActivityStatusForBoundary(String guestId) {
+        WalkInRegistration[] waiting = getVipRegistrationsByPriority();
+        for (WalkInRegistration registration : waiting) {
+            if (registration != null && registration.getGuest() != null
+                    && registration.getGuest().getGuestId().equalsIgnoreCase(guestId)) {
+                return "WAITING";
+            }
+        }
+
+        Booking[] currentBookings = getCurrentVipRoomBookings();
+        for (Booking booking : currentBookings) {
+            if (booking != null && booking.getGuest() != null
+                    && booking.getGuest().getGuestId().equalsIgnoreCase(guestId)) {
+                return "IN HOUSE";
+            }
+        }
+        return "PROFILE ONLY";
+    }
+
+    private String formatBoundaryDateTime(LocalDateTime value) {
+        return value == null ? "-"
+                : value.format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"));
+    }
+
+    private String formatBoundaryDateTimeDash(LocalDateTime value) {
+        return value == null ? "-"
+                : value.format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"));
+    }
 }
