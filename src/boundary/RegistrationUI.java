@@ -270,6 +270,18 @@ public class RegistrationUI {
                 arrivalTime,
                 expectedCheckOut);
 
+        if (result == RegistrationController.DUPLICATE_REGISTRATION_ID) {
+            Utility.printError(
+                    "Registration ID already exists. Please try the registration again.");
+            return;
+        }
+
+        if (result == RegistrationController.GUEST_ALREADY_ACTIVE) {
+            Utility.printError(
+                    "This guest already has a waiting registration or is currently checked in.");
+            return;
+        }
+
         if (loyaltyTier != null) {
             if (result != VipPriorityController.ADD_SUCCESS) {
                 displayVipAddError(result);
@@ -579,11 +591,10 @@ public class RegistrationUI {
 
         System.out.println("\nSort Report By:");
         System.out.println("1. FIFO Order / Earliest Arrival First");
-        System.out.println("2. Longest Waiting Time First");
-        System.out.println("3. Largest Party Size First");
+        System.out.println("2. Largest Party Size First");
 
         int sortOption = readIntegerInRange(
-                "Select Sort Option (1-3): ", 1, 3);
+                "Select Sort Option (1-2): ", 1, 2);
 
         StandardFifoWaitingTimeRP report = new StandardFifoWaitingTimeRP();
         report.generateReport(

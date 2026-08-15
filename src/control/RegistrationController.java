@@ -28,7 +28,8 @@ public class RegistrationController {
 
     private final LinearADT<WalkInRegistration> registrationQueue;
     private final LinearADT<WalkInRegistration> registrationRecords;
-
+    public static final int DUPLICATE_REGISTRATION_ID = -2;
+    public static final int GUEST_ALREADY_ACTIVE = -5;
     private final GuestDao guestDao;
     private final WalkInRegistrationDao registrationDao;
     private final RoomDao roomDao;
@@ -1079,9 +1080,17 @@ public class RegistrationController {
             LocalDateTime arrivalTime,
             LocalDateTime expectedCheckOut) {
 
+        if (searchRegistrationById(registrationId) != null) {
+            return DUPLICATE_REGISTRATION_ID;
+        }        
+
         Guest guest = searchGuestById(guestId);
         if (guest == null) {
             return VipPriorityController.INVALID_INPUT;
+        }
+
+        if (hasActiveRegistrationOrStay(guestId)) {
+            return GUEST_ALREADY_ACTIVE;
         }
 
         WalkInRegistration registration = new WalkInRegistration(

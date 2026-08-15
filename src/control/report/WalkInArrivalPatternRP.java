@@ -361,48 +361,85 @@ public class WalkInArrivalPatternRP {
         }
     }
 
-    private String findPeakArrivalPeriod(
-            WalkInRegistration[] records) {
+        private String findPeakArrivalPeriod(
+                WalkInRegistration[] records) {
 
-        int[] counts
-                = new int[4];
+        int[] counts = new int[4];
 
         for (WalkInRegistration registration : records) {
 
-            int periodIndex
-                    = getPeriodIndex(
-                            registration
-                                    .getRegistrationTime()
-                                    .getHour());
+                int periodIndex
+                        = getPeriodIndex(
+                                registration
+                                        .getRegistrationTime()
+                                        .getHour());
 
-            counts[periodIndex]++;
+                counts[periodIndex]++;
         }
 
         String[] periodLabels = {
-            "12:00 AM - 5:59 AM",
-            "6:00 AM - 11:59 AM",
-            "12:00 PM - 5:59 PM",
-            "6:00 PM - 11:59 PM"
+                "12:00 AM - 5:59 AM",
+                "6:00 AM - 11:59 AM",
+                "12:00 PM - 5:59 PM",
+                "6:00 PM - 11:59 PM"
         };
 
-        int highestIndex = 0;
+        // Find the highest registration count.
+        int highestCount = counts[0];
 
-        for (int i = 1;
-                i < counts.length;
-                i++) {
+        for (int i = 1; i < counts.length; i++) {
 
-            if (counts[i]
-                    > counts[highestIndex]) {
-
-                highestIndex = i;
-            }
+                if (counts[i] > highestCount) {
+                highestCount = counts[i];
+                }
         }
 
-        return periodLabels[highestIndex]
+        // Count how many periods share the same highest count.
+        int peakPeriodCount = 0;
+
+        for (int count : counts) {
+
+                if (count == highestCount) {
+                peakPeriodCount++;
+                }
+        }
+
+        // Only one peak period.
+        if (peakPeriodCount == 1) {
+
+                for (int i = 0; i < counts.length; i++) {
+
+                if (counts[i] == highestCount) {
+
+                        return periodLabels[i]
+                                + " ("
+                                + highestCount
+                                + " registration(s))";
+                }
+                }
+        }
+
+        // More than one period has the same highest count.
+        StringBuilder peakPeriods
+                = new StringBuilder();
+
+        for (int i = 0; i < counts.length; i++) {
+
+                if (counts[i] == highestCount) {
+
+                if (peakPeriods.length() > 0) {
+                        peakPeriods.append(" & ");
+                }
+
+                peakPeriods.append(periodLabels[i]);
+                }
+        }
+
+        return peakPeriods
                 + " ("
-                + counts[highestIndex]
-                + " registration(s))";
-    }
+                + highestCount
+                + " registration(s) each)";
+        }
 
     private int getPeriodIndex(int hour) {
 

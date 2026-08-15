@@ -23,8 +23,7 @@ public class StandardFifoWaitingTimeRP {
     /**
      * sortOption:
      * 1 = FIFO order / earliest arrival first
-     * 2 = longest waiting time first
-     * 3 = largest party size first
+     * 2 = largest party size first
      */
     public void generateReport(
             RegistrationController controller,
@@ -328,25 +327,14 @@ public class StandardFifoWaitingTimeRP {
         }
     }
 
-    private boolean comesBefore(
-            WaitingEntry first,
-            WaitingEntry second,
-            int sortOption) {
+        private boolean comesBefore(
+                WaitingEntry first,
+                WaitingEntry second,
+                int sortOption) {
 
         switch (sortOption) {
 
-            case 2:
-                if (first.waitingMinutes
-                        != second.waitingMinutes) {
-
-                    return first.waitingMinutes
-                            > second.waitingMinutes;
-                }
-
-                return first.fifoPosition
-                        < second.fifoPosition;
-
-            case 3:
+                case 2:
                 int firstParty
                         = first.registration
                                 .getNumberOfGuests();
@@ -356,20 +344,19 @@ public class StandardFifoWaitingTimeRP {
                                 .getNumberOfGuests();
 
                 if (firstParty != secondParty) {
-                    return firstParty
-                            > secondParty;
+                        return firstParty
+                                > secondParty;
                 }
 
                 return first.fifoPosition
                         < second.fifoPosition;
 
-            case 1:
-            default:
+                case 1:
+                default:
                 return first.fifoPosition
                         < second.fifoPosition;
         }
-    }
-
+        }
     private boolean matchesKeyword(
             WalkInRegistration registration,
             String keyword) {
@@ -416,17 +403,11 @@ public class StandardFifoWaitingTimeRP {
 
         switch (sortOption) {
             case 2:
-                return "Selection Sort "
-                        + "(Longest Waiting Time First)";
-
-            case 3:
-                return "Selection Sort "
-                        + "(Largest Party Size First)";
+                return "Selection Sort " + "(Largest Party Size First)";
 
             case 1:
-            default:
-                return "Selection Sort "
-                        + "(FIFO / Earliest Arrival First)";
+                default:
+                return "Selection Sort " + "(Earliest Arrival First)";       
         }
     }
 
