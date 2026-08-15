@@ -151,7 +151,7 @@ public class VipLoyaltyStayPerformanceRP {
         }
 
         System.out.printf(
-                "%-4s %-8s %-18s %-10s %-12s %-13s %-16s %-16s %-18s%n",
+                "%-4s %-8s %-18s %-10s %-12s %-13s %-16s %-20s %-18s%n",
                 "No.", "Guest ID", "Guest Name", "Tier", "Total Stays", "Period Stays",
                 "Activity", "Last Room", "Next Tier Progress");
         System.out.println("-".repeat(142));
@@ -195,7 +195,7 @@ public class VipLoyaltyStayPerformanceRP {
             }
 
             System.out.printf(
-                    "%-4d %-8s %-18s %-10s %-12d %-13d %-16s %-16s %-18s%n",
+                    "%-4d %-8s %-18s %-10s %-12d %-13d %-16s %-20s %-18s%n",
                     i + 1,
                     entry.guest.getGuestId(),
                     shorten(entry.guest.getName(), 18),
@@ -452,7 +452,7 @@ public class VipLoyaltyStayPerformanceRP {
             return "-";
         }
         return booking.getRoom().getRoomNumber() + " "
-                + shorten(formatRoomType(booking.getRoom().getRoomType()), 10);
+                + formatRoomType(booking.getRoom().getRoomType());
     }
 
     private String nextTierProgress(LoyaltyProfile profile) {

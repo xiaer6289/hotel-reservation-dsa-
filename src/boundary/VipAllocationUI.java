@@ -106,42 +106,39 @@ public class VipAllocationUI {
     }
 
     private void displayMenu() {
-        displayScreenHeader(
-                "VIP & LOYALTY TIER PRIORITY ROOM ALLOCATION",
-                "Manage VIP priority, waiting requests, room assignment and VIP allocation analysis.");
+        final int menuWidth = 88;
+
+        System.out.println("=".repeat(menuWidth));
+        System.out.println(" VIP & LOYALTY TIER PRIORITY ROOM ALLOCATION");
+        System.out.println("=".repeat(menuWidth));
 
         displayModuleStatus();
+        System.out.println("-".repeat(menuWidth));
 
-        System.out.println("\n[ VIP INFORMATION ]");
+        System.out.println("[ VIP INFORMATION ]");
         System.out.println("  1. View All VIP Guest Profiles");
-        System.out.println("     Review VIP identity, loyalty tier, completed stays and current activity.");
         System.out.println("  2. View Next VIP in Priority");
-        System.out.println("     Show the VIP guest who should be served first and whether a suitable room is ready.");
         System.out.println("  3. View VIP Waiting List by Priority");
-        System.out.println("     Review all VIP_WAITING registrations in priority order.");
+        System.out.println();
 
-        System.out.println("\n[ VIP WAITING REQUEST MANAGEMENT ]");
+        System.out.println("[ WAITING REQUESTS ]");
         System.out.println("  4. Find VIP Waiting Registration");
-        System.out.println("     Search one waiting VIP request using its Registration ID.");
         System.out.println("  5. Update VIP Room Request");
-        System.out.println("     Change room type, party size or expected check-out date before check-in.");
         System.out.println("  6. Cancel VIP Waiting Registration");
-        System.out.println("     Remove a waiting request from the VIP priority queue after confirmation.");
+        System.out.println();
 
-        System.out.println("\n[ VIP ROOM OPERATIONS ]");
+        System.out.println("[ ROOM OPERATIONS ]");
         System.out.println("  7. View Current VIP In-House Rooms");
-        System.out.println("     View VIP guests currently checked in, including confirmation and room details.");
         System.out.println("  8. Assign Ready Room & Check In VIP");
-        System.out.println("     Allocate the highest-priority VIP who can use a suitable READY room.");
+        System.out.println();
 
-        System.out.println("\n[ VIP MANAGEMENT REPORTS ]");
+        System.out.println("[ REPORTS ]");
         System.out.println("  9. VIP Priority Allocation Performance Report");
-        System.out.println("     Analyse current and historical VIP allocation results, waiting time and tier performance.");
         System.out.println(" 10. VIP Loyalty & Stay Performance Report");
-        System.out.println("     Analyse VIP loyalty tiers, completed stays, booking history and current activity.");
 
-        System.out.println("\n  0. Return to Main Menu");
-        System.out.println("=".repeat(104));
+        System.out.println("-".repeat(menuWidth));
+        System.out.println("  0. Return to Main Menu");
+        System.out.println("=".repeat(menuWidth));
     }
 
     private void displayAllVipGuests() {
@@ -852,12 +849,11 @@ public class VipAllocationUI {
         int readyRooms = controller.getVacantRooms().length;
         WalkInRegistration next = controller.peekNextVip();
 
-        System.out.println("SYSTEM STATUS");
-        System.out.println("  VIP Profiles : " + vipProfiles.length
-                + "   |   Waiting : " + waiting
-                + "   |   In House : " + inHouse
-                + "   |   READY Rooms : " + readyRooms);
-        System.out.println("  Next Priority: " + (next == null
+        System.out.println("STATUS        : " + vipProfiles.length + " VIP Profiles"
+                + " | " + waiting + " Waiting"
+                + " | " + inHouse + " In House"
+                + " | " + readyRooms + " Ready Rooms");
+        System.out.println("NEXT PRIORITY : " + (next == null
                 ? "NONE"
                 : next.getRegistrationId() + " / " + next.getGuest().getGuestId()
                 + " / " + controller.getLoyaltyTier(next)));

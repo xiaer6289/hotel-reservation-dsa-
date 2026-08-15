@@ -230,7 +230,7 @@ public class VipPriorityAllocationPerformanceRP {
 
         System.out.println("-".repeat(142));
         System.out.println("TIER PERFORMANCE SUMMARY");
-        System.out.printf("%-12s %-12s %-12s %-12s %-20s%n",
+        System.out.printf("%-12s %-10s %-11s %-15s %-20s%n",
                 "Tier", "Requests", "Allocated", "Not Allocated", "Avg Allocation Wait");
 
         for (LoyaltyTier tier : new LoyaltyTier[]{LoyaltyTier.DIAMOND, LoyaltyTier.PLATINUM, LoyaltyTier.ELITE}) {
@@ -241,13 +241,13 @@ public class VipPriorityAllocationPerformanceRP {
             String average = tierWaitCount[index] == 0
                     ? "-"
                     : String.format("%.1f min", (double) tierWaitTotal[index] / tierWaitCount[index]);
-            System.out.printf("%-12s %-12d %-12d %-12d %-20s%n",
+            System.out.printf("%-12s %-10d %-11d %-15d %-20s%n",
                     tier, tierRequests[index], tierAllocated[index],
                     tierRequests[index] - tierAllocated[index], average);
         }
 
         System.out.println("\nROOM TYPE ALLOCATION SUMMARY");
-        System.out.printf("%-20s %-12s %-12s %-15s%n",
+        System.out.printf("%-22s %-10s %-11s %-16s%n",
                 "Requested Room Type", "Requests", "Allocated", "Allocation Rate");
         for (RoomType roomType : RoomType.values()) {
             int index = roomType.ordinal();
@@ -256,7 +256,7 @@ public class VipPriorityAllocationPerformanceRP {
             }
             double rate = (double) roomAllocated[index] * 100.0 / roomRequests[index];
             String rateText = String.format("%.1f%%", rate);
-            System.out.printf("%-20s %-12d %-12d %-15s%n",
+            System.out.printf("%-22s %-10d %-11d %-16s%n",
                     formatRoomType(roomType.name()), roomRequests[index], roomAllocated[index], rateText);
         }
 
