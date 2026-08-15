@@ -13,9 +13,11 @@ import dao.RoomDao;
 import entity.Booking;
 import entity.Guest;
 import entity.Payment;
+import entity.RegistrationStatus;
 import entity.Room;
 import entity.RoomStatus;
 import entity.TaskLogEntry;
+import entity.WalkInRegistration;
 
 /**
  *
@@ -125,6 +127,19 @@ public class FrontDeskControl implements RoomAvailabilityNotifier.RoomReadyListe
         }
 
         /*
+         * A historical Booking must not be allowed to check out again. A
+         * guest is considered currently checked in only when the matching
+         * WalkInRegistration is still CHECKED_IN and the live room record is
+         * still OCCUPIED for the same check-in time.
+         */
+        WalkInRegistration activeRegistration
+                = findCheckedInRegistrationForBooking(booking);
+
+        if (activeRegistration == null) {
+            return null;
+        }
+
+        /*
          * Booking.room is a serialized snapshot of the room at booking time.
          * Never use that snapshot as the current room-state object. The
          * Housekeeping controller updates the shared RoomDao room instead.
@@ -132,6 +147,17 @@ public class FrontDeskControl implements RoomAvailabilityNotifier.RoomReadyListe
         String roomNumber = booking.getRoom().getRoomNumber();
         Room currentRoom = findRoomByNumber(roomNumber);
         if (currentRoom == null) {
+            return null;
+        }
+
+        boolean sameLiveStay
+                = currentRoom.getRoomStatus() == RoomStatus.OCCUPIED
+                && currentRoom.getCheckInDateTime() != null
+                && activeRegistration.getCheckInDateTime() != null
+                && currentRoom.getCheckInDateTime()
+                        .equals(activeRegistration.getCheckInDateTime());
+
+        if (!sameLiveStay) {
             return null;
         }
 
@@ -148,6 +174,100 @@ public class FrontDeskControl implements RoomAvailabilityNotifier.RoomReadyListe
         }
 
         return task;
+    }
+
+    /**
+     * Returns only bookings that represent guests who are currently staying
+     * in the hotel. Historical booking room snapshots are deliberately not
+     * used as the source of truth for current occupancy.
+     */
+    public Booking[] getCurrentCheckedInBookings() {
+        Booking[] allBookings = sortBooking();
+        refreshRooms();
+
+        Booking[] matches = new Booking[allBookings.length];
+        int count = 0;
+
+        for (Booking booking : allBookings) {
+            if (booking == null
+                    || booking.getRoom() == null
+                    || booking.getRoom().getRoomNumber() == null) {
+                continue;
+            }
+
+            WalkInRegistration registration
+                    = findCheckedInRegistrationForBooking(booking);
+
+            if (registration == null) {
+                continue;
+            }
+
+            Room currentRoom = findRoomByNumberWithoutRefresh(
+                    booking.getRoom().getRoomNumber());
+
+            if (currentRoom == null
+                    || currentRoom.getRoomStatus() != RoomStatus.OCCUPIED
+                    || currentRoom.getCheckInDateTime() == null
+                    || registration.getCheckInDateTime() == null
+                    || !currentRoom.getCheckInDateTime()
+                            .equals(registration.getCheckInDateTime())) {
+                continue;
+            }
+
+            matches[count++] = booking;
+        }
+
+        Booking[] currentBookings = new Booking[count];
+        System.arraycopy(matches, 0, currentBookings, 0, count);
+        return currentBookings;
+    }
+
+    /**
+     * Finds the CHECKED_IN registration that belongs to one Booking by Guest
+     * ID and the actual check-in timestamp. This also lets FrontDeskUI show
+     * the Registration ID without storing duplicate data in Booking.
+     */
+    public WalkInRegistration getCheckedInRegistrationForBooking(Booking booking) {
+        return findCheckedInRegistrationForBooking(booking);
+    }
+
+    private WalkInRegistration findCheckedInRegistrationForBooking(Booking booking) {
+        if (booking == null
+                || booking.getGuest() == null
+                || booking.getGuest().getGuestId() == null
+                || booking.getRoom() == null
+                || booking.getRoom().getCheckInDateTime() == null) {
+            return null;
+        }
+
+        String guestId = booking.getGuest().getGuestId();
+
+        for (int i = registrationController.getTotalRegistrationCount() - 1;
+                i >= 0; i--) {
+
+            WalkInRegistration registration
+                    = registrationController.getRecordAt(i);
+
+            if (registration == null
+                    || registration.getGuest() == null
+                    || registration.getGuest().getGuestId() == null
+                    || registration.getCheckInDateTime() == null
+                    || registration.getStatus() != RegistrationStatus.CHECKED_IN) {
+                continue;
+            }
+
+            boolean sameGuest = registration.getGuest().getGuestId()
+                    .equalsIgnoreCase(guestId);
+
+            boolean sameCheckInTime = registration.getCheckInDateTime()
+                    .equals(booking.getRoom().getCheckInDateTime());
+
+            if (sameGuest && sameCheckInTime) {
+                return registration;
+            }
+        }
+
+        return null;
     }
     
     public Booking[] sortBooking() {

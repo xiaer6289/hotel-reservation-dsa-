@@ -10,6 +10,9 @@ import control.report.RoomOccupancyRP;
 import entity.Booking;
 import entity.Room;
 import entity.RoomType;
+import entity.WalkInRegistration;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Scanner;
 import utility.Utility;
 
@@ -18,6 +21,9 @@ import utility.Utility;
  * @author Lee Cheng Xuan
  */
 public class FrontDeskUI {
+    private static final DateTimeFormatter DATE_TIME_FORMAT
+            = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+
     Scanner scanner = new Scanner(System.in);
     private FrontDeskControl control = new FrontDeskControl();
     private RoomOccupancyRP roomOccupancy = new RoomOccupancyRP();
@@ -123,18 +129,110 @@ public class FrontDeskUI {
     }
     
     private void processCheckout() {
-        System.out.print("Enter Confirmation Number (8 digits): ");
-        String confirmationNo = scanner.nextLine().trim();
+        Booking[] checkedInBookings = control.getCurrentCheckedInBookings();
 
-        if (!Utility.isValidConfirmationNo(confirmationNo)) {
-            Utility.printError("Invalid Confirmation number format. Please try again...");
+        System.out.println("\n===== PROCESS GUEST CHECK OUT =====");
+
+        if (checkedInBookings.length == 0) {
+            Utility.printError("No guests are currently checked in.");
             return;
         }
 
-        Booking booking = control.searchBookingByConfirmationNo(confirmationNo);
-        if (booking == null) {
-            Utility.printError("No booking found for " + confirmationNo);
-            return;
+        System.out.println("\nCURRENT CHECKED-IN GUESTS");
+        System.out.printf("%-6s %-10s %-20s %-10s %-18s %-18s%n",
+                "Room", "Guest ID", "Guest Name", "Reg ID",
+                "Confirmation No.", "Expected Check-Out");
+        System.out.println("--------------------------------------------------------------------------------------");
+
+        for (Booking currentBooking : checkedInBookings) {
+            WalkInRegistration registration
+                    = control.getCheckedInRegistrationForBooking(currentBooking);
+
+            String registrationId = registration == null
+                    ? "N/A"
+                    : registration.getRegistrationId();
+
+            LocalDateTime expectedCheckOut = registration == null
+                    ? currentBooking.getRoom().getCheckOutDateTime()
+                    : registration.getCheckOutDateTime();
+
+            System.out.printf("%-6s %-10s %-20s %-10s %-18s %-18s%n",
+                    currentBooking.getRoom().getRoomNumber(),
+                    currentBooking.getGuest().getGuestId(),
+                    currentBooking.getGuest().getName(),
+                    registrationId,
+                    currentBooking.getConfirmationNo(),
+                    formatDateTime(expectedCheckOut));
+        }
+
+        Booking booking = null;
+
+        while (booking == null) {
+            System.out.print("\nEnter Room Number to check out (0 = Cancel): ");
+            String roomNumber = scanner.nextLine().trim();
+
+            if (roomNumber.equals("0")) {
+                System.out.println("Check-out cancelled.");
+                return;
+            }
+
+            for (Booking currentBooking : checkedInBookings) {
+                if (currentBooking.getRoom().getRoomNumber()
+                        .equalsIgnoreCase(roomNumber)) {
+                    booking = currentBooking;
+                    break;
+                }
+            }
+
+            if (booking == null) {
+                Utility.printError("Please enter a room number from the checked-in list above.");
+            }
+        }
+
+        WalkInRegistration selectedRegistration
+                = control.getCheckedInRegistrationForBooking(booking);
+
+        System.out.println("\nSELECTED CHECKED-IN STAY");
+        System.out.println("Room Number         : " + booking.getRoom().getRoomNumber());
+        System.out.println("Guest ID            : " + booking.getGuest().getGuestId());
+        System.out.println("Guest Name          : " + booking.getGuest().getName());
+        System.out.println("Phone Number        : " + booking.getGuest().getPhoneNo());
+        System.out.println("Registration ID     : "
+                + (selectedRegistration == null
+                        ? "N/A"
+                        : selectedRegistration.getRegistrationId()));
+        System.out.println("Confirmation Number : " + booking.getConfirmationNo());
+        System.out.println("Check-In Time       : "
+                + formatDateTime(selectedRegistration == null
+                        ? booking.getRoom().getCheckInDateTime()
+                        : selectedRegistration.getCheckInDateTime()));
+        System.out.println("Expected Check-Out  : "
+                + formatDateTime(selectedRegistration == null
+                        ? booking.getRoom().getCheckOutDateTime()
+                        : selectedRegistration.getCheckOutDateTime()));
+
+        String confirmationNo;
+
+        while (true) {
+            System.out.print("\nEnter Confirmation Number shown above (8 digits, 0 = Cancel): ");
+            confirmationNo = scanner.nextLine().trim();
+
+            if (confirmationNo.equals("0")) {
+                System.out.println("Check-out cancelled.");
+                return;
+            }
+
+            if (!Utility.isValidConfirmationNo(confirmationNo)) {
+                Utility.printError("Invalid Confirmation number format. Please enter 8 digits.");
+                continue;
+            }
+
+            if (!booking.getConfirmationNo().equals(confirmationNo)) {
+                Utility.printError("Confirmation number does not match the selected room/guest.");
+                continue;
+            }
+
+            break;
         }
         
         String staff = selectStaff(scanner);
@@ -166,6 +264,10 @@ public class FrontDeskUI {
         }
 
         Utility.printSuccess("Check-out completed. Housekeeping task created: " + task.getTaskId());
+    }
+
+    private String formatDateTime(LocalDateTime dateTime) {
+        return dateTime == null ? "N/A" : dateTime.format(DATE_TIME_FORMAT);
     }
 
     private void viewReadyRoomNotifications() {
