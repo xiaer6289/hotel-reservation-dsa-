@@ -21,87 +21,37 @@ import java.time.format.DateTimeFormatter;
  * @author Low Enn Toong
  */
 public class VipPriorityAllocationPerformanceRP {
-    private static final DateTimeFormatter DATE_TIME_FORMAT
-            = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+    private static final DateTimeFormatter DATE_TIME_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
     private static final String ALL = "ALL";
 
-    public void generateReport(
-            VipPriorityController controller,
-            String keyword,
-            LoyaltyTier tierFilter,
-            String roomTypeFilter,
-            String statusFilter,
-            LocalDate startDate,
-            LocalDate endDate,
-            int minimumGuests,
-            int sortOption) {
-
-        WalkInRegistration[] registrations
-                = controller.getAllRegistrationsForReport();
+    public void generateReport(VipPriorityController controller, String keyword, LoyaltyTier tierFilter, String roomTypeFilter, String statusFilter, LocalDate startDate, LocalDate endDate, int minimumGuests, int sortOption) {
+        WalkInRegistration[] registrations = controller.getAllRegistrationsForReport();
         Booking[] bookings = controller.getAllBookingsForReport();
         LoyaltyProfile[] profiles = controller.getAllVipProfiles();
-
-        AllocationEntry[] entries = searchAndFilter(
-                registrations,
-                bookings,
-                profiles,
-                keyword,
-                tierFilter,
-                roomTypeFilter,
-                statusFilter,
-                startDate,
-                endDate,
-                minimumGuests);
-
+        AllocationEntry[] entries = searchAndFilter(registrations, bookings, profiles, keyword, tierFilter, roomTypeFilter, statusFilter, startDate, endDate, minimumGuests);
         selectionSort(entries, sortOption);
-        printReport(entries, keyword, tierFilter, roomTypeFilter, statusFilter,
-                startDate, endDate, minimumGuests, sortOption);
+        printReport(entries, keyword, tierFilter, roomTypeFilter, statusFilter, startDate, endDate, minimumGuests, sortOption);
     }
 
-    private AllocationEntry[] searchAndFilter(
-            WalkInRegistration[] registrations,
-            Booking[] bookings,
-            LoyaltyProfile[] profiles,
-            String keyword,
-            LoyaltyTier tierFilter,
-            String roomTypeFilter,
-            String statusFilter,
-            LocalDate startDate,
-            LocalDate endDate,
-            int minimumGuests) {
-
+    private AllocationEntry[] searchAndFilter(WalkInRegistration[] registrations, Booking[] bookings, LoyaltyProfile[] profiles, String keyword, LoyaltyTier tierFilter, String roomTypeFilter, String statusFilter, LocalDate startDate, LocalDate endDate, int minimumGuests) {
         AllocationEntry[] temporary = new AllocationEntry[registrations.length];
         int count = 0;
 
         for (WalkInRegistration registration : registrations) {
-            if (registration == null
-                    || registration.getGuest() == null
-                    || registration.getGuest().getGuestId() == null
-                    || registration.getRegistrationTime() == null) {
+            if (registration == null || registration.getGuest() == null || registration.getGuest().getGuestId() == null || registration.getRegistrationTime() == null) {
                 continue;
             }
 
-            LoyaltyProfile profile = findProfile(
-                    profiles, registration.getGuest().getGuestId());
+            LoyaltyProfile profile = findProfile(profiles, registration.getGuest().getGuestId());
 
-            if (profile == null || profile.getTier() == null
-                    || !isVipReportStatus(registration.getStatus())) {
+            if (profile == null || profile.getTier() == null || !isVipReportStatus(registration.getStatus())) {
                 continue;
             }
 
             Booking booking = findBookingForRegistration(registration, bookings);
-            AllocationEntry entry = new AllocationEntry(
-                    registration,
-                    profile,
-                    booking,
-                    calculateWaitMinutes(registration));
+            AllocationEntry entry = new AllocationEntry(registration, profile, booking, calculateWaitMinutes(registration));
 
-            if (!matchesKeyword(entry, keyword)
-                    || (tierFilter != null && profile.getTier() != tierFilter)
-                    || !matchesRoomType(registration, roomTypeFilter)
-                    || !matchesStatus(registration.getStatus(), statusFilter)
-                    || !matchesDate(registration.getRegistrationTime().toLocalDate(), startDate, endDate)
-                    || registration.getNumberOfGuests() < minimumGuests) {
+            if (!matchesKeyword(entry, keyword) || (tierFilter != null && profile.getTier() != tierFilter) || !matchesRoomType(registration, roomTypeFilter) || !matchesStatus(registration.getStatus(), statusFilter) || !matchesDate(registration.getRegistrationTime().toLocalDate(), startDate, endDate) || registration.getNumberOfGuests() < minimumGuests) {
                 continue;
             }
 
@@ -114,23 +64,10 @@ public class VipPriorityAllocationPerformanceRP {
     }
 
     private boolean isVipReportStatus(RegistrationStatus status) {
-        return status == RegistrationStatus.VIP_WAITING
-                || status == RegistrationStatus.CHECKED_IN
-                || status == RegistrationStatus.CHECKED_OUT
-                || status == RegistrationStatus.CANCELLED;
+        return status == RegistrationStatus.VIP_WAITING || status == RegistrationStatus.CHECKED_IN || status == RegistrationStatus.CHECKED_OUT || status == RegistrationStatus.CANCELLED;
     }
 
-    private void printReport(
-            AllocationEntry[] entries,
-            String keyword,
-            LoyaltyTier tierFilter,
-            String roomTypeFilter,
-            String statusFilter,
-            LocalDate startDate,
-            LocalDate endDate,
-            int minimumGuests,
-            int sortOption) {
-
+    private void printReport(AllocationEntry[] entries, String keyword, LoyaltyTier tierFilter, String roomTypeFilter, String statusFilter, LocalDate startDate, LocalDate endDate, int minimumGuests, int sortOption) {
         System.out.println("\n" + "=".repeat(142));
         System.out.println("                                      VIP PRIORITY ALLOCATION PERFORMANCE REPORT");
         System.out.println("=".repeat(142));
@@ -154,8 +91,7 @@ public class VipPriorityAllocationPerformanceRP {
 
         System.out.printf(
                 "%-4s %-7s %-8s %-17s %-10s %-16s %-12s %-6s %-12s %-16s %-9s%n",
-                "No.", "Reg ID", "Guest ID", "Guest Name", "Tier", "Room Request",
-                "Status", "Room", "Confirm No.", "Registered At", "Wait Min");
+                "No.", "Reg ID", "Guest ID", "Guest Name", "Tier", "Room Request", "Status", "Room", "Confirm No.", "Registered At", "Wait Min");
         System.out.println("-".repeat(142));
 
         int allocated = 0;
@@ -170,7 +106,6 @@ public class VipPriorityAllocationPerformanceRP {
         int[] tierAllocated = new int[LoyaltyTier.values().length];
         long[] tierWaitTotal = new long[LoyaltyTier.values().length];
         int[] tierWaitCount = new int[LoyaltyTier.values().length];
-
         int[] roomRequests = new int[RoomType.values().length];
         int[] roomAllocated = new int[RoomType.values().length];
 
@@ -230,25 +165,19 @@ public class VipPriorityAllocationPerformanceRP {
 
         System.out.println("-".repeat(142));
         System.out.println("TIER PERFORMANCE SUMMARY");
-        System.out.printf("%-12s %-10s %-11s %-15s %-20s%n",
-                "Tier", "Requests", "Allocated", "Not Allocated", "Avg Allocation Wait");
+        System.out.printf("%-12s %-10s %-11s %-15s %-20s%n", "Tier", "Requests", "Allocated", "Not Allocated", "Avg Allocation Wait");
 
         for (LoyaltyTier tier : new LoyaltyTier[]{LoyaltyTier.DIAMOND, LoyaltyTier.PLATINUM, LoyaltyTier.ELITE}) {
             int index = tier.ordinal();
             if (tierRequests[index] == 0) {
                 continue;
             }
-            String average = tierWaitCount[index] == 0
-                    ? "-"
-                    : String.format("%.1f min", (double) tierWaitTotal[index] / tierWaitCount[index]);
-            System.out.printf("%-12s %-10d %-11d %-15d %-20s%n",
-                    tier, tierRequests[index], tierAllocated[index],
-                    tierRequests[index] - tierAllocated[index], average);
+            String average = tierWaitCount[index] == 0 ? "-" : String.format("%.1f min", (double) tierWaitTotal[index] / tierWaitCount[index]);
+            System.out.printf("%-12s %-10d %-11d %-15d %-20s%n", tier, tierRequests[index], tierAllocated[index], tierRequests[index] - tierAllocated[index], average);
         }
 
         System.out.println("\nROOM TYPE ALLOCATION SUMMARY");
-        System.out.printf("%-22s %-10s %-11s %-16s%n",
-                "Requested Room Type", "Requests", "Allocated", "Allocation Rate");
+        System.out.printf("%-22s %-10s %-11s %-16s%n", "Requested Room Type", "Requests", "Allocated", "Allocation Rate");
         for (RoomType roomType : RoomType.values()) {
             int index = roomType.ordinal();
             if (roomRequests[index] == 0) {
@@ -256,8 +185,7 @@ public class VipPriorityAllocationPerformanceRP {
             }
             double rate = (double) roomAllocated[index] * 100.0 / roomRequests[index];
             String rateText = String.format("%.1f%%", rate);
-            System.out.printf("%-22s %-10d %-11d %-16s%n",
-                    formatRoomType(roomType.name()), roomRequests[index], roomAllocated[index], rateText);
+            System.out.printf("%-22s %-10d %-11d %-16s%n", formatRoomType(roomType.name()), roomRequests[index], roomAllocated[index], rateText);
         }
 
         LoyaltyTier highestDemandTier = findHighestDemandTier(tierRequests);
@@ -270,12 +198,8 @@ public class VipPriorityAllocationPerformanceRP {
         System.out.println("Currently VIP Waiting       : " + waiting);
         System.out.println("Cancelled Requests          : " + cancelled);
         System.out.printf("Allocation Success Rate     : %.1f%%%n", successRate);
-        System.out.println("Average Allocation Wait     : "
-                + (allocatedWithWait == 0 ? "-" : String.format("%.1f minute(s)", (double) totalAllocatedWait / allocatedWithWait)));
-        System.out.println("Longest Allocation Wait     : "
-                + (longestEntry == null ? "-" : longestWait + " minute(s) - "
-                        + longestEntry.registration.getRegistrationId() + " / "
-                        + longestEntry.registration.getGuest().getName()));
+        System.out.println("Average Allocation Wait     : " + (allocatedWithWait == 0 ? "-" : String.format("%.1f minute(s)", (double) totalAllocatedWait / allocatedWithWait)));
+        System.out.println("Longest Allocation Wait     : " + (longestEntry == null ? "-" : longestWait + " minute(s) - " + longestEntry.registration.getRegistrationId() + " / " + longestEntry.registration.getGuest().getName()));
         System.out.println("Highest Demand VIP Tier     : " + (highestDemandTier == null ? "-" : highestDemandTier));
         System.out.println("Highest Demand Room Type    : " + (highestDemandRoom == null ? "-" : formatRoomType(highestDemandRoom.name())));
         System.out.println("=".repeat(142));
@@ -283,8 +207,7 @@ public class VipPriorityAllocationPerformanceRP {
 
     private LoyaltyProfile findProfile(LoyaltyProfile[] profiles, String guestId) {
         for (LoyaltyProfile profile : profiles) {
-            if (profile != null && profile.getGuestId() != null
-                    && profile.getGuestId().equalsIgnoreCase(guestId)) {
+            if (profile != null && profile.getGuestId() != null && profile.getGuestId().equalsIgnoreCase(guestId)) {
                 return profile;
             }
         }
@@ -296,14 +219,11 @@ public class VipPriorityAllocationPerformanceRP {
             return null;
         }
         for (Booking booking : bookings) {
-            if (booking == null || booking.getGuest() == null || booking.getRoom() == null
-                    || booking.getRoom().getCheckInDateTime() == null) {
+            if (booking == null || booking.getGuest() == null || booking.getRoom() == null || booking.getRoom().getCheckInDateTime() == null) {
                 continue;
             }
-            boolean sameGuest = booking.getGuest().getGuestId()
-                    .equalsIgnoreCase(registration.getGuest().getGuestId());
-            boolean sameCheckIn = booking.getRoom().getCheckInDateTime()
-                    .equals(registration.getCheckInDateTime());
+            boolean sameGuest = booking.getGuest().getGuestId().equalsIgnoreCase(registration.getGuest().getGuestId());
+            boolean sameCheckIn = booking.getRoom().getCheckInDateTime().equals(registration.getCheckInDateTime());
             if (sameGuest && sameCheckIn) {
                 return booking;
             }
@@ -332,15 +252,11 @@ public class VipPriorityAllocationPerformanceRP {
         }
         String value = keyword.trim().toLowerCase();
         WalkInRegistration registration = entry.registration;
-        return registration.getRegistrationId().toLowerCase().contains(value)
-                || registration.getGuest().getGuestId().toLowerCase().contains(value)
-                || registration.getGuest().getName().toLowerCase().contains(value)
-                || getConfirmation(entry).toLowerCase().contains(value);
+        return registration.getRegistrationId().toLowerCase().contains(value) || registration.getGuest().getGuestId().toLowerCase().contains(value) || registration.getGuest().getName().toLowerCase().contains(value) || getConfirmation(entry).toLowerCase().contains(value);
     }
 
     private boolean matchesRoomType(WalkInRegistration registration, String roomTypeFilter) {
-        return roomTypeFilter == null || roomTypeFilter.isBlank()
-                || registration.getRequestedRoomType().equalsIgnoreCase(roomTypeFilter);
+        return roomTypeFilter == null || roomTypeFilter.isBlank() || registration.getRequestedRoomType().equalsIgnoreCase(roomTypeFilter);
     }
 
     private boolean matchesStatus(RegistrationStatus status, String statusFilter) {
@@ -352,8 +268,7 @@ public class VipPriorityAllocationPerformanceRP {
     }
 
     private boolean matchesDate(LocalDate date, LocalDate startDate, LocalDate endDate) {
-        return (startDate == null || !date.isBefore(startDate))
-                && (endDate == null || !date.isAfter(endDate));
+        return (startDate == null || !date.isBefore(startDate)) && (endDate == null || !date.isAfter(endDate));
     }
 
     private void selectionSort(AllocationEntry[] entries, int sortOption) {
@@ -378,11 +293,9 @@ public class VipPriorityAllocationPerformanceRP {
                 }
                 break;
             case 3:
-                return first.registration.getRegistrationTime()
-                        .isAfter(second.registration.getRegistrationTime());
+                return first.registration.getRegistrationTime().isAfter(second.registration.getRegistrationTime());
             case 4:
-                int roomCompare = first.registration.getRequestedRoomType()
-                        .compareToIgnoreCase(second.registration.getRequestedRoomType());
+                int roomCompare = first.registration.getRequestedRoomType().compareToIgnoreCase(second.registration.getRequestedRoomType());
                 if (roomCompare != 0) {
                     return roomCompare < 0;
                 }
@@ -394,11 +307,9 @@ public class VipPriorityAllocationPerformanceRP {
                 if (firstPriority != secondPriority) {
                     return firstPriority > secondPriority;
                 }
-                return first.registration.getRegistrationTime()
-                        .isBefore(second.registration.getRegistrationTime());
+                return first.registration.getRegistrationTime().isBefore(second.registration.getRegistrationTime());
         }
-        return first.registration.getRegistrationTime()
-                .isBefore(second.registration.getRegistrationTime());
+        return first.registration.getRegistrationTime().isBefore(second.registration.getRegistrationTime());
     }
 
     private LoyaltyTier findHighestDemandTier(int[] counts) {
@@ -437,13 +348,11 @@ public class VipPriorityAllocationPerformanceRP {
     }
 
     private String getRoomNumber(AllocationEntry entry) {
-        return entry.booking == null || entry.booking.getRoom() == null
-                ? "-" : entry.booking.getRoom().getRoomNumber();
+        return entry.booking == null || entry.booking.getRoom() == null ? "-" : entry.booking.getRoom().getRoomNumber();
     }
 
     private String getConfirmation(AllocationEntry entry) {
-        return entry.booking == null || entry.booking.getConfirmationNo() == null
-                ? "-" : entry.booking.getConfirmationNo();
+        return entry.booking == null || entry.booking.getConfirmationNo() == null ? "-" : entry.booking.getConfirmationNo();
     }
 
     private String normalizeStatus(String value) {
@@ -461,8 +370,7 @@ public class VipPriorityAllocationPerformanceRP {
         if (startDate == null && endDate == null) {
             return ALL;
         }
-        return (startDate == null ? "Beginning" : startDate)
-                + " to " + (endDate == null ? "Present" : endDate);
+        return (startDate == null ? "Beginning" : startDate) + " to " + (endDate == null ? "Present" : endDate);
     }
 
     private String sortDescription(int option) {
@@ -487,9 +395,7 @@ public class VipPriorityAllocationPerformanceRP {
         if (value == null) {
             return "-";
         }
-        return value.length() <= maximumLength
-                ? value
-                : value.substring(0, maximumLength - 3) + "...";
+        return value.length() <= maximumLength ? value : value.substring(0, maximumLength - 3) + "...";
     }
 
     private static class AllocationEntry {
@@ -498,11 +404,7 @@ public class VipPriorityAllocationPerformanceRP {
         private final Booking booking;
         private final long waitMinutes;
 
-        private AllocationEntry(
-                WalkInRegistration registration,
-                LoyaltyProfile profile,
-                Booking booking,
-                long waitMinutes) {
+        private AllocationEntry(WalkInRegistration registration, LoyaltyProfile profile, Booking booking, long waitMinutes) {
             this.registration = registration;
             this.profile = profile;
             this.booking = booking;

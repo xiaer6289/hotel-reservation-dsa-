@@ -45,10 +45,8 @@ public class VipPriorityController {
      * performs file I/O. The cache is refreshed whenever loyalty data may have
      * changed and before new VIP entries are enqueued.
      */
-    private static LoyaltyProfile[] priorityProfileCache
-            = PRIORITY_LOYALTY_DAO.loadOrSeed();
-    private static final PriorityQueueADT<WalkInRegistration> PRIORITY_QUEUE
-            = new MaxHeap<>(VipPriorityController::compareVipPriority);
+    private static LoyaltyProfile[] priorityProfileCache = PRIORITY_LOYALTY_DAO.loadOrSeed();
+    private static final PriorityQueueADT<WalkInRegistration> PRIORITY_QUEUE = new MaxHeap<>(VipPriorityController::compareVipPriority);
     private static boolean waitingVipRegistrationsLoaded = false;
     private final WalkInRegistrationDao registrationDao;
     private final RoomDao roomDao;
@@ -82,9 +80,7 @@ public class VipPriorityController {
         LoyaltyProfile[] profiles = loyaltyProfileDao.loadOrSeed();
 
         for (LoyaltyProfile profile : profiles) {
-            if (profile != null
-                    && profile.getGuestId() != null
-                    && profile.getGuestId().equalsIgnoreCase(guestId.trim())) {
+            if (profile != null && profile.getGuestId() != null && profile.getGuestId().equalsIgnoreCase(guestId.trim())) {
                 return profile;
             }
         }
@@ -111,8 +107,7 @@ public class VipPriorityController {
 
             existingProfile.updateCompletedStays(completedStays);
 
-            if (before != existingProfile.getCompletedStays()
-                    || beforeTier != existingProfile.getTier()) {
+            if (before != existingProfile.getCompletedStays() || beforeTier != existingProfile.getTier()) {
                 loyaltyProfileDao.saveToFile(profiles);
                 refreshPriorityProfileCache();
             }
@@ -149,12 +144,10 @@ public class VipPriorityController {
 
         String normalizedGuestId = guestId.trim();
         LoyaltyProfile[] profiles = loyaltyProfileDao.loadOrSeed();
-        LoyaltyProfile existingProfile
-                = findLoyaltyProfile(profiles, normalizedGuestId);
+        LoyaltyProfile existingProfile = findLoyaltyProfile(profiles, normalizedGuestId);
 
         if (existingProfile != null) {
-            existingProfile.updateCompletedStays(
-                    existingProfile.getCompletedStays() + 1);
+            existingProfile.updateCompletedStays(existingProfile.getCompletedStays() + 1);
             loyaltyProfileDao.saveToFile(profiles);
             refreshPriorityProfileCache();
             return existingProfile;
@@ -167,10 +160,8 @@ public class VipPriorityController {
             return null;
         }
 
-        LoyaltyProfile newProfile
-                = new LoyaltyProfile(normalizedGuestId, completedStays);
-        LoyaltyProfile[] updatedProfiles
-                = new LoyaltyProfile[profiles.length + 1];
+        LoyaltyProfile newProfile = new LoyaltyProfile(normalizedGuestId, completedStays);
+        LoyaltyProfile[] updatedProfiles = new LoyaltyProfile[profiles.length + 1];
         System.arraycopy(profiles, 0, updatedProfiles, 0, profiles.length);
         updatedProfiles[profiles.length] = newProfile;
         loyaltyProfileDao.saveToFile(updatedProfiles);
@@ -202,16 +193,12 @@ public class VipPriorityController {
         int completedCount = 0;
 
         for (WalkInRegistration registration : registrations) {
-            if (registration == null
-                    || registration.getGuest() == null
-                    || registration.getGuest().getGuestId() == null) {
+            if (registration == null || registration.getGuest() == null || registration.getGuest().getGuestId() == null) {
                 continue;
             }
 
-            boolean sameGuest = registration.getGuest().getGuestId()
-                    .equalsIgnoreCase(guestId);
-            boolean stayCompleted = registration.getStatus()
-                    == RegistrationStatus.CHECKED_OUT;
+            boolean sameGuest = registration.getGuest().getGuestId().equalsIgnoreCase(guestId);
+            boolean stayCompleted = registration.getStatus() == RegistrationStatus.CHECKED_OUT;
 
             if (sameGuest && stayCompleted) {
                 completedCount++;
@@ -221,18 +208,13 @@ public class VipPriorityController {
         return completedCount;
     }
 
-    private LoyaltyProfile findLoyaltyProfile(
-            LoyaltyProfile[] profiles,
-            String guestId) {
-
+    private LoyaltyProfile findLoyaltyProfile(LoyaltyProfile[] profiles, String guestId) {
         if (profiles == null || guestId == null) {
             return null;
         }
 
         for (LoyaltyProfile profile : profiles) {
-            if (profile != null
-                    && profile.getGuestId() != null
-                    && profile.getGuestId().equalsIgnoreCase(guestId.trim())) {
+            if (profile != null && profile.getGuestId() != null && profile.getGuestId().equalsIgnoreCase(guestId.trim())) {
                 return profile;
             }
         }
@@ -294,8 +276,7 @@ public class VipPriorityController {
         Guest[] guests = guestDao.loadOrSeed();
 
         for (Guest guest : guests) {
-            if (guest != null && guest.getGuestId() != null
-                    && guest.getGuestId().equalsIgnoreCase(guestId.trim())) {
+            if (guest != null && guest.getGuestId() != null && guest.getGuestId().equalsIgnoreCase(guestId.trim())) {
                 return guest;
             }
         }
@@ -371,29 +352,20 @@ public class VipPriorityController {
      * incoming VIP's count because the MaxHeap will place the higher-tier guest
      * ahead of them for allocation.
      */
-    public int getReadyRoomCountForIncomingVip(
-            String roomType,
-            int numberOfGuests,
-            LoyaltyTier incomingTier) {
-
-        if (roomType == null || roomType.isBlank()
-                || numberOfGuests <= 0 || incomingTier == null) {
+    public int getReadyRoomCountForIncomingVip(String roomType, int numberOfGuests, LoyaltyTier incomingTier) {
+        if (roomType == null || roomType.isBlank() || numberOfGuests <= 0 || incomingTier == null) {
             return 0;
         }
 
         Room[] currentRooms = roomDao.loadOrSeed();
-        boolean[] reservedForHigherOrEarlierVip
-                = new boolean[currentRooms.length];
-
-        PriorityQueueADT<WalkInRegistration> copiedQueue
-                = PRIORITY_QUEUE.copy();
+        boolean[] reservedForHigherOrEarlierVip = new boolean[currentRooms.length];
+        PriorityQueueADT<WalkInRegistration> copiedQueue = PRIORITY_QUEUE.copy();
 
         while (!copiedQueue.isEmpty()) {
             WalkInRegistration waitingRegistration = copiedQueue.dequeue();
             LoyaltyTier waitingTier = getLoyaltyTier(waitingRegistration);
 
-            if (waitingTier == null
-                    || waitingTier.getPriority() < incomingTier.getPriority()) {
+            if (waitingTier == null || waitingTier.getPriority() < incomingTier.getPriority()) {
                 continue;
             }
 
@@ -403,11 +375,7 @@ public class VipPriorityController {
              * One waiting VIP protects only one suitable ready room.
              */
             for (int i = 0; i < currentRooms.length; i++) {
-                if (!reservedForHigherOrEarlierVip[i]
-                        && isRoomSuitableForRegistration(
-                                currentRooms[i],
-                                waitingRegistration)) {
-
+                if (!reservedForHigherOrEarlierVip[i] && isRoomSuitableForRegistration(currentRooms[i], waitingRegistration)) {
                     reservedForHigherOrEarlierVip[i] = true;
                     break;
                 }
@@ -419,13 +387,7 @@ public class VipPriorityController {
         for (int i = 0; i < currentRooms.length; i++) {
             Room room = currentRooms[i];
 
-            if (!reservedForHigherOrEarlierVip[i]
-                    && room != null
-                    && room.isAssignable()
-                    && room.getRoomType() != null
-                    && room.getRoomType().equalsIgnoreCase(roomType.trim())
-                    && room.getNoOfGuest() >= numberOfGuests) {
-
+            if (!reservedForHigherOrEarlierVip[i] && room != null && room.isAssignable() && room.getRoomType() != null && room.getRoomType().equalsIgnoreCase(roomType.trim()) && room.getNoOfGuest() >= numberOfGuests) {
                 availableCount++;
             }
         }
@@ -441,21 +403,13 @@ public class VipPriorityController {
         Room[] currentRooms = roomDao.loadOrSeed();
         boolean[] reserved = new boolean[currentRooms.length];
 
-        PriorityQueueADT<WalkInRegistration> copiedQueue
-                = PRIORITY_QUEUE.copy();
+        PriorityQueueADT<WalkInRegistration> copiedQueue = PRIORITY_QUEUE.copy();
 
         while (!copiedQueue.isEmpty()) {
-
-            WalkInRegistration registration
-                    = copiedQueue.dequeue();
+            WalkInRegistration registration = copiedQueue.dequeue();
 
             for (int i = 0; i < currentRooms.length; i++) {
-
-                if (!reserved[i]
-                        && isRoomSuitableForRegistration(
-                                currentRooms[i],
-                                registration)) {
-
+                if (!reserved[i] && isRoomSuitableForRegistration(currentRooms[i], registration)) {
                     // One VIP registration only protects one room
                     reserved[i] = true;
                     break;
@@ -464,12 +418,7 @@ public class VipPriorityController {
         }
 
         for (int i = 0; i < currentRooms.length; i++) {
-
-            if (reserved[i]
-                    && currentRooms[i].getRoomNumber()
-                            .equalsIgnoreCase(
-                                    targetRoom.getRoomNumber())) {
-
+            if (reserved[i] && currentRooms[i].getRoomNumber().equalsIgnoreCase(targetRoom.getRoomNumber())) {
                 return true;
             }
         }
@@ -537,7 +486,7 @@ public class VipPriorityController {
         }
 
         if (selectedRegistration == null) {
-                        return null;
+            return null;
         }
 
         WalkInRegistration registration = selectedRegistration;
@@ -595,9 +544,7 @@ public class VipPriorityController {
         while (!copiedQueue.isEmpty()) {
             WalkInRegistration registration = copiedQueue.dequeue();
 
-            if (registration != null
-                    && registration.getStatus() == RegistrationStatus.VIP_WAITING
-                    && registration.getRegistrationId().equalsIgnoreCase(registrationId.trim())) {
+            if (registration != null && registration.getStatus() == RegistrationStatus.VIP_WAITING && registration.getRegistrationId().equalsIgnoreCase(registrationId.trim())) {
                 return registration;
             }
         }
@@ -611,19 +558,10 @@ public class VipPriorityController {
      * These fields do not affect heap priority, so the registration keeps the
      * same MaxHeap ordering after the request update.
      */
-    public boolean updateVipRegistrationRequest(
-            String registrationId,
-            String requestedRoomType,
-            int numberOfGuests,
-            LocalDateTime checkOutDateTime) {
-
+    public boolean updateVipRegistrationRequest(String registrationId, String requestedRoomType, int numberOfGuests, LocalDateTime checkOutDateTime) {
         WalkInRegistration registration = findWaitingVipRegistrationById(registrationId);
 
-        if (registration == null
-                || requestedRoomType == null
-                || requestedRoomType.isBlank()
-                || numberOfGuests <= 0
-                || checkOutDateTime == null) {
+        if (registration == null || requestedRoomType == null || requestedRoomType.isBlank() || numberOfGuests <= 0 || checkOutDateTime == null) {
             return false;
         }
 
@@ -640,20 +578,16 @@ public class VipPriorityController {
             return false;
         }
 
-        LocalDate arrivalDate = registration.getRegistrationTime() == null
-                ? LocalDate.now()
-                : registration.getRegistrationTime().toLocalDate();
+        LocalDate arrivalDate = registration.getRegistrationTime() == null ? LocalDate.now() : registration.getRegistrationTime().toLocalDate();
         LocalDate requestedCheckOutDate = checkOutDateTime.toLocalDate();
 
-        if (!requestedCheckOutDate.isAfter(arrivalDate)
-                || requestedCheckOutDate.isAfter(arrivalDate.plusDays(MAX_STAY_NIGHTS))) {
+        if (!requestedCheckOutDate.isAfter(arrivalDate) || requestedCheckOutDate.isAfter(arrivalDate.plusDays(MAX_STAY_NIGHTS))) {
             return false;
         }
 
         // VIP request maintenance can change the departure date only. The hotel
         // standard check-out time remains fixed at 12:00 PM, matching RegistrationUI.
-        LocalDateTime normalizedCheckOutDateTime
-                = LocalDateTime.of(requestedCheckOutDate, STANDARD_CHECKOUT_TIME);
+        LocalDateTime normalizedCheckOutDateTime = LocalDateTime.of(requestedCheckOutDate, STANDARD_CHECKOUT_TIME);
 
         if (!normalizedCheckOutDateTime.isAfter(LocalDateTime.now().withSecond(0).withNano(0))) {
             return false;
@@ -752,38 +686,28 @@ public class VipPriorityController {
     }
 
     private boolean isCurrentVipRoomBooking(Booking booking) {
-        if (booking == null
-                || booking.getGuest() == null
-                || booking.getGuest().getGuestId() == null
-                || booking.getRoom() == null
-                || booking.getRoom().getRoomNumber() == null) {
+        if (booking == null || booking.getGuest() == null || booking.getGuest().getGuestId() == null || booking.getRoom() == null || booking.getRoom().getRoomNumber() == null) {
             return false;
         }
 
-        LoyaltyProfile profile = searchLoyaltyProfileByGuestId(
-                booking.getGuest().getGuestId());
+        LoyaltyProfile profile = searchLoyaltyProfileByGuestId(booking.getGuest().getGuestId());
         if (profile == null || profile.getTier() == null) {
             return false;
         }
 
         Room currentRoom = findRoomByNumber(booking.getRoom().getRoomNumber());
-        if (currentRoom == null
-                || currentRoom.getRoomStatus() != RoomStatus.OCCUPIED) {
+        if (currentRoom == null || currentRoom.getRoomStatus() != RoomStatus.OCCUPIED) {
             return false;
         }
 
         LocalDateTime bookingCheckIn = booking.getRoom().getCheckInDateTime();
         LocalDateTime currentCheckIn = currentRoom.getCheckInDateTime();
 
-        return bookingCheckIn != null
-                && currentCheckIn != null
-                && bookingCheckIn.equals(currentCheckIn);
+        return bookingCheckIn != null && currentCheckIn != null && bookingCheckIn.equals(currentCheckIn);
     }
 
     public Room getCurrentRoomForBooking(Booking booking) {
-        if (booking == null
-                || booking.getRoom() == null
-                || booking.getRoom().getRoomNumber() == null) {
+        if (booking == null || booking.getRoom() == null || booking.getRoom().getRoomNumber() == null) {
             return null;
         }
 
@@ -797,9 +721,7 @@ public class VipPriorityController {
         }
 
         for (Room room : rooms) {
-            if (room != null
-                    && room.getRoomNumber() != null
-                    && room.getRoomNumber().equalsIgnoreCase(roomNumber)) {
+            if (room != null && room.getRoomNumber() != null && room.getRoomNumber().equalsIgnoreCase(roomNumber)) {
                 return room;
             }
         }
@@ -817,11 +739,9 @@ public class VipPriorityController {
          * disturbed, then use the MaxHeap's direct remove operation. This avoids
          * draining and rebuilding the whole heap for one cancellation.
          */
-        WalkInRegistration removedRegistration
-                = findWaitingVipRegistrationById(registrationId);
+        WalkInRegistration removedRegistration = findWaitingVipRegistrationById(registrationId);
 
-        if (removedRegistration == null
-                || !PRIORITY_QUEUE.remove(removedRegistration)) {
+        if (removedRegistration == null || !PRIORITY_QUEUE.remove(removedRegistration)) {
             return null;
         }
 
@@ -848,9 +768,7 @@ public class VipPriorityController {
             WalkInRegistration[] savedRegistrations = registrationDao.loadExisting();
 
             for (WalkInRegistration registration : savedRegistrations) {
-                if (registration != null
-                        && registration.getStatus() == RegistrationStatus.VIP_WAITING
-                        && getLoyaltyTier(registration) != null) {
+                if (registration != null && registration.getStatus() == RegistrationStatus.VIP_WAITING && getLoyaltyTier(registration) != null) {
                     PRIORITY_QUEUE.enqueue(registration);
                 }
             }
@@ -895,8 +813,7 @@ public class VipPriorityController {
             return null;
         }
 
-        LoyaltyProfile profile = searchLoyaltyProfileByGuestId(
-                registration.getGuest().getGuestId());
+        LoyaltyProfile profile = searchLoyaltyProfileByGuestId(registration.getGuest().getGuestId());
         return profile == null ? null : profile.getTier();
     }
 
@@ -910,10 +827,7 @@ public class VipPriorityController {
      * DIAMOND > PLATINUM > ELITE, then earlier registration time, then the
      * smaller registration ID as a deterministic final tie-breaker.
      */
-    private static int compareVipPriority(
-            WalkInRegistration first,
-            WalkInRegistration second) {
-
+    private static int compareVipPriority(WalkInRegistration first, WalkInRegistration second) {
         int firstPriority = getStoredPriority(first);
         int secondPriority = getStoredPriority(second);
 
@@ -922,10 +836,8 @@ public class VipPriorityController {
             return tierComparison;
         }
 
-        if (first.getRegistrationTime() != null
-                && second.getRegistrationTime() != null) {
-            int timeComparison = second.getRegistrationTime()
-                    .compareTo(first.getRegistrationTime());
+        if (first.getRegistrationTime() != null && second.getRegistrationTime() != null) {
+            int timeComparison = second.getRegistrationTime().compareTo(first.getRegistrationTime());
 
             if (timeComparison != 0) {
                 return timeComparison;
@@ -938,17 +850,14 @@ public class VipPriorityController {
     }
 
     private static int getStoredPriority(WalkInRegistration registration) {
-        if (registration == null || registration.getGuest() == null
-                || registration.getGuest().getGuestId() == null) {
+        if (registration == null || registration.getGuest() == null || registration.getGuest().getGuestId() == null) {
             return 0;
         }
 
         String guestId = registration.getGuest().getGuestId();
 
         for (LoyaltyProfile profile : priorityProfileCache) {
-            if (profile != null
-                    && profile.getGuestId() != null
-                    && profile.getGuestId().equalsIgnoreCase(guestId)) {
+            if (profile != null && profile.getGuestId() != null && profile.getGuestId().equalsIgnoreCase(guestId)) {
                 LoyaltyTier tier = profile.getTier();
                 return tier == null ? 0 : tier.getPriority();
             }

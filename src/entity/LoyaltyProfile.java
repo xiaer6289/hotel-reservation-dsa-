@@ -149,8 +149,6 @@ public class LoyaltyProfile implements Serializable {
 
     @Override
     public String toString() {
-        return String.format(
-                "Guest ID: %s | Completed Stays: %d | Loyalty Tier: %s",
-                guestId, completedStays, tier);
+        return String.format("Guest ID: %s | Completed Stays: %d | Loyalty Tier: %s", guestId, completedStays, tier);
     }
 }

@@ -21,9 +21,7 @@ import java.util.Comparator;
  * @author Low Enn Toong
  */
 public class MaxHeap<T> implements PriorityQueueADT<T> {
-
     private static final int DEFAULT_CAPACITY = 20;
-
     private T[] heap;
     private int size;
     private final Comparator<? super T> comparator;
@@ -138,8 +136,7 @@ public class MaxHeap<T> implements PriorityQueueADT<T> {
             int rightChild = leftChild + 1;
             int largerChild = leftChild;
 
-            if (rightChild <= size
-                    && compare(heap[rightChild], heap[leftChild]) > 0) {
+            if (rightChild <= size && compare(heap[rightChild], heap[leftChild]) > 0) {
                 largerChild = rightChild;
             }
 
@@ -187,8 +184,7 @@ public class MaxHeap<T> implements PriorityQueueADT<T> {
             return ((Comparable<? super T>) first).compareTo(second);
         }
 
-        throw new IllegalStateException(
-                "A Comparator is required when heap entries do not implement Comparable.");
+        throw new IllegalStateException("A Comparator is required when heap entries do not implement Comparable.");
     }
 
     private boolean sameEntry(T first, T second) {

@@ -8,7 +8,6 @@ package adt.heap;
  * @author Low Enn Toong
  */
 public interface PriorityQueueADT<T> {
-
     /** Inserts an entry and restores priority order. */
     void enqueue(T data);
 
@@ -32,7 +31,7 @@ public interface PriorityQueueADT<T> {
 
     /** Removes all entries. */
     void clear();
-
+    
     /**
      * Creates an independent heap structure containing the same entry
      * references and priority rule. Mutating the copy's structure does not
