@@ -55,7 +55,7 @@ public class RegistrationUI {
 
         do {
             displayMenu();
-            choice = readMenuChoice("Enter choice (0-8): ", 0, 8);
+            choice = readMenuChoice("  Enter choice (0-8): ", 0, 8);
 
             switch (choice) {
                 case 1:
@@ -83,29 +83,36 @@ public class RegistrationUI {
                     generateWalkInArrivalPatternReport();
                     break;
                 case 0:
-                    System.out.println("Returning to Main Menu...");
+                    Utility.printInfo("Returning to Main Menu...");
                     break;
                 default:
+                    Utility.printError("Invalid choice. Please try again.");
                     break;
             }
 
-            System.out.println();
+            if (choice != 0) Utility.pauseScreen();
         } while (choice != 0);
     }
 
     private void displayMenu() {
-        System.out.println("============================================");
-        System.out.println(" WALK-IN REGISTRATION & STANDARD BOOKING");
-        System.out.println("============================================");
-        System.out.println("1. Register Walk-In Guest");
-        System.out.println("2. View Standard Waiting Queue");
-        System.out.println("3. View Next Standard Guest");
-        System.out.println("4. Assign Ready Room & Check In Next Standard Guest");
-        System.out.println("5. Search Walk-In Registration by ID");
-        System.out.println("6. Cancel Waiting Standard Registration");
-        System.out.println("7. Standard FIFO Waiting Time Analysis Report");
-        System.out.println("8. Walk-In Arrival Pattern Analysis Report");
-        System.out.println("0. Return to Main Menu");
+        Utility.clearScreen();
+        Utility.printHeader("WALK-IN REGISTRATION & STANDARD BOOKING");
+        System.out.println();
+        Utility.printSectionTitle("REGISTRATION");
+        System.out.println("  1.  Register Walk-In Guest");
+        System.out.println("  2.  View Standard Waiting Queue");
+        System.out.println("  3.  View Next Standard Guest");
+        System.out.println("  4.  Assign Ready Room & Check In Next Guest");
+        System.out.println("  5.  Search Walk-In Registration by ID");
+        System.out.println("  6.  Cancel Waiting Standard Registration");
+        System.out.println();
+        Utility.printSectionTitle("REPORTS");
+        System.out.println("  7.  Standard FIFO Waiting Time Analysis");
+        System.out.println("  8.  Walk-In Arrival Pattern Analysis");
+        System.out.println();
+        Utility.printDivider();
+        System.out.println("  0.  Return to Main Menu");
+        Utility.printDivider();
     }
 
     /**

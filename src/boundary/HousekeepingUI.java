@@ -27,24 +27,29 @@ public class HousekeepingUI {
 
         do {
             Utility.clearScreen();
-
-            System.out.println("\n=========================================");
-            System.out.println("   TARUMT RESORTS - HOUSEKEEPING SYSTEM");
-            System.out.println("=========================================");
-            System.out.println("1. Log New Housekeeping Task");
-            System.out.println("2. Update Task Status");
-            System.out.println("3. Rollback Task Status");
-            System.out.println("4. Search Task by Room Number");
-            System.out.println("5. Generate Cleaning Status Report");
-            System.out.println("6. Generate Daily Performance Report");
-            System.out.println("7. Display All Tasks");
-            System.out.println("8. Display Room Housekeeping Status");
-            System.out.println("9. Show Only Dirty Rooms");
-            System.out.println("10. Show Only Ready Rooms");
-            System.out.println("11. Show Tasks for a Selected Room");
-            System.out.println("0. Exit Module");
-            System.out.println("=========================================");
-            System.out.print("Enter your choice: ");
+            Utility.printHeader("TARUMT RESORTS - HOUSEKEEPING SYSTEM");
+            System.out.println();
+            Utility.printSectionTitle("TASK MANAGEMENT");
+            System.out.println("   1.  Log New Housekeeping Task");
+            System.out.println("   2.  Update Task Status");
+            System.out.println("   3.  Rollback Task Status");
+            System.out.println();
+            Utility.printSectionTitle("VIEW & SEARCH");
+            System.out.println("   4.  Search Task by Room Number");
+            System.out.println("   5.  Display All Tasks");
+            System.out.println("   6.  Display Room Housekeeping Status");
+            System.out.println("   7.  Show Only Dirty Rooms");
+            System.out.println("   8.  Show Only Ready Rooms");
+            System.out.println("   9.  Show Tasks for a Selected Room");
+            System.out.println();
+            Utility.printSectionTitle("REPORTS");
+            System.out.println("  10.  Generate Cleaning Status Report");
+            System.out.println("  11.  Generate Daily Performance Report");
+            System.out.println();
+            Utility.printDivider();
+            System.out.println("   0.  Exit Module");
+            Utility.printDivider();
+            System.out.print("  Enter your choice: ");
 
             choice = readChoice();
 
@@ -67,43 +72,40 @@ public class HousekeepingUI {
                     break;
 
                 case 5:
-                    generateCleaningStatusReport();
-                    break;
-
-                case 6:
-                    generateDailyPerformanceReport();
-                    break;
-
-                case 7:
-                    System.out.println("\n=== ALL TASKS ===");
+                    Utility.printHeader("ALL TASKS");
                     controller.displayAllTasks();
                     break;
 
-                case 8:
+                case 6:
                     controller.displayRoomStatus();
                     break;
 
-                case 9:
+                case 7:
                     controller.displayDirtyRooms();
                     break;
 
-                case 10:
+                case 8:
                     controller.displayReadyRooms();
                     break;
 
-                case 11:
+                case 9:
                     showTasksForSelectedRoom();
                     break;
 
+                case 10:
+                    generateCleaningStatusReport();
+                    break;
+
+                case 11:
+                    generateDailyPerformanceReport();
+                    break;
 
                 case 0:
-                    System.out.println(
-                            "Exiting Housekeeping Module...");
+                    Utility.printInfo("Exiting Housekeeping Module...");
                     break;
 
                 default:
-                    System.out.println(
-                            "Invalid choice! Please try again.");
+                    Utility.printError("Invalid choice! Please enter a number from the menu.");
             }
 
             if (choice != 0) {

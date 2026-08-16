@@ -18,23 +18,59 @@ import java.util.Scanner;
  * @author Lee Cheng Xuan
  */
 public class Utility {
+
+    /** Standard width used for all banners and dividers. */
+    public static final int UI_WIDTH = 54;
+
     public static void clearScreen() {
-        System.out.print("\033[H\033[2J");
+        for (int i = 0; i < 100; i++) {
+            System.out.println();
+        }
         System.out.flush();
     }
 
     public static void pauseScreen() {
-        System.out.println("\nPress Enter to continue...");
+        System.out.println("\n  Press Enter to continue...");
         Scanner scanner = new Scanner(System.in);
         scanner.nextLine();
     }
-    
-    public static void printError(String message) {
-        System.out.println("[ERROR]: " + message);
+
+    /**
+     * Prints a centred boxed header banner.
+     * Example:
+     * ======================================================
+     *                  MODULE TITLE HERE
+     * ======================================================
+     */
+    public static void printHeader(String title) {
+        String border = "=".repeat(UI_WIDTH);
+        System.out.println(border);
+        int padding = Math.max(0, (UI_WIDTH - title.length()) / 2);
+        System.out.println(" ".repeat(padding) + title);
+        System.out.println(border);
     }
-    
+
+    /** Prints a full-width dash divider line. */
+    public static void printDivider() {
+        System.out.println("-".repeat(UI_WIDTH));
+    }
+
+    /** Prints a [ SECTION TITLE ] label for grouping menu items. */
+    public static void printSectionTitle(String title) {
+        System.out.println("  [ " + title + " ]");
+    }
+
+    /** Prints a neutral informational message. */
+    public static void printInfo(String message) {
+        System.out.println("  [i] " + message);
+    }
+
+    public static void printError(String message) {
+        System.out.println("  [!] " + message);
+    }
+
     public static void printSuccess(String message) {
-        System.out.println("[SUCCESS]: " + message);
+        System.out.println(" [OK] " + message);
     }
     
     public static boolean isValidConfirmationNo(String confirmationNo) {
