@@ -119,8 +119,7 @@ public class RegistrationUI {
         System.out.println("\n===== REGISTER WALK-IN GUEST =====");
         System.out.println("Guest ID and Registration ID are generated automatically.");
 
-        boolean existingGuestOrMember = readYesNo(
-                "Is this an existing guest or loyalty member? (Y/N): ");
+        boolean existingGuestOrMember = readYesNo("Is this an existing guest or loyalty member? (Y/N): ");
 
         String guestId = null;
         boolean newGuest = !existingGuestOrMember;
@@ -153,8 +152,7 @@ public class RegistrationUI {
 
             String[] guestWithSamePhone = controller.searchGuestDisplayDataByPhoneNo(phoneNumber);
             if (guestWithSamePhone != null) {
-                Utility.printError(
-                        "This phone number is already linked to an existing guest profile.");
+                Utility.printError("This phone number is already linked to an existing guest profile.");
                 System.out.println("Guest ID     : " + guestWithSamePhone[0]);
                 System.out.println("Guest Name   : " + guestWithSamePhone[1]);
                 System.out.println("Phone Number : " + formatPhoneNo(guestWithSamePhone[2]));
@@ -170,8 +168,7 @@ public class RegistrationUI {
             loyaltyTier = controller.refreshLoyaltyTierNameByGuestId(guestId);
 
             if (beforeRefreshTier == null && loyaltyTier != null) {
-                Utility.printSuccess(
-                        "Loyalty requirement reached. VIP membership activated automatically.");
+                Utility.printSuccess("Loyalty requirement reached. VIP membership activated automatically.");
             }
         }
 
@@ -184,8 +181,7 @@ public class RegistrationUI {
         }
 
         int numberOfGuests = readIntegerInRange(
-                "Enter Number of Guests (1-" + maximumOccupancy
-                + ", one room per registration): ",
+                "Enter Number of Guests (1-" + maximumOccupancy + ", one room per registration): ",
                 1,
                 maximumOccupancy);
 

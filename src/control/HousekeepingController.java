@@ -1,5 +1,6 @@
 package control;
 
+import java.time.LocalDate;
 import adt.linear.DoublyLinkedList;
 import adt.linear.LinearADT;
 import dao.HousekeepingDao;
@@ -129,6 +130,28 @@ public class HousekeepingController {
                 return task;
             }
         }
+        return null;
+    }
+
+    /**
+ * Returns the newest housekeeping task for a room.
+ * Older tasks are historical records and must not change
+ * the room's current status.
+ */
+    private TaskLogEntry findLatestTaskForRoom(String roomNumber) {
+
+        for (int i = taskLog.size() - 1; i >= 0; i--) {
+
+            TaskLogEntry task = taskLog.get(i);
+
+            if (task != null
+                    && task.getRoomNumber() != null
+                    && task.getRoomNumber().equals(roomNumber)) {
+
+                return task;
+            }
+        }
+
         return null;
     }
 
@@ -267,23 +290,106 @@ public class HousekeepingController {
      * Prevents rolling back past the initial 'Dirty' state.
      */
     public boolean rollbackTask(String taskId) {
-        TaskLogEntry task = findTaskById(taskId);
-        if (task != null) {
-            String current = task.getStatus();
-            String previous = getPreviousStatus(current);
-            if (previous != null) {
-                task.setStatus(previous);
-                syncRoomState(task);
-                persistTaskLog();
-                System.out.println("🔄 Task " + taskId + " rolled back to: " + previous);
-                return true;
-            } else {
-                System.out.println("❌ Cannot rollback task from initial status (Dirty).");
-                return false;
-            }
+
+        TaskLogEntry task =
+                findTaskById(taskId);
+
+        if (task == null) {
+            System.out.println(
+                    "Task not found: " + taskId);
+            return false;
         }
-        System.out.println("❌ Task not found: " + taskId);
-        return false;
+
+        /*
+        * Only the latest task for the room may change
+        * the room's current housekeeping state.
+        */
+        TaskLogEntry latestTask =
+                findLatestTaskForRoom(
+                        task.getRoomNumber());
+
+        if (latestTask == null
+                || !task.getTaskId()
+                        .equals(latestTask.getTaskId())) {
+
+            System.out.println(
+                    "❌ Cannot rollback historical task "
+                    + taskId
+                    + ". Only the latest task for Room "
+                    + task.getRoomNumber()
+                    + " can be rolled back.");
+
+            return false;
+        }
+
+        /*
+        * Check the CURRENT room status.
+        * If another module has already changed the room
+        * (for example Ready -> Occupied), rollback is blocked.
+        */
+        Room room =
+                findRoomByNumber(
+                        task.getRoomNumber());
+
+        if (room == null) {
+            System.out.println(
+                    "❌ Room not found: "
+                    + task.getRoomNumber());
+            return false;
+        }
+
+        String currentRoomTaskStatus =
+                mapRoomStatusToTaskStatus(
+                        room.getRoomStatus());
+
+        if (currentRoomTaskStatus == null
+                || !task.getStatus()
+                        .equals(currentRoomTaskStatus)) {
+
+            System.out.println(
+                    "❌ Cannot rollback task "
+                    + taskId
+                    + " because Room "
+                    + task.getRoomNumber()
+                    + " is currently "
+                    + describeRoomStatus(
+                            room.getRoomStatus())
+                    + ". The task is no longer the room's "
+                    + "active housekeeping state.");
+
+            return false;
+        }
+
+        String current =
+                task.getStatus();
+
+        String previous =
+                getPreviousStatus(current);
+
+        if (previous == null) {
+
+            System.out.println(
+                    "❌ Cannot rollback task from "
+                    + "initial status (Dirty).");
+
+            return false;
+        }
+
+        task.setStatus(previous);
+
+        syncRoomState(task);
+
+        persistTaskLog();
+
+        System.out.println(
+                "🔄 Task "
+                + taskId
+                + " rolled back: "
+                + current
+                + " → "
+                + previous);
+
+        return true;
     }
 
     private String getPreviousStatus(String current) {
@@ -446,12 +552,44 @@ public class HousekeepingController {
         return rows;
     }
 
-    public void generateCleaningStatusReport() {
-        new control.report.CleaningStatusFlowRP().generateReport(taskLog);
-    }
+public void generateCleaningStatusReport() {
+    new control.report.CleaningStatusFlowRP()
+            .generateReport(taskLog);
+}
+
+public void generateCleaningStatusReport(
+        String statusFilter,
+        String staffFilter,
+        String roomSearch,
+        int sortOption) {
+
+    new control.report.CleaningStatusFlowRP()
+            .generateReport(
+                    taskLog,
+                    statusFilter,
+                    staffFilter,
+                    roomSearch,
+                    sortOption);
+}
 
     public void generateDailyPerformanceReport() {
-        new control.report.DailyPerformanceRP().generateReport(taskLog);
+        new control.report.DailyPerformanceRP()
+                .generateReport(taskLog);
+    }
+
+    public void generateDailyPerformanceReport(
+            LocalDate reportDate,
+            String staffFilter,
+            long minimumMinutes,
+            int sortOption) {
+
+        new control.report.DailyPerformanceRP()
+                .generateReport(
+                        taskLog,
+                        reportDate,
+                        staffFilter,
+                        minimumMinutes,
+                        sortOption);
     }
 
     public void displayAllTasks() {
