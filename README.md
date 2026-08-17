@@ -8,24 +8,24 @@ Language: Java (Console-based, JDK 24)
 ## 📄 1. Module Overview
 
 ### 🏨 Front Desk Service
-- **Room availability** — check whether a specific room is currently occupied or free
-- **Billing details** — retrieve payment amount and status tied to a booking
-- **Guest identification** — locate a guest's complete booking record using a unique **8-digit confirmation number**
+- **Room availability** — Check whether a specific room is currently occupied or free
+- **Billing details** — Retrieve payment amount and status tied to a booking
+- **Guest identification** — Locate a guest's complete booking record using a unique **8-digit confirmation number**
 
 ### 🚶 Walk-In Registrations & Standard Booking Procedure
-- **Walk-in registration** — register new or existing standard guests and create their walk-in registration records
-- **FIFO waiting queue** — manage standard guest registrations chronologically so the earliest waiting guest is processed first
-- **Standard room assignment** — assign a suitable ready room to the next eligible standard guest and complete the check-in process
+- **Walk-in registration** — Register new or existing standard guests and create their walk-in registration records
+- **FIFO waiting queue** — Manage standard guest registrations chronologically so the earliest waiting guest is processed first
+- **Standard room assignment** — Assign a suitable ready room to the next eligible standard guest and complete the check-in process
 
 ### 👑 VIP & Loyalty Tier Priority Room Allocation
-- **VIP priority allocation** — prioritize eligible loyalty members for room assignment based on their membership tier
-- **Loyalty tier ranking** — process VIP guests according to **Diamond > Platinum > Elite**, with earlier registration time used when guests have the same tier
-- **Priority room assignment** — automatically reorganize waiting VIP registrations and assign suitable ready rooms according to priority
+- **VIP priority allocation** — Prioritize eligible loyalty members for room assignment based on their membership tier
+- **Loyalty tier ranking** — Process VIP guests according to **Diamond > Platinum > Elite**, with earlier registration time used when guests have the same tier
+- **Priority room assignment** — Automatically reorganize waiting VIP registrations and assign suitable ready rooms according to priority
 
 ### 🧹 Housekeeping and Task Log
-- **Cleaning status updates** — manage room cleaning progress sequentially from **Dirty → Cleaning In Progress → Inspected → Ready for Check-In**
-- **Housekeeping task log** — record and track housekeeping tasks assigned to rooms and staff
-- **Status rollback** — reverse an incorrect housekeeping status when necessary to maintain accurate room conditions
+- **Cleaning status updates** — Manage room cleaning progress sequentially from **Dirty → Cleaning In Progress → Inspected → Ready for Check-In**
+- **Housekeeping task log** — Record and track housekeeping tasks assigned to rooms and staff
+- **Status rollback** — Reverse an incorrect housekeeping status when necessary to maintain accurate room conditions
 
 ---
 
@@ -159,11 +159,41 @@ The generic `<T>` allows the MaxHeap to manage entity objects independently from
 ## 📊 3. Reports
 
 ### Room Occupancy & Availability Report
-- **Filters:** room type + available status
-- **Sort:** room number ascending
-- **Purpose:** allow staff or admin to have a review of occupied or available room by type
+- **Filters:** Room type + Available status
+- **Sort:** Room number ascending
+- **Purpose:** Allow staff or admin to have a review of occupied or available room by type
 
 ### Billing Summary Report
-- **Filters:** payment status (Pending / Completed / Cancelled / Refunded)
-- **Sort:** payment amount descending (selection sort)
-- **Purpose:** revenue review, surfacing highest-value bookings and compute total revenue
+- **Filters:** Payment status (Pending / Completed / Cancelled / Refunded)
+- **Sort:** Payment amount descending (selection sort)
+- **Purpose:** Revenue review, surfacing highest-value bookings and compute total revenue
+
+### Standard FIFO Waiting Time Analysis Report
+- **Filters:** Registration ID / Guest ID / Guest name + Room type + Minimum party size + Minimum waiting time
+- **Sort:** FIFO earliest arrival / Longest waiting time / Largest party size (selection sort)
+- **Purpose:** Analyze the current standard waiting queue, identify long-waiting guests and support FIFO room allocation decisions
+
+### Walk-In Arrival Pattern Analysis Report
+- **Filters:** Date range + Room type + Minimum party size
+- **Sort:** Earliest arrival / Latest arrival / Largest party size (selection sort)
+- **Purpose:** Analyze walk-in arrival patterns, guest demand and peak arrival periods for room and staffing planning
+
+### VIP Priority Allocation Performance Report
+- **Filters:** Member ID / Registration ID / Guest ID / Guest name + Loyalty tier + Requested room type + Minimum guests
+- **Sort:** Loyalty tier descending + Arrival time ascending (selection sort)
+- **Purpose:** Analyze VIP allocation priority and waiting performance to ensure higher-tier loyalty guests are served according to the required priority rules
+
+### VIP Loyalty & Stay Performance Report
+- **Filters:** Registration ID / Guest ID / Guest name + Loyalty tier + Room type + Minimum waiting time + Minimum party size
+- **Sort:** Loyalty tier descending + Arrival time ascending (selection sort)
+- **Purpose:** Analyze VIP guest activity by loyalty tier, room preference and stay-related performance for management review
+
+### Cleaning Status Flow Report
+- **Filters:** Cleaning status + Staff + Room number
+- **Sort:** Room number / Task update time (selection sort)
+- **Purpose:** Review the cleaning progress of hotel rooms and identify rooms that are still being cleaned, inspected or ready for check-in
+
+### Daily Performance Report
+- **Filters:** Date + Staff + Minimum task time
+- **Sort:** Task created time / Task completion time (selection sort)
+- **Purpose:** Analyze daily housekeeping workload and staff task performance to support housekeeping supervision and operational planning
