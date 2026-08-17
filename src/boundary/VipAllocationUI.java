@@ -47,7 +47,7 @@ public class VipAllocationUI {
             choice = readMenuChoice("Enter menu choice (0-10): ", 0, 10);
 
             if (choice == 0) {
-                System.out.println("\nReturning to Main Menu...");
+                Utility.printInfo("Returning to Main Menu...");
                 break;
             }
 
@@ -85,6 +85,7 @@ public class VipAllocationUI {
                     generateLoyaltyStayPerformanceReport();
                     break;
                 default:
+                    Utility.printError("Invalid option. Please try again.");
                     break;
             }
 
@@ -93,32 +94,32 @@ public class VipAllocationUI {
     }
 
     private void displayMenu() {
-        final int menuWidth = 88;
+        final int menuWidth = Utility.UI_WIDTH;
 
         System.out.println("=".repeat(menuWidth));
-        System.out.println(" VIP & LOYALTY TIER PRIORITY ROOM ALLOCATION");
+        System.out.println("    VIP & LOYALTY TIER PRIORITY ROOM ALLOCATION");
         System.out.println("=".repeat(menuWidth));
         displayModuleStatus();
         System.out.println("-".repeat(menuWidth));
-        System.out.println("[ VIP INFORMATION ]");
-        System.out.println("  1. View All VIP Guest Profiles");
-        System.out.println("  2. View Next VIP in Priority");
-        System.out.println("  3. View VIP Waiting List by Priority");
+        Utility.printSectionTitle("VIP INFORMATION");
+        System.out.println("    1.  View All VIP Guest Profiles");
+        System.out.println("    2.  View Next VIP in Priority");
+        System.out.println("    3.  View VIP Waiting List by Priority");
         System.out.println();
-        System.out.println("[ WAITING REQUESTS ]");
-        System.out.println("  4. Find VIP Waiting Registration");
-        System.out.println("  5. Update VIP Room Request");
-        System.out.println("  6. Cancel VIP Waiting Registration");
+        Utility.printSectionTitle("WAITING REQUESTS");
+        System.out.println("    4.  Find VIP Waiting Registration");
+        System.out.println("    5.  Update VIP Room Request");
+        System.out.println("    6.  Cancel VIP Waiting Registration");
         System.out.println();
-        System.out.println("[ ROOM OPERATIONS ]");
-        System.out.println("  7. View Current VIP In-House Rooms");
-        System.out.println("  8. Assign Ready Room & Check In VIP");
+        Utility.printSectionTitle("ROOM OPERATIONS");
+        System.out.println("    7.  View Current VIP In-House Rooms");
+        System.out.println("    8.  Assign Ready Room & Check In VIP");
         System.out.println();
-        System.out.println("[ REPORTS ]");
-        System.out.println("  9. VIP Priority Allocation Performance Report");
-        System.out.println(" 10. VIP Loyalty & Stay Performance Report");
+        Utility.printSectionTitle("REPORTS");
+        System.out.println("    9.  VIP Priority Allocation Performance Report");
+        System.out.println("   10.  VIP Loyalty & Stay Performance Report");
         System.out.println("-".repeat(menuWidth));
-        System.out.println("  0. Return to Main Menu");
+        System.out.println("    0.  Return to Main Menu");
         System.out.println("=".repeat(menuWidth));
     }
 
