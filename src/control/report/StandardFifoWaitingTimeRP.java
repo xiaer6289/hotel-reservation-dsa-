@@ -80,14 +80,7 @@ public class StandardFifoWaitingTimeRP {
         System.out.println(
                 "------------------------------------------------------------------------------------------------");
 
-        if (entries.length == 0) {
-            System.out.println(
-                    "No Standard waiting registrations match the selected criteria.");
-
-            System.out.println(
-                    "================================================================================================");
-            return;
-        }
+      
 
         System.out.printf(
                 "%-5s %-7s %-8s %-18s %-17s %-7s %-16s %-9s%n",
@@ -101,7 +94,17 @@ public class StandardFifoWaitingTimeRP {
                 "Wait Min");
 
         System.out.println(
-                "------------------------------------------------------------------------------------------------");
+        "------------------------------------------------------------------------------------------------");
+
+        if (entries.length == 0) {
+        if (controller.getWaitingCount() == 0) {
+                System.out.println(
+                        "No Standard waiting registrations are currently available.");
+        } else {
+                System.out.println(
+                        "No Standard waiting registrations match the selected criteria.");
+        }
+        }
 
         int totalGuests = 0;
         long totalWaitingMinutes = 0;
@@ -146,12 +149,14 @@ public class StandardFifoWaitingTimeRP {
         }
 
         double averageWaitingMinutes
-                = (double) totalWaitingMinutes
-                / entries.length;
+                = entries.length == 0
+                ? 0.0
+                : (double) totalWaitingMinutes / entries.length;
 
         double averagePartySize
-                = (double) totalGuests
-                / entries.length;
+                = entries.length == 0
+                ? 0.0
+                : (double) totalGuests / entries.length;
 
         System.out.println(
                 "------------------------------------------------------------------------------------------------");
@@ -181,29 +186,35 @@ public class StandardFifoWaitingTimeRP {
 
         System.out.println(
                 "Longest Waiting Time        : "
-                + longestWaitingMinutes
+                + (longestWaitingEntry == null ? 0 : longestWaitingMinutes)
                 + " minute(s)");
 
         if (longestWaitingEntry != null) {
-            System.out.println(
-                    "Longest Waiting Registration: "
-                    + longestWaitingEntry.registration
-                            .getRegistrationId()
-                    + " / "
-                    + longestWaitingEntry.registration
-                            .getGuest()
-                            .getName());
+        System.out.println(
+                "Longest Waiting Registration: "
+                + longestWaitingEntry.registration
+                        .getRegistrationId()
+                + " / "
+                + longestWaitingEntry.registration
+                        .getGuest()
+                        .getName());
+        } else {
+        System.out.println(
+                "Longest Waiting Registration: N/A");
         }
 
         WalkInRegistration fifoHead
                 = controller.getNextRegistration();
 
         if (fifoHead != null) {
-            System.out.println(
-                    "Current FIFO Head           : "
-                    + fifoHead.getRegistrationId()
-                    + " / "
-                    + fifoHead.getGuest().getName());
+        System.out.println(
+                "Current FIFO Head           : "
+                + fifoHead.getRegistrationId()
+                + " / "
+                + fifoHead.getGuest().getName());
+        } else {
+        System.out.println(
+                "Current FIFO Head           : N/A");
         }
 
         System.out.println(

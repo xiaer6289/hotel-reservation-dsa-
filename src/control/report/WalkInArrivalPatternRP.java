@@ -76,14 +76,7 @@ public class WalkInArrivalPatternRP {
         System.out.println(
                 "------------------------------------------------------------------------------------------------");
 
-        if (records.length == 0) {
-            System.out.println(
-                    "No walk-in registrations match the selected criteria.");
-
-            System.out.println(
-                    "================================================================================================");
-            return;
-        }
+        
 
         System.out.printf(
                 "%-8s %-9s %-18s %-17s %-7s %-17s%n",
@@ -96,6 +89,16 @@ public class WalkInArrivalPatternRP {
 
         System.out.println(
                 "------------------------------------------------------------------------------------------------");
+
+        if (records.length == 0) {
+        if (controller.getTotalRegistrationCount() == 0) {
+                System.out.println(
+                        "No walk-in registration records are currently available.");
+        } else {
+                System.out.println(
+                        "No walk-in registrations match the selected criteria.");
+        }
+        }
 
         int totalGuests = 0;
 
@@ -124,8 +127,9 @@ public class WalkInArrivalPatternRP {
         printArrivalPeriodAnalysis(records);
 
         double averagePartySize
-                = (double) totalGuests
-                / records.length;
+                = records.length == 0
+                ? 0.0
+                : (double) totalGuests / records.length;
 
         System.out.println(
                 "\nMANAGEMENT SUMMARY");
@@ -363,6 +367,10 @@ public class WalkInArrivalPatternRP {
 
         private String findPeakArrivalPeriod(
                 WalkInRegistration[] records) {
+
+        if (records == null || records.length == 0) {
+                return "N/A";
+        }
 
         int[] counts = new int[4];
 
