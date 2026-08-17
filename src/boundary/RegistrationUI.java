@@ -550,10 +550,11 @@ public class RegistrationUI {
                 "\n===== STANDARD FIFO WAITING TIME REPORT OPTIONS =====");
 
         if (controller.getWaitingCount() == 0) {
-            System.out.println(
-                    "No Standard guests are currently waiting in the FIFO queue.");
+            Utility.printInfo("No guests are currently in the FIFO waiting queue. Showing empty report...");
+            new StandardFifoWaitingTimeRP().generateReport(controller, "", "", 0, 0, 1);
             return;
         }
+
 
         System.out.println(
                 "Press Enter without typing anything to include all records.");
@@ -614,8 +615,8 @@ public class RegistrationUI {
                 "\n===== WALK-IN ARRIVAL PATTERN REPORT OPTIONS =====");
 
         if (controller.getTotalRegistrationCount() == 0) {
-            System.out.println(
-                    "No walk-in registration records are available.");
+            Utility.printInfo("No walk-in registration records are available. Showing empty report...");
+            new WalkInArrivalPatternRP().generateReport(controller, null, null, "", 0, 1);
             return;
         }
 
