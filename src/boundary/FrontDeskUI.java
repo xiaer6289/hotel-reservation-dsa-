@@ -36,39 +36,39 @@ public class FrontDeskUI {
                     processCheckout();
                     break;
                 case 5:
-                    roomOccupancyRP();
-                    break;
-                case 6:
-                    billingSummaryRP();
-                    break;
-                case 7:
                     viewReadyRoomNotifications();
                     break;
-                case 8: 
+                case 6:
+                    roomOccupancyRP();
+                    break;
+                case 7:
+                    billingSummaryRP();
+                    break;
+                case 0: 
                     control.save();
-                    Utility.printSuccess("Data saved.");
-                    Utility.pauseScreen();
-                    Utility.clearScreen();
+                    Utility.printSuccess("Data saved. Returning to Main Menu...");
                     break;
                 default: 
-                    Utility.printError("Invalid option, please try again...");
+                    Utility.printError("Invalid option, please try again");
             }
-            if (choice != 8) Utility.pauseScreen();
-        } while (choice != 8);
+            if (choice != 0) Utility.pauseScreen();
+        } while (choice != 0);
     }
     
     private void displayMenu() {
         Utility.clearScreen();
-        System.out.println("--- FRONT DESK SERVICE ---");
-        System.out.println("1. Search Booking");
-        System.out.println("2. View All Booking");
-        System.out.println("3. Check Room Availability");
-        System.out.println("4. Process Guest Check Out");
-        System.out.println("5. Room Occupancy Report");
-        System.out.println("6. Billing Summary Report");
-        System.out.println("7. View Ready Room Notifications");
-        System.out.println("8. Save and Exit");
-        System.out.print("Enter choice: ");
+        Utility.printHeader("FRONT DESK SERVICE\n");
+        Utility.printSectionTitle("GUEST MANAGEMENT");
+        System.out.println(" 1. Search Booking by Confirmation No");
+        System.out.println(" 2. View All Booking");
+        System.out.println(" 3. Check Room Availability");
+        System.out.println(" 4. Process Guest Check Out");
+        System.out.println(" 5. View Ready Room Notifications\n");
+        Utility.printSectionTitle("REPORTS");
+        System.out.println(" 6. Room Occupancy Report");
+        System.out.println(" 7. Billing Summary Report");
+        System.out.println(" 0. Save & Return to Main Menu");
+        System.out.print(" Enter choice: ");
     }
     
     private int getMenuChoice() {
@@ -251,99 +251,117 @@ public class FrontDeskUI {
     }
     
     private void roomOccupancyRP() {
-        System.out.println("--- ROOM OCCUPANCY REPORT ---");
-        System.out.println("1. Deluxe  2. Deluxe Twin  3. Superior  4. Superior Twin  5. All");
-        System.out.print("Filter by Room Type: ");
+        Utility.printHeader("ROOM OCCUPANCY REPORT");
+        System.out.println("\nFilter by Room Type: ");
+        System.out.println(" 1. Deluxe   2. Deluxe Twin   3. Superior   4. Superior Twin   5. All");
+        System.out.print("Choice: ");
         int type = getMenuChoice();
         String roomTypeFilter;
         switch (type) {
-            case 1:
-                roomTypeFilter = "DELUXE";
-                break;
-            case 2:
-                roomTypeFilter = "DELUXE_TWIN";
-                break;
-            case 3:
-                roomTypeFilter = "SUPERIOR";
-                break;
-            case 4:
-                roomTypeFilter = "SUPERIOR_TWIN";
-                break;
-            case 5:
-                roomTypeFilter = null;
-                break;
+            case 1: roomTypeFilter = "DELUXE"; break;
+            case 2: roomTypeFilter = "DELUXE_TWIN"; break;
+            case 3: roomTypeFilter = "SUPERIOR"; break;
+            case 4: roomTypeFilter = "SUPERIOR_TWIN"; break;
+            case 5: roomTypeFilter = null; break;
             default:
-                Utility.printError("Invalid Option. Please try again...");
+                Utility.printError("Invalid Option.");
                 return;
         }
         
-        System.out.print("Show Available (A) or Occupied (O) rooms?");
-        String status = scanner.nextLine().trim().toUpperCase();
-        boolean availabilityFilter = status.equals("A");
+        System.out.println("\n Availability Filter: ");
+        System.out.print(" A = Available   O = Occupied");
+        System.out.print("\nChoice: ");
+        String statusInput = scanner.nextLine().trim().toUpperCase();
+        if (!statusInput.equals("A") && !statusInput.equals("O")) {
+            Utility.printError("Invalid Option");
+            return;
+        }
+        boolean availabilityFilter = statusInput.equals("A");
         
         String[][] report = control.generateRoomOccupancyReportDisplay(
                 roomTypeFilter,
                 availabilityFilter);
         
-        System.out.println("\nFilter: Room Type = " + (roomTypeFilter == null ? "ALL" : roomTypeFilter) 
-        + " | Status = " + (availabilityFilter ? "AVAILABLE" : "OCCUPIED"));
-        System.out.printf("\n%-8s %-14s %-6s %15s %-17s %-17s%n", 
-                "Room No", "Type", "Floor", "Guest Name", "Check-In", "Check-Out");
-        for (String[] booking : report) {
-            System.out.printf("\n%-8s %-14s %-6s %-15s %-17s %-17s%n", 
-                    booking[0],
-                    booking[1],
-                    booking[2],
-                    booking[3],
-                    booking[4],
-                    booking[5]);
+        System.out.println("\n Filter: Room Type = " + (roomTypeFilter == null ? "ALL" : roomTypeFilter) 
+        + "  | Status = " + (availabilityFilter ? "AVAILABLE" : "OCCUPIED\n"));
+
+        String hdr = String.format("\n  %-8s %-15s %-6s %-20s %-17s %-17s",
+            "Room No", "Type", "Floor", "Guest Name", "Check-In", "Check-Out");
+        System.out.println(hdr);
+        
+        if (report.length == 0) {
+            System.out.println("  No rooms match the selected filter.");
+        } else {
+            for (String[] row : report) {
+                System.out.printf("  %-8s %-15s %-6s %-20s %-17s %-17s", 
+                row[0], row[1], row[2], row[3],
+                formatDT(row[4]), formatDT(row[5]));
+            }
         }
-        System.out.println("Total matching rooms: " + report.length);
+        System.out.println("\n Total matching rooms: " + report.length);
     }
     
     private void billingSummaryRP() {
-        System.out.println("--- BILLING SUMMARY REPORT ---");
-        System.out.println("P = Pending, C = Completed, X = Cancelled, R = Refunded");
-        System.out.print("Filter by Payment Status: ");
-        char status = scanner.nextLine().trim().toUpperCase().charAt(0);
+        Utility.printHeader("BILLING SUMMARY REPORT");
+        System.out.println("\n Filter by Payment Status: ");
+        System.out.println(" P = Pending  C = Completed  X = Cancelled  R = Refunded");
+        System.out.print(" Choice: ");
+        String statusInput = scanner.nextLine().trim().toUpperCase();
         
+        if (statusInput.isEmpty()) {
+            Utility.printError("No input entered.");
+            return;
+        }
+
+        char status = statusInput.charAt(0);
         if (status != 'P' && status != 'C' && status != 'X' && status != 'R') {
-            Utility.printError("Invalid Option. Please try again...");
+            Utility.printError("Invalid Status. Enter P, C, X or R");
             return;
         }
 
         String[][] report = control.generateBillingSummaryReportDisplay(status);
         double total = control.getBillingSummaryTotal(status);
         
-        System.out.println("\nFilter: Status = " + status);
-        System.out.printf("\n%-12s %-15s %-14s %-10s %-10s%n", 
-                "Conf. No", "Guest Name", "Room Type", "Amount", "Status");
-        for (String[] booking : report) {
-            System.out.printf("\n%-12s %-15s %-14s %-10.2f %-10s%n", 
-                    booking[0],
-                    booking[1],
-                    booking[2],
-                    Double.parseDouble(booking[3]),
-                    booking[4]);
+        System.out.println("\n  Filter: Status = " + status + "\n");
+
+        String hdr = String.format("\n  %-12s %-20s %-15s %-12s %-10s",
+            "Conf. No", "Guest Name", "Room Type", "Amount (RM)", "Status");
+        System.out.println(hdr);
+        System.out.println("  " + "-".repeat(hdr.trim().length() + 2));
+
+        if (report.length == 0) {
+            System.out.println("  No bookings match the selected status.");
+        } else {
+            for (String[] booking : report) {
+                System.out.printf("  %-12s %-20s %-15s %-12.2f %-10s%n", 
+                        booking[0], booking[1], booking[2],
+                        Double.parseDouble(booking[3]), booking[4]);
+            }
         }
-        System.out.printf("Total Revenue: RM %.2f | Bookings count: %d%n", total, report.length);
+        
+        System.out.printf("\n  Total Revenue: RM %.2f  |  Bookings count: %d%n", total, report.length);
             
     }
 
     private String selectStaff(Scanner scanner) {
-        System.out.println("\n---Select Staff---");
-        System.out.println("1. S001 Tan");
-        System.out.println("2. S002 Choo");
-        System.out.println("3. S003 Michelle");
-        System.out.print("Enter staff choice: ");
+        Utility.printSectionTitle("\nSELECT STAFF");
+        System.out.println(" 1. S001 - Tan");
+        System.out.println(" 2. S002 - Choo");
+        System.out.println(" 3. S003 - Michelle");
+        System.out.print(" Enter staff choice: ");
         int choice = getMenuChoice();
         switch (choice) {
             case 1: return "S001";
             case 2: return "S002";
             case 3: return "S003";
             default:
-                Utility.printError("Invalid staff selection. Please try again...");
+                Utility.printError("Invalid staff selection.");
                 return null;
         }
+    }
+
+    private String formatDT(String raw) {
+        if (raw == null || raw.length() < 16) return raw == null? "-" : raw;
+        return raw.substring(0, 10) + " " + raw.substring(11, 16);
     }
 }
