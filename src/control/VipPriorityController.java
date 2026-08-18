@@ -2,11 +2,13 @@ package control;
 
 import adt.heap.MaxHeap;
 import adt.heap.PriorityQueueADT;
+import dao.PaymentDao;
 import dao.BookingDao;
 import dao.GuestDao;
 import dao.LoyaltyProfileDao;
 import dao.RoomDao;
 import dao.WalkInRegistrationDao;
+import entity.Payment;
 import entity.Booking;
 import entity.Guest;
 import entity.LoyaltyProfile;
@@ -490,16 +492,15 @@ public class VipPriorityController {
         }
 
         WalkInRegistration registration = selectedRegistration;
-
         LocalDateTime actualCheckInTime = LocalDateTime.now().withSecond(0).withNano(0);
-
         updateAllocatedRoom(suitableRoom, registration, actualCheckInTime);
-
         registration.setCheckInDateTime(actualCheckInTime);
         registration.setStatus(RegistrationStatus.CHECKED_IN);
-
-        Booking booking = new Booking(generateUniqueConfirmationNo(), registration.getGuest(), suitableRoom, null);
-
+        long numberOfNights = calculateStayNights(actualCheckInTime, registration.getCheckOutDateTime());
+        double amount = getRoomTypePricePerDay(suitableRoom.getRoomType()) * numberOfNights;
+        String confirmationNo = generateUniqueConfirmationNo();
+        Payment payment = new Payment(generateNextPaymentId(), amount, actualCheckInTime, 'C');
+        Booking booking = new Booking(confirmationNo, registration.getGuest(), suitableRoom,payment);
         bookings = appendBooking(bookings, booking);
 
         roomDao.saveToFile(rooms);
@@ -957,6 +958,94 @@ public class VipPriorityController {
         return names;
     }
 
+    public String[] getNextVipPaymentPreviewDisplayData() {
+        String registrationId = getNextAllocatableVipRegistrationId();
+
+        if (registrationId == null) {
+            return null;
+        }
+
+        WalkInRegistration registration = findWaitingVipRegistrationById(registrationId);
+
+        if (registration == null) {
+            return null;
+        }
+
+        rooms = roomDao.loadOrSeed();
+        Room suitableRoom = findSuitableVacantRoom(registration);
+
+        if (suitableRoom == null) {
+            return null;
+        }
+
+        LocalDateTime previewCheckInTime = LocalDateTime.now().withSecond(0).withNano(0);
+        long numberOfNights = calculateStayNights(previewCheckInTime, registration.getCheckOutDateTime());
+        double rate = getRoomTypePricePerDay(suitableRoom.getRoomType());
+        double totalAmount = rate * numberOfNights;
+
+        return new String[]{
+            String.format("%.2f", rate),
+            String.valueOf(numberOfNights),
+            String.format("%.2f", totalAmount)
+        };
+    }
+
+    private long calculateStayNights(LocalDateTime checkInTime, LocalDateTime checkOutTime) {
+        if (checkInTime == null || checkOutTime == null) {
+            return 1;
+        }
+
+        long nights = java.time.temporal.ChronoUnit.DAYS.between(checkInTime.toLocalDate(), checkOutTime.toLocalDate());
+        return Math.max(nights, 1);
+    }
+
+    private String generateNextPaymentId() {
+        int highestNumber = 0;
+        Payment[] savedPayments = new PaymentDao().loadOrSeed();
+
+        if (savedPayments != null) {
+            for (Payment payment : savedPayments) {
+                if (payment == null) {
+                    continue;
+                }
+
+                int number = getSequentialPaymentNumber(payment.getPaymentId());
+
+                if (number > highestNumber) {
+                    highestNumber = number;
+                }
+            }
+        }
+
+        if (bookings != null) {
+            for (Booking booking : bookings) {
+                if (booking == null || booking.getPayment() == null) {
+                    continue;
+                }
+
+                int number = getSequentialPaymentNumber(booking.getPayment().getPaymentId());
+
+                if (number > highestNumber) {
+                    highestNumber = number;
+                }
+            }
+        }
+
+        return String.format("PAY%03d", highestNumber + 1);
+    }
+
+    private int getSequentialPaymentNumber(String paymentId) {
+        if (paymentId == null || !paymentId.matches("(?i)PAY\\d{3}")) {
+            return -1;
+        }
+
+        try {
+            return Integer.parseInt(paymentId.substring(3));
+        } catch (NumberFormatException ex) {
+            return -1;
+        }
+    }
+
     public double getRoomTypePricePerDay(String roomTypeName) {
         if (roomTypeName == null) {
             return 0.0;
@@ -1080,8 +1169,7 @@ public class VipPriorityController {
             // Historical/cancelled records are not in the heap; search saved records.
             WalkInRegistration[] records = registrationDao.loadExisting();
             for (WalkInRegistration record : records) {
-                if (record != null && record.getRegistrationId() != null
-                        && record.getRegistrationId().equalsIgnoreCase(registrationId)) {
+                if (record != null && record.getRegistrationId() != null && record.getRegistrationId().equalsIgnoreCase(registrationId)) {
                     registration = record;
                     break;
                 }
@@ -1175,38 +1263,21 @@ public class VipPriorityController {
             room.getRoomType(),
             formatBoundaryDateTime(room.getCheckInDateTime()),
             formatBoundaryDateTime(room.getCheckOutDateTime()),
-            String.valueOf(getWaitingCount())
+            String.valueOf(getWaitingCount()),
+            booking.getPayment() == null ? "N/A" : booking.getPayment().getPaymentId(),
+            booking.getPayment() == null ? "0.00" : String.format("%.2f", booking.getPayment().getAmount()),
+            booking.getPayment() == null ? "N/A" : String.valueOf(booking.getPayment().getStatus())
         };
     }
 
-    public void generatePriorityAllocationPerformanceReport(
-            String keyword,
-            String tierName,
-            String roomTypeFilter,
-            String statusFilter,
-            LocalDate startDate,
-            LocalDate endDate,
-            int minimumGuests,
-            int sortOption) {
+    public void generatePriorityAllocationPerformanceReport(String keyword, String tierName, String roomTypeFilter, String statusFilter, LocalDate startDate, LocalDate endDate, int minimumGuests, int sortOption) {
         LoyaltyTier tier = parseBoundaryTier(tierName);
-        new control.report.VipPriorityAllocationPerformanceRP().generateReport(
-                this, keyword, tier, roomTypeFilter, statusFilter,
-                startDate, endDate, minimumGuests, sortOption);
+        new control.report.VipPriorityAllocationPerformanceRP().generateReport(this, keyword, tier, roomTypeFilter, statusFilter, startDate, endDate, minimumGuests, sortOption);
     }
 
-    public void generateLoyaltyStayPerformanceReport(
-            String keyword,
-            String tierName,
-            String activityFilter,
-            int minimumCompletedStays,
-            String roomTypeFilter,
-            LocalDate startDate,
-            LocalDate endDate,
-            int sortOption) {
+    public void generateLoyaltyStayPerformanceReport(String keyword, String tierName, String activityFilter, int minimumCompletedStays, String roomTypeFilter, LocalDate startDate, LocalDate endDate, int sortOption) {
         LoyaltyTier tier = parseBoundaryTier(tierName);
-        new control.report.VipLoyaltyStayPerformanceRP().generateReport(
-                this, keyword, tier, activityFilter, minimumCompletedStays,
-                roomTypeFilter, startDate, endDate, sortOption);
+        new control.report.VipLoyaltyStayPerformanceRP().generateReport(this, keyword, tier, activityFilter, minimumCompletedStays, roomTypeFilter, startDate, endDate, sortOption);
     }
 
     private LoyaltyTier parseBoundaryTier(String tierName) {
@@ -1230,9 +1301,7 @@ public class VipPriorityController {
             if (room == null || !room.isAssignable()) {
                 continue;
             }
-            boolean sameType = room.getRoomType() != null
-                    && registration.getRequestedRoomType() != null
-                    && room.getRoomType().equalsIgnoreCase(registration.getRequestedRoomType());
+            boolean sameType = room.getRoomType() != null && registration.getRequestedRoomType() != null && room.getRoomType().equalsIgnoreCase(registration.getRequestedRoomType());
             boolean enoughCapacity = room.getNoOfGuest() >= registration.getNumberOfGuests();
             if (sameType && enoughCapacity) {
                 count++;
@@ -1244,16 +1313,14 @@ public class VipPriorityController {
     private String getVipActivityStatusForBoundary(String guestId) {
         WalkInRegistration[] waiting = getVipRegistrationsByPriority();
         for (WalkInRegistration registration : waiting) {
-            if (registration != null && registration.getGuest() != null
-                    && registration.getGuest().getGuestId().equalsIgnoreCase(guestId)) {
+            if (registration != null && registration.getGuest() != null && registration.getGuest().getGuestId().equalsIgnoreCase(guestId)) {
                 return "WAITING";
             }
         }
 
         Booking[] currentBookings = getCurrentVipRoomBookings();
         for (Booking booking : currentBookings) {
-            if (booking != null && booking.getGuest() != null
-                    && booking.getGuest().getGuestId().equalsIgnoreCase(guestId)) {
+            if (booking != null && booking.getGuest() != null && booking.getGuest().getGuestId().equalsIgnoreCase(guestId)) {
                 return "IN HOUSE";
             }
         }
@@ -1261,12 +1328,10 @@ public class VipPriorityController {
     }
 
     private String formatBoundaryDateTime(LocalDateTime value) {
-        return value == null ? "-"
-                : value.format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"));
+        return value == null ? "-" : value.format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"));
     }
 
     private String formatBoundaryDateTimeDash(LocalDateTime value) {
-        return value == null ? "-"
-                : value.format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"));
+        return value == null ? "-" : value.format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"));
     }
 }

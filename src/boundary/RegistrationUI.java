@@ -453,15 +453,66 @@ public class RegistrationUI {
         System.out.println("\nSelected Room: " + selectedRoom[0]
                 + " (" + formatRoomType(selectedRoom[1]) + ")");
 
-        if (!readYesNo(
-                "Confirm room assignment and check-in for "
-                + registration[2] + "? (Y/N): ")) {
+        String[] paymentPreview
+            = controller
+                    .getStandardPaymentPreviewDisplayData(
+                            selectedRoom[0]);
 
-            System.out.println("Check-in cancelled. The registration remains in the FIFO queue.");
+        if (paymentPreview == null) {
+
+            Utility.printError(
+                    "Unable to prepare payment details for the selected room.");
+
+            System.out.println(
+                    "The registration remains in the FIFO queue.");
+
             return;
         }
 
-        String[] booking = controller.checkInNextStandardDisplayData(selectedRoom[0]);
+        System.out.println(
+                "\n===== PAYMENT SUMMARY =====");
+
+        System.out.println(
+                "Guest Name       : "
+                + paymentPreview[0]);
+
+        System.out.println(
+                "Room Number      : "
+                + paymentPreview[1]);
+
+        System.out.println(
+                "Room Type        : "
+                + formatRoomType(paymentPreview[2]));
+
+        System.out.println(
+                "Room Rate        : RM"
+                + paymentPreview[3]
+                + " / night");
+
+        System.out.println(
+                "Number of Nights : "
+                + paymentPreview[4]);
+
+        System.out.println(
+                "Total Amount     : RM"
+                + paymentPreview[5]);
+
+        if (!readYesNo(
+                "Confirm payment of RM"
+                + paymentPreview[5]
+                + " and proceed with check-in? (Y/N): ")) {
+
+            System.out.println(
+                    "Payment cancelled. "
+                    + "The registration remains in the FIFO queue.");
+
+            return;
+        }
+
+        String[] booking
+                = controller
+                        .checkInNextStandardDisplayData(
+                                selectedRoom[0]);
 
         if (booking == null) {
             Utility.printError(
@@ -479,6 +530,9 @@ public class RegistrationUI {
         System.out.println("Actual Check-In    : " + booking[4]);
         System.out.println("Expected Check-Out : " + booking[5]);
         System.out.println("Registration Status: " + booking[6]);
+        System.out.println("Payment ID         : " + booking[7]);
+        System.out.println("Payment Amount     : RM" + booking[8]);
+        System.out.println("Payment Status     : " + booking[9] + " (Completed)");
         System.out.println("Standard Guests Remaining: " + controller.getWaitingCount());
     }
 

@@ -2,10 +2,12 @@ package control;
 
 import adt.linear.DoublyLinkedList;
 import adt.linear.LinearADT;
+import dao.PaymentDao;
 import dao.BookingDao;
 import dao.GuestDao;
 import dao.RoomDao;
 import dao.WalkInRegistrationDao;
+import entity.Payment;
 import entity.Booking;
 import entity.Guest;
 import entity.LoyaltyProfile;
@@ -555,11 +557,26 @@ public class RegistrationController {
         registration.setCheckInDateTime(actualCheckInTime);
         registration.setStatus(RegistrationStatus.CHECKED_IN);
 
+        long numberOfNights = calculateStayNights(
+                actualCheckInTime,
+                registration.getCheckOutDateTime());
+
+        double amount = getRoomTypePricePerDay(selectedRoom.getRoomType())
+                * numberOfNights;
+
+        String confirmationNo = generateUniqueConfirmationNo();
+
+        Payment payment = new Payment(
+                generateNextPaymentId(),
+                amount,
+                actualCheckInTime,
+                'C');
+
         Booking booking = new Booking(
-                generateUniqueConfirmationNo(),
+                confirmationNo,
                 registration.getGuest(),
                 selectedRoom,
-                null);
+                payment);
 
         bookings = appendBooking(bookings, booking);
 
@@ -1045,6 +1062,144 @@ public class RegistrationController {
         return names;
     }
 
+        /**
+     * Prepares payment details for the next Standard guest before check-in.
+     * This method does not change room or registration status.
+     */
+    public String[] getStandardPaymentPreviewDisplayData(
+            String selectedRoomNumber) {
+
+        if (registrationQueue.isEmpty()) {
+            return null;
+        }
+
+        WalkInRegistration registration
+                = registrationQueue.peekFirst();
+
+        rooms = roomDao.loadOrSeed();
+
+        Room selectedRoom = findSelectedSuitableRoom(
+                selectedRoomNumber,
+                registration);
+
+        if (selectedRoom == null
+                || vipPriorityController
+                        .isRoomReservedForWaitingVip(selectedRoom)) {
+
+            return null;
+        }
+
+        LocalDateTime previewCheckInTime
+                = LocalDateTime.now()
+                        .withSecond(0)
+                        .withNano(0);
+
+        long numberOfNights = calculateStayNights(
+                previewCheckInTime,
+                registration.getCheckOutDateTime());
+
+        double rate = getRoomTypePricePerDay(
+                selectedRoom.getRoomType());
+
+        double totalAmount
+                = rate * numberOfNights;
+
+        return new String[]{
+            registration.getGuest().getName(),
+            selectedRoom.getRoomNumber(),
+            selectedRoom.getRoomType(),
+            String.format("%.2f", rate),
+            String.valueOf(numberOfNights),
+            String.format("%.2f", totalAmount)
+        };
+    }
+
+    private long calculateStayNights(
+            LocalDateTime checkInTime,
+            LocalDateTime checkOutTime) {
+
+        if (checkInTime == null
+                || checkOutTime == null) {
+
+            return 1;
+        }
+
+        long nights
+                = java.time.temporal.ChronoUnit.DAYS.between(
+                        checkInTime.toLocalDate(),
+                        checkOutTime.toLocalDate());
+
+        return Math.max(nights, 1);
+    }
+
+    private String generateNextPaymentId() {
+
+        int highestNumber = 0;
+
+        Payment[] savedPayments
+                = new PaymentDao().loadOrSeed();
+
+        if (savedPayments != null) {
+
+            for (Payment payment : savedPayments) {
+
+                if (payment == null) {
+                    continue;
+                }
+
+                int number = getSequentialPaymentNumber(
+                        payment.getPaymentId());
+
+                if (number > highestNumber) {
+                    highestNumber = number;
+                }
+            }
+        }
+
+        if (bookings != null) {
+
+            for (Booking booking : bookings) {
+
+                if (booking == null
+                        || booking.getPayment() == null) {
+
+                    continue;
+                }
+
+                int number = getSequentialPaymentNumber(
+                        booking.getPayment().getPaymentId());
+
+                if (number > highestNumber) {
+                    highestNumber = number;
+                }
+            }
+        }
+
+        return String.format(
+                "PAY%03d",
+                highestNumber + 1);
+    }
+
+    private int getSequentialPaymentNumber(
+            String paymentId) {
+
+        if (paymentId == null
+                || !paymentId.matches("(?i)PAY\\d{3}")) {
+
+            return -1;
+        }
+
+        try {
+
+            return Integer.parseInt(
+                    paymentId.substring(3));
+
+        } catch (NumberFormatException ex) {
+
+            return -1;
+        }
+    }
+
     public double getRoomTypePricePerDay(String roomTypeName) {
         if (roomTypeName == null) {
             return 0.0;
@@ -1194,9 +1349,25 @@ public class RegistrationController {
             booking.getGuest().getName(),
             booking.getRoom().getRoomNumber(),
             booking.getRoom().getRoomType(),
-            formatBoundaryDateTime(booking.getRoom().getCheckInDateTime()),
-            formatBoundaryDateTime(booking.getRoom().getCheckOutDateTime()),
-            registration == null ? "N/A" : String.valueOf(registration.getStatus())
+            formatBoundaryDateTime(
+                    booking.getRoom().getCheckInDateTime()),
+            formatBoundaryDateTime(
+                    booking.getRoom().getCheckOutDateTime()),
+            registration == null
+                    ? "N/A"
+                    : String.valueOf(registration.getStatus()),
+            booking.getPayment() == null
+                    ? "N/A"
+                    : booking.getPayment().getPaymentId(),
+            booking.getPayment() == null
+                    ? "0.00"
+                    : String.format(
+                            "%.2f",
+                            booking.getPayment().getAmount()),
+            booking.getPayment() == null
+                    ? "N/A"
+                    : String.valueOf(
+                            booking.getPayment().getStatus())
         };
     }
 
