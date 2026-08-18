@@ -3,6 +3,7 @@ package control;
 import adt.linear.DoublyLinkedList;
 import adt.linear.LinearADT;
 import entity.Room;
+
 /**
  * RoomAvailabilityNotifier uses a Listener/Callback pattern to notify the 
  * Front Desk module whenever a room is marked as 'Ready' by the Housekeeping 
@@ -11,13 +12,12 @@ import entity.Room;
  */
 
 /**
- *
  * @author Low Wei Shin
  */
 public final class RoomAvailabilityNotifier {
 
     /**
-     * Inner interface that defines the contract for any component wishing to 
+     * Inner interface that defines the contract for any component wishing to
      * be notified of room changes (specifically, a room becoming ready for guests).
      */
     public interface RoomReadyListener {
@@ -25,8 +25,7 @@ public final class RoomAvailabilityNotifier {
     }
 
     private static RoomReadyListener listener;
-    private static final LinearADT<Room> readyRoomNotifications
-            = new DoublyLinkedList<>();
+    private static final LinearADT<Room> readyRoomNotifications = new DoublyLinkedList<>();
 
     private RoomAvailabilityNotifier() {
     }

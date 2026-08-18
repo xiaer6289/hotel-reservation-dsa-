@@ -10,7 +10,7 @@ package adt.linear;
  * scanning from the front.</p>
  *
  * @param <T> type of elements stored in the list
- * @author team members
+ * @author Low Wei Shin
  */
 public class DoublyLinkedList<T> implements LinearADT<T> {
 

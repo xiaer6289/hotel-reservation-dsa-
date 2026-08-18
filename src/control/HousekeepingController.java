@@ -1,6 +1,5 @@
 package control;
 
-import java.time.LocalDate;
 import adt.linear.DoublyLinkedList;
 import adt.linear.LinearADT;
 import dao.HousekeepingDao;
@@ -8,6 +7,7 @@ import dao.RoomDao;
 import entity.Room;
 import entity.RoomStatus;
 import entity.TaskLogEntry;
+import java.time.LocalDate;
 
 /**
  *
@@ -52,7 +52,7 @@ public class HousekeepingController {
 
     private void persistTaskLog() {
         TaskLogEntry[] entries = new TaskLogEntry[taskLog.size()];
-        final int[] index = {0};
+        final int[] index = { 0 };
         taskLog.traverse(entry -> entries[index[0]++] = entry);
         housekeepingDao.saveToFile(entries);
     }
@@ -63,7 +63,8 @@ public class HousekeepingController {
 
     /**
      * Maps a Housekeeping task status directly to a Room's entity status.
-     * Also triggers any necessary cross-module notifications (e.g. telling Front Desk
+     * Also triggers any necessary cross-module notifications (e.g. telling Front
+     * Desk
      * that a room is now available for new guests).
      */
     private void applyTaskStatusToRoom(TaskLogEntry task, boolean notifyFrontDesk) {
@@ -134,20 +135,17 @@ public class HousekeepingController {
     }
 
     /**
- * Returns the newest housekeeping task for a room.
- * Older tasks are historical records and must not change
- * the room's current status.
- */
+     * Returns the newest housekeeping task for a room.
+     * Older tasks are historical records and must not change
+     * the room's current status.
+     */
     private TaskLogEntry findLatestTaskForRoom(String roomNumber) {
 
         for (int i = taskLog.size() - 1; i >= 0; i--) {
 
             TaskLogEntry task = taskLog.get(i);
 
-            if (task != null
-                    && task.getRoomNumber() != null
-                    && task.getRoomNumber().equals(roomNumber)) {
-
+            if (task != null && task.getRoomNumber() != null && task.getRoomNumber().equals(roomNumber)) {
                 return task;
             }
         }
@@ -194,8 +192,8 @@ public class HousekeepingController {
     }
 
     /**
-     * Logs a brand new housekeeping task manually. By default, new tasks are 
-     * created with a 'Dirty' status. It also prevents duplicate active tasks 
+     * Logs a brand new housekeeping task manually. By default, new tasks are
+     * created with a 'Dirty' status. It also prevents duplicate active tasks
      * for the same room.
      */
     public boolean logNewTask(String roomNumber, String staffId) {
@@ -222,8 +220,8 @@ public class HousekeepingController {
     }
 
     /**
-     * Specialized method called by the Front Desk or Registration module when 
-     * a guest checks out. It automatically creates a 'Dirty' task so housekeepers 
+     * Specialized method called by the Front Desk or Registration module when
+     * a guest checks out. It automatically creates a 'Dirty' task so housekeepers
      * know the room needs to be cleaned for the next guest.
      */
     public TaskLogEntry createCheckoutTask(String roomNumber, String staffId) {
@@ -247,7 +245,8 @@ public class HousekeepingController {
         syncRoomState(task);
         persistTaskLog();
 
-        System.out.println("✅ Check-out processed for Room " + roomNumber + ". Housekeeping task created: " + task.getTaskId());
+        System.out.println(
+                "✅ Check-out processed for Room " + roomNumber + ". Housekeeping task created: " + task.getTaskId());
         return task;
     }
 
@@ -260,10 +259,10 @@ public class HousekeepingController {
     }
 
     /**
-     * Updates a task to a specific new status. It enforces a strict linear state 
+     * Updates a task to a specific new status. It enforces a strict linear state
      * flow: Dirty → Cleaning In Progress → Inspected → Ready.
      * 
-     * @param taskId The unique ID of the task to update (e.g., T001)
+     * @param taskId    The unique ID of the task to update (e.g., T001)
      * @param newStatus The target status
      * @return true if update was successful, false if invalid transition
      */
@@ -286,13 +285,13 @@ public class HousekeepingController {
     }
 
     /**
-     * Reverts a task to its previous logical status in case a housekeeper made a mistake.
+     * Reverts a task to its previous logical status in case a housekeeper made a
+     * mistake.
      * Prevents rolling back past the initial 'Dirty' state.
      */
     public boolean rollbackTask(String taskId) {
 
-        TaskLogEntry task =
-                findTaskById(taskId);
+        TaskLogEntry task = findTaskById(taskId);
 
         if (task == null) {
             System.out.println(
@@ -301,76 +300,46 @@ public class HousekeepingController {
         }
 
         /*
-        * Only the latest task for the room may change
-        * the room's current housekeeping state.
-        */
-        TaskLogEntry latestTask =
-                findLatestTaskForRoom(
-                        task.getRoomNumber());
+         * Only the latest task for the room may change
+         * the room's current housekeeping state.
+         */
+        TaskLogEntry latestTask = findLatestTaskForRoom(task.getRoomNumber());
 
-        if (latestTask == null
-                || !task.getTaskId()
-                        .equals(latestTask.getTaskId())) {
+        if (latestTask == null || !task.getTaskId().equals(latestTask.getTaskId())) {
 
-            System.out.println(
-                    "❌ Cannot rollback historical task "
-                    + taskId
-                    + ". Only the latest task for Room "
-                    + task.getRoomNumber()
-                    + " can be rolled back.");
+            System.out.println("❌ Cannot rollback historical task " + taskId + ". Only the latest task for Room " + task.getRoomNumber() + " can be rolled back.");
 
             return false;
         }
 
         /*
-        * Check the CURRENT room status.
-        * If another module has already changed the room
-        * (for example Ready -> Occupied), rollback is blocked.
-        */
-        Room room =
-                findRoomByNumber(
-                        task.getRoomNumber());
+         * Check the CURRENT room status.
+         * If another module has already changed the room
+         * (for example Ready -> Occupied), rollback is blocked.
+         */
+        Room room = findRoomByNumber(task.getRoomNumber());
 
         if (room == null) {
-            System.out.println(
-                    "❌ Room not found: "
-                    + task.getRoomNumber());
+            System.out.println("❌ Room not found: " + task.getRoomNumber());
             return false;
         }
 
-        String currentRoomTaskStatus =
-                mapRoomStatusToTaskStatus(
-                        room.getRoomStatus());
+        String currentRoomTaskStatus = mapRoomStatusToTaskStatus(room.getRoomStatus());
 
-        if (currentRoomTaskStatus == null
-                || !task.getStatus()
-                        .equals(currentRoomTaskStatus)) {
+        if (currentRoomTaskStatus == null || !task.getStatus().equals(currentRoomTaskStatus)) {
 
-            System.out.println(
-                    "❌ Cannot rollback task "
-                    + taskId
-                    + " because Room "
-                    + task.getRoomNumber()
-                    + " is currently "
-                    + describeRoomStatus(
-                            room.getRoomStatus())
-                    + ". The task is no longer the room's "
-                    + "active housekeeping state.");
+            System.out.println("❌ Cannot rollback task "+ taskId + " because Room " + task.getRoomNumber() + " is currently " + describeRoomStatus(room.getRoomStatus()) + ". The task is no longer the room's active housekeeping state.");
 
             return false;
         }
 
-        String current =
-                task.getStatus();
+        String current = task.getStatus();
 
-        String previous =
-                getPreviousStatus(current);
+        String previous = getPreviousStatus(current);
 
         if (previous == null) {
 
-            System.out.println(
-                    "❌ Cannot rollback task from "
-                    + "initial status (Dirty).");
+            System.out.println("❌ Cannot rollback task from initial status (Dirty).");
 
             return false;
         }
@@ -381,13 +350,7 @@ public class HousekeepingController {
 
         persistTaskLog();
 
-        System.out.println(
-                "🔄 Task "
-                + taskId
-                + " rolled back: "
-                + current
-                + " → "
-                + previous);
+        System.out.println("🔄 Task "+ taskId + " rolled back: " + current + " → " + previous);
 
         return true;
     }
@@ -477,10 +440,7 @@ public class HousekeepingController {
                 continue;
             }
             if (room.getStatus() == status) {
-                System.out.printf("%-8s | %-22s | %-10s%n",
-                        room.getRoomNumber(),
-                        describeRoomStatus(room.getRoomStatus()),
-                        room.isAvailability() ? "Yes" : "No");
+                System.out.printf("%-8s | %-22s | %-10s%n", room.getRoomNumber(), describeRoomStatus(room.getRoomStatus()), room.isAvailability() ? "Yes" : "No");
                 found = true;
             }
         }
@@ -520,7 +480,8 @@ public class HousekeepingController {
         return taskLog;
     }
 
-    // ===== Boundary display helpers (ECB: Boundary does not access Entity/ADT objects) =====
+    // ===== Boundary display helpers (ECB: Boundary does not access Entity/ADT
+    // objects) =====
     public String[][] getRoomSelectionDisplayData() {
         Room[] currentRooms = getRooms();
         String[][] rows = new String[currentRooms == null ? 0 : currentRooms.length][2];
@@ -552,44 +513,23 @@ public class HousekeepingController {
         return rows;
     }
 
-public void generateCleaningStatusReport() {
-    new control.report.CleaningStatusFlowRP()
-            .generateReport(taskLog);
-}
-
-public void generateCleaningStatusReport(
-        String statusFilter,
-        String staffFilter,
-        String roomSearch,
-        int sortOption) {
-
-    new control.report.CleaningStatusFlowRP()
-            .generateReport(
-                    taskLog,
-                    statusFilter,
-                    staffFilter,
-                    roomSearch,
-                    sortOption);
-}
-
-    public void generateDailyPerformanceReport() {
-        new control.report.DailyPerformanceRP()
+    public void generateCleaningStatusReport() {
+        new control.report.CleaningStatusFlowRP()
                 .generateReport(taskLog);
     }
 
-    public void generateDailyPerformanceReport(
-            LocalDate reportDate,
-            String staffFilter,
-            long minimumMinutes,
-            int sortOption) {
+    public void generateCleaningStatusReport(String statusFilter, String staffFilter, String roomSearch, int sortOption) {
 
-        new control.report.DailyPerformanceRP()
-                .generateReport(
-                        taskLog,
-                        reportDate,
-                        staffFilter,
-                        minimumMinutes,
-                        sortOption);
+        new control.report.CleaningStatusFlowRP()
+                .generateReport(taskLog,statusFilter,staffFilter,roomSearch,sortOption);
+    }
+
+    public void generateDailyPerformanceReport() {
+        new control.report.DailyPerformanceRP().generateReport(taskLog);
+    }
+
+    public void generateDailyPerformanceReport(LocalDate reportDate, String staffFilter, long minimumMinutes, int sortOption) {
+        new control.report.DailyPerformanceRP().generateReport(taskLog, reportDate,staffFilter,minimumMinutes,sortOption);
     }
 
     public void displayAllTasks() {

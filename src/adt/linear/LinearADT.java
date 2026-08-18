@@ -8,7 +8,7 @@ package adt.linear;
  * visitor so clients do not depend on implementation nodes.</p>
  *
  * @param <T> type of elements stored in the sequence
- * @author team members
+ * @author Low Wei Shin
  */
 public interface LinearADT<T> {
 
