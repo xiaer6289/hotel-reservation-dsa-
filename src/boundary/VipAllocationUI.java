@@ -231,7 +231,7 @@ public class VipAllocationUI {
         System.out.println("-".repeat(93));
 
         System.out.printf(
-                "%-8s %-8s %-9s %-18s %-10s %-16s %-7s %-21s%n",
+                "%-11s %-8s %-9s %-18s %-10s %-16s %-7s %-18s%n",
                 "Priority", "Reg ID", "Guest ID", "Guest Name", "Tier", "Requested Room", "Guests", "Available"
         );
 
@@ -242,7 +242,7 @@ public class VipAllocationUI {
             int readyMatches = Integer.parseInt(registration[6]);
 
             System.out.printf(
-                    "%-8d %-8s %-9s %-18s %-10s %-16s %-7d %-21s%n",
+                    "%-11s %-8s %-9s %-18s %-10s %-16s %-7s %-18s%n",
                     i + 1,
                     registration[0],
                     registration[1],
