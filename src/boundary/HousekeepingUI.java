@@ -550,9 +550,7 @@ public class HousekeepingUI {
         System.out.println(
                 "\nRoom Number Search:");
 
-        System.out.print(
-                "Enter Room Number "
-                + "(Press Enter = All Rooms): ");
+        System.out.print("Enter Room Number [Press Enter to show all rooms]: ");
 
         String roomSearch =
                 scanner.nextLine()

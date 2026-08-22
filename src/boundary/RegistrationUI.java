@@ -153,8 +153,15 @@ public class RegistrationUI {
             System.out.println("\n===== NEW GUEST REGISTRATION =====");
             System.out.println("A new guest profile will be created after the walk-in details are confirmed.");
 
-            newGuestName = readGuestName("Enter Guest Full Name: ");
-            phoneNumber = readPhoneNumber();
+            newGuestName = readGuestNameOrBack(
+                "Enter Guest Full Name (0 = Back): ");
+
+        if (newGuestName == null) {
+            System.out.println("Registration cancelled.");
+            return;
+        }
+
+        phoneNumber = readPhoneNumber();
             phoneDisplay = String.valueOf(phoneNumber);
 
             String[] guestWithSamePhone = controller.searchGuestDisplayDataByPhoneNo(phoneNumber);
@@ -775,8 +782,12 @@ public class RegistrationUI {
      */
     private String selectExistingGuestByName() {
         while (true) {
-            String guestName = readGuestName(
-                    "Enter Existing Guest/Member Full Name (e.g. Tan Wei Jie): ");
+            String guestName = readGuestNameOrBack(
+                "Enter Existing Guest/Member Full Name (0 = Back): ");
+
+            if (guestName == null) {
+                return null;
+            }
 
             String[][] matches = controller.searchGuestDisplayDataByName(guestName);
 
@@ -856,6 +867,24 @@ public class RegistrationUI {
 
             Utility.printError(
                     "Enter a valid name (2-50 characters; letters, spaces, apostrophes or hyphens only).");
+        }
+    }
+
+    private String readGuestNameOrBack(String message) {
+        while (true) {
+            System.out.print(message);
+            String input = scanner.nextLine().trim();
+
+            if (input.equals("0")) {
+                return null;
+            }
+
+            if (Utility.isValidPersonName(input)) {
+                return input;
+            }
+
+            Utility.printError(
+                    "Enter a valid name (2-50 characters; letters, spaces, apostrophes or hyphens only), or enter 0 to go back.");
         }
     }
 
