@@ -30,21 +30,24 @@ public class HousekeepingUI {
                         Utility.printHeader("TARUMT RESORTS - HOUSEKEEPING SYSTEM");
                         System.out.println();
                         Utility.printSectionTitle("TASK MANAGEMENT");
-                        System.out.println("   1.  Log New Housekeeping Task");
-                        System.out.println("   2.  Update Task Status");
+                        System.out.println("   1.  Mark Room as Dirty (Queue for Cleaning)");
+                        System.out.println("   2.  Staff: Mark Self Ready (Early Finish)");
                         System.out.println("   3.  Rollback Task Status");
+                        System.out.println("   4.  Manually Advance Task Status");
                         System.out.println();
                         Utility.printSectionTitle("VIEW & SEARCH");
-                        System.out.println("   4.  Search Task by Room Number");
-                        System.out.println("   5.  Display All Tasks");
-                        System.out.println("   6.  Display Room Housekeeping Status");
-                        System.out.println("   7.  Show Only Dirty Rooms");
-                        System.out.println("   8.  Show Only Ready Rooms");
-                        System.out.println("   9.  Show Tasks for a Selected Room");
+                        System.out.println("   5.  View Cleaning Queue & Staff Status");
+                        System.out.println("   6.  Search Task by Room Number");
+                        System.out.println("   7.  Display All Tasks");
+                        System.out.println("   8.  Display Room Housekeeping Status");
+                        System.out.println("   9.  Show Only Dirty Rooms");
+                        System.out.println("  10.  Show Only Ready Rooms");
+                        System.out.println("  11.  Show Tasks for a Selected Room");
                         System.out.println();
                         Utility.printSectionTitle("REPORTS");
-                        System.out.println("  10.  Generate Cleaning Status Report");
-                        System.out.println("  11.  Generate Daily Performance Report");
+                        System.out.println("  12.  Cleaning Status Analysis Report");
+                        System.out.println("  13.  Daily Performance Report");
+                        System.out.println("  14.  KPI Report (Daily Staff Target)");
                         System.out.println();
                         Utility.printDivider();
                         System.out.println("   0.  Exit Module");
@@ -56,11 +59,11 @@ public class HousekeepingUI {
                         switch (choice) {
 
                                 case 1:
-                                        logNewTask();
+                                        markRoomDirty();
                                         break;
 
                                 case 2:
-                                        updateTaskStatus();
+                                        markStaffReady();
                                         break;
 
                                 case 3:
@@ -68,36 +71,48 @@ public class HousekeepingUI {
                                         break;
 
                                 case 4:
-                                        searchByRoom();
+                                        advanceTaskStatus();
                                         break;
 
                                 case 5:
+                                        controller.displayQueueAndStaffStatus();
+                                        break;
+
+                                case 6:
+                                        searchByRoom();
+                                        break;
+
+                                case 7:
                                         Utility.printHeader("ALL TASKS");
                                         controller.displayAllTasks();
                                         break;
 
-                                case 6:
+                                case 8:
                                         controller.displayRoomStatus();
                                         break;
 
-                                case 7:
+                                case 9:
                                         controller.displayDirtyRooms();
                                         break;
 
-                                case 8:
+                                case 10:
                                         controller.displayReadyRooms();
                                         break;
 
-                                case 9:
+                                case 11:
                                         showTasksForSelectedRoom();
                                         break;
 
-                                case 10:
+                                case 12:
                                         generateCleaningStatusReport();
                                         break;
 
-                                case 11:
+                                case 13:
                                         generateDailyPerformanceReport();
+                                        break;
+
+                                case 14:
+                                        generateKpiReport();
                                         break;
 
                                 case 0:
@@ -123,20 +138,16 @@ public class HousekeepingUI {
 
                 String[][] rooms = controller.getRoomSelectionDisplayData();
 
-                if (rooms == null|| rooms.length == 0) {
-
+                if (rooms == null || rooms.length == 0) {
                         System.out.println("No rooms available.");
-
                         return null;
                 }
 
                 System.out.println("\n--- Select Room ---");
 
                 for (int i = 0; i < rooms.length; i++) {
-
                         if (rooms[i] != null && rooms[i][0] != null) {
-
-                                System.out.printf("%d. Room %s (%s)%n",(i + 1), rooms[i][0], rooms[i][1]);
+                                System.out.printf("%d. Room %s (%s)%n", (i + 1), rooms[i][0], rooms[i][1]);
                         }
                 }
 
@@ -144,77 +155,72 @@ public class HousekeepingUI {
 
                 int choice = readChoice();
 
-                if (choice > 0 && choice <= rooms.length && rooms[choice - 1] != null && rooms[choice - 1][0] != null) {
-
+                if (choice > 0 && choice <= rooms.length
+                        && rooms[choice - 1] != null && rooms[choice - 1][0] != null) {
                         return rooms[choice - 1][0];
                 }
 
                 System.out.println("❌ Invalid choice.");
-
                 return null;
         }
 
         // =========================================================
-        // STAFF SELECTION
+        // STAFF SELECTION  (for "Mark Self Ready" only)
         // =========================================================
 
-        private String selectStaff() {
+        private String selectBusyStaff() {
+                String[][] staff = controller.getStaffDisplayData();
 
-                System.out.println("\n--- Select Staff ---");
+                System.out.println("\n--- Select Staff Member ---");
+                int displayedCount = 0;
+                int[] indexMap = new int[staff.length];
 
-                System.out.println("1. Staff S001 (Tan)");
+                for (int i = 0; i < staff.length; i++) {
+                        if (staff[i] != null && staff[i][0] != null) {
+                                displayedCount++;
+                                indexMap[displayedCount - 1] = i;
+                                System.out.printf("%d. %s (%s) – %s%n",
+                                        displayedCount, staff[i][1], staff[i][0], staff[i][2]);
+                        }
+                }
 
-                System.out.println("2. Staff S002 (Choo)");
+                if (displayedCount == 0) {
+                        System.out.println("No staff found.");
+                        return null;
+                }
 
-                System.out.println("3. Staff S003 (Michelle)");
-
-                System.out.print("Enter staff choice: ");
-
+                System.out.print("Enter choice: ");
                 int choice = readChoice();
 
-                switch (choice) {
-
-                        case 1:
-                                return "S001";
-
-                        case 2:
-                                return "S002";
-
-                        case 3:
-                                return "S003";
-
-                        default:
-                                System.out.println("❌ Invalid staff selection.");
-
-                                return null;
+                if (choice > 0 && choice <= displayedCount) {
+                        int realIdx = indexMap[choice - 1];
+                        return staff[realIdx][0];
                 }
+
+                System.out.println("❌ Invalid selection.");
+                return null;
         }
 
         // =========================================================
-        // TASK SELECTION
+        // TASK SELECTION  (for rollback / advance)
         // =========================================================
 
         private String selectTask() {
 
                 String[][] tasks = controller.getTaskSelectionDisplayData();
 
-                if (tasks == null|| tasks.length == 0) {
-
+                if (tasks == null || tasks.length == 0) {
                         System.out.println("No tasks available.");
-
                         return null;
                 }
 
-                System.out.println(
-                                "\n--- Select Task ---");
+                System.out.println("\n--- Select Task ---");
 
                 for (int i = 0; i < tasks.length; i++) {
-
                         String[] task = tasks[i];
-
                         if (task != null && task[0] != null) {
-
-                                System.out.printf("%d. Task %s (Room %s) - %s%n",(i + 1), task[0], task[1], task[2]);
+                                System.out.printf("%d. Task %s (Room %s) - %s%n",
+                                        (i + 1), task[0], task[1], task[2]);
                         }
                 }
 
@@ -223,25 +229,26 @@ public class HousekeepingUI {
                 int choice = readChoice();
 
                 if (choice > 0 && choice <= tasks.length) {
-
                         String[] selected = tasks[choice - 1];
-
                         if (selected != null && selected[0] != null) {
-
                                 return selected[0];
                         }
                 }
 
                 System.out.println("❌ Invalid task selection.");
-
                 return null;
         }
 
         // =========================================================
-        // LOG NEW TASK
+        // MARK ROOM DIRTY  (replaces old "Log New Task")
         // =========================================================
 
-        private void logNewTask() {
+        private void markRoomDirty() {
+
+                Utility.printSectionTitle("MARK ROOM AS DIRTY");
+                System.out.println("Rooms will be automatically assigned to the next free staff member.");
+                System.out.println("If all staff are busy, the room will wait in the FIFO queue.");
+                System.out.println();
 
                 controller.displayRoomStatus();
 
@@ -251,20 +258,40 @@ public class HousekeepingUI {
                         return;
                 }
 
-                String staffId = selectStaff();
+                System.out.print("Remarks (optional, press Enter to skip): ");
+                String remarks = scanner.nextLine().trim();
 
-                if (staffId == null) {
-                        return;
-                }
-
-                controller.logNewTask(room, staffId);
+                controller.markRoomDirty(room, remarks.isBlank() ? null : remarks);
         }
 
         // =========================================================
-        // UPDATE TASK STATUS
+        // MARK STAFF READY  (early finish)
         // =========================================================
 
-        private void updateTaskStatus() {
+        private void markStaffReady() {
+
+                Utility.printSectionTitle("STAFF – EARLY FINISH (MARK READY)");
+                System.out.println("Select the staff member who has finished cleaning.");
+                System.out.println("If the 30-minute countdown has not expired, this counts as an early finish.");
+                System.out.println("The next queued room (if any) will be auto-assigned.");
+                System.out.println();
+
+                controller.displayQueueAndStaffStatus();
+
+                String staffId = selectBusyStaff();
+                if (staffId == null) return;
+
+                controller.markStaffReady(staffId);
+        }
+
+        // =========================================================
+        // ADVANCE TASK STATUS  (manual, for inspection flows)
+        // =========================================================
+
+        private void advanceTaskStatus() {
+
+                Utility.printSectionTitle("ADVANCE TASK STATUS");
+                System.out.println("Note: Staff assignment is automatic. This option is for manual corrections.");
 
                 String taskId = selectTask();
 
@@ -273,16 +300,11 @@ public class HousekeepingUI {
                 }
 
                 System.out.println("\nSelect New Status:");
+                System.out.println("1. Cleaning In Progress (C)");
+                System.out.println("2. Inspected (I)");
+                System.out.println("3. Ready (R)");
 
-                System.out.println("1. Dirty (D)");
-
-                System.out.println("2. Cleaning In Progress (C)");
-
-                System.out.println("3. Inspected (I)");
-
-                System.out.println("4. Ready (R)");
-
-                System.out.print("Enter choice (1-4 or D/C/I/R): ");
+                System.out.print("Enter choice (1-3 or C/I/R): ");
 
                 String choice = scanner.nextLine().trim().toUpperCase();
 
@@ -291,28 +313,22 @@ public class HousekeepingUI {
                 switch (choice) {
 
                         case "1":
-                        case "D":
-                                status = "Dirty";
-                                break;
-
-                        case "2":
                         case "C":
                                 status = "Cleaning In Progress";
                                 break;
 
-                        case "3":
+                        case "2":
                         case "I":
                                 status = "Inspected";
                                 break;
 
-                        case "4":
+                        case "3":
                         case "R":
                                 status = "Ready";
                                 break;
 
                         default:
                                 System.out.println("❌ Invalid status selection.");
-
                                 return;
                 }
 
@@ -358,20 +374,13 @@ public class HousekeepingUI {
 
                 System.out.println("\n===== CLEANING STATUS ANALYSIS REPORT OPTIONS =====");
 
-                // -----------------------------------------------------
                 // STATUS FILTER
-                // -----------------------------------------------------
 
                 System.out.println("\nFilter by Status:");
-
                 System.out.println("0. All Statuses");
-
                 System.out.println("1. Dirty");
-
                 System.out.println("2. Cleaning In Progress");
-
                 System.out.println("3. Inspected");
-
                 System.out.println("4. Ready");
 
                 int statusChoice = readIntegerInRange("Select Status (0-4): ", 0, 4);
@@ -402,20 +411,13 @@ public class HousekeepingUI {
                                 break;
                 }
 
-                // -----------------------------------------------------
                 // STAFF FILTER
-                // -----------------------------------------------------
 
                 System.out.println("\nFilter by Staff:");
-
                 System.out.println("0. All Staff");
-
-                System.out.println("1. S001");
-
-                System.out.println("2. S002");
-
-                System.out.println("3. S003");
-
+                System.out.println("1. S001 (Tan)");
+                System.out.println("2. S002 (Choo)");
+                System.out.println("3. S003 (Michelle)");
                 System.out.println("4. SYSTEM");
 
                 int staffChoice = readIntegerInRange("Select Staff (0-4): ", 0, 4);
@@ -446,25 +448,16 @@ public class HousekeepingUI {
                                 break;
                 }
 
-                // -----------------------------------------------------
-                // ROOM FILTER / SEARCH
-                // -----------------------------------------------------
+                // ROOM FILTER
 
-                System.out.println(
-                                "\nRoom Number Search:");
-
+                System.out.println("\nRoom Number Search:");
                 System.out.print("Enter Room Number [Press Enter to show all rooms]: ");
-
                 String roomSearch = scanner.nextLine().trim();
 
-                // -----------------------------------------------------
                 // SORT OPTION
-                // -----------------------------------------------------
 
                 System.out.println("\nSort Report By:");
-
                 System.out.println("1. Room Number (Ascending)");
-
                 System.out.println("2. Time Spent (Longest First)");
 
                 int sortOption = readIntegerInRange("Select Sort Option (1-2): ", 1, 2);
@@ -481,26 +474,13 @@ public class HousekeepingUI {
 
                 System.out.println("\n===== DAILY HOUSEKEEPING PERFORMANCE REPORT OPTIONS =====");
 
-                // -----------------------------------------------------
-                // DATE FILTER
-                // -----------------------------------------------------
-
                 LocalDate reportDate = readReportDate();
 
-                // -----------------------------------------------------
-                // STAFF FILTER
-                // -----------------------------------------------------
-
                 System.out.println("\nFilter by Staff:");
-
                 System.out.println("0. All Staff");
-
-                System.out.println("1. S001");
-
-                System.out.println("2. S002");
-
-                System.out.println("3. S003");
-
+                System.out.println("1. S001 (Tan)");
+                System.out.println("2. S002 (Choo)");
+                System.out.println("3. S003 (Michelle)");
                 System.out.println("4. SYSTEM");
 
                 int staffChoice = readIntegerInRange("Select Staff (0-4): ", 0, 4);
@@ -531,26 +511,32 @@ public class HousekeepingUI {
                                 break;
                 }
 
-                // -----------------------------------------------------
-                // MINIMUM TASK TIME FILTER
-                // -----------------------------------------------------
-
-                long minimumMinutes = readNonNegativeLong("Minimum Task Time "
-                                + "(0 = All): ");
-
-                // -----------------------------------------------------
-                // SORT OPTION
-                // -----------------------------------------------------
+                long minimumMinutes = readNonNegativeLong("Minimum Task Time (0 = All): ");
 
                 System.out.println("\nSort Report By:");
-
-                System.out.println("1. Created Time " + "(Earliest First)");
-
-                System.out.println("2. Task Time " + "(Longest First)");
+                System.out.println("1. Created Time (Earliest First)");
+                System.out.println("2. Task Time (Longest First)");
 
                 int sortOption = readIntegerInRange("Select Sort Option (1-2): ", 1, 2);
 
                 controller.generateDailyPerformanceReport(reportDate, staffFilter, minimumMinutes, sortOption);
+        }
+
+        // =========================================================
+        // REPORT 3:
+        // KPI REPORT
+        // =========================================================
+
+        private void generateKpiReport() {
+
+                System.out.println("\n===== KPI REPORT OPTIONS =====");
+                System.out.println("KPI Target: each staff must clean ≥ 5 rooms per day.");
+                System.out.println("On-Time Target: each room cleaned within 30 minutes.");
+                System.out.println();
+
+                LocalDate reportDate = readReportDate();
+
+                controller.generateKpiReport(reportDate);
         }
 
         // =========================================================
@@ -567,34 +553,8 @@ public class HousekeepingUI {
                         return;
                 }
 
-                controller.showTasksForRoom(
-                                room);
+                controller.showTasksForRoom(room);
         }
-
-        // =========================================================
-        // RESET ALL ROOMS
-        // =========================================================
-
-        // private void resetAllRooms() {
-
-        //         System.out.print("Are you sure you want to reset "
-        //                         + "all rooms to default ready data? "
-        //                         + "(yes/no): ");
-
-        //         String confirmation = scanner.nextLine().trim()
-        //                         .toLowerCase();
-
-        //         if (!confirmation.equals("yes")
-        //                         && !confirmation.equals("y")) {
-
-        //                 System.out.println(
-        //                                 "Reset operation cancelled.");
-
-        //                 return;
-        //         }
-
-        //         controller.resetToDefaultData();
-        // }
 
         // =========================================================
         // INPUT VALIDATION
@@ -606,8 +566,7 @@ public class HousekeepingUI {
 
                 try {
 
-                        return Integer.parseInt(
-                                        input);
+                        return Integer.parseInt(input);
 
                 } catch (NumberFormatException ex) {
 
@@ -640,11 +599,8 @@ public class HousekeepingUI {
                                 // Validation message below.
                         }
 
-                        System.out.println("❌ Invalid input. "+ "Please enter a number from "
-                                        + minimum
-                                        + " to "
-                                        + maximum
-                                        + ".");
+                        System.out.println("❌ Invalid input. Please enter a number from "
+                                + minimum + " to " + maximum + ".");
                 }
         }
 
@@ -656,7 +612,7 @@ public class HousekeepingUI {
 
                 while (true) {
 
-                        System.out.print("Report Date " + "(YYYY-MM-DD, " + "Press Enter = Today): ");
+                        System.out.print("Report Date (YYYY-MM-DD, Press Enter = Today): ");
 
                         String input = scanner.nextLine().trim();
 
@@ -671,8 +627,7 @@ public class HousekeepingUI {
 
                         } catch (DateTimeParseException ex) {
 
-                                System.out.println("❌ Invalid date. "
-                                                + "Please use YYYY-MM-DD.");
+                                System.out.println("❌ Invalid date. Please use YYYY-MM-DD.");
                         }
                 }
         }
@@ -680,8 +635,7 @@ public class HousekeepingUI {
         /**
          * Reads 0 or a positive whole number.
          */
-        private long readNonNegativeLong(
-                        String prompt) {
+        private long readNonNegativeLong(String prompt) {
 
                 while (true) {
 
@@ -702,7 +656,7 @@ public class HousekeepingUI {
                                 // Validation message below.
                         }
 
-                        System.out.println("❌ Invalid input. " + "Please enter 0 or " + "a positive number.");
+                        System.out.println("❌ Invalid input. Please enter 0 or a positive number.");
                 }
         }
 
