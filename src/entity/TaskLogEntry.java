@@ -35,6 +35,26 @@ public class TaskLogEntry implements Serializable {
         this.estimatedMinutes = calculateEstimatedMinutes(status);
     }
 
+    public TaskLogEntry(
+            String taskId,
+            String roomNumber,
+            String status,
+            String staffId,
+            String remarks,
+            LocalDateTime createdTime,
+            LocalDateTime lastUpdatedTime,
+            int estimatedMinutes) {
+
+        this.taskId = taskId;
+        this.roomNumber = roomNumber;
+        this.status = status;
+        this.staffId = staffId;
+        this.remarks = remarks;
+        this.createdTime = createdTime;
+        this.lastUpdatedTime = lastUpdatedTime;
+        this.estimatedMinutes = estimatedMinutes;
+    }
+
     private int calculateEstimatedMinutes(String status) {
         switch (status) {
             case "Dirty": return 35;

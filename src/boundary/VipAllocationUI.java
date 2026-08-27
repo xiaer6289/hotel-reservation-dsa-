@@ -231,27 +231,29 @@ public class VipAllocationUI {
         System.out.println("-".repeat(93));
 
         System.out.printf(
-                "%-11s %-8s %-9s %-18s %-10s %-16s %-7s %-18s%n",
-                "Priority", "Reg ID", "Guest ID", "Guest Name", "Tier", "Requested Room", "Guests", "Available"
+                 "%-9s %-8s %-9s %-16s %-10s %-15s %-7s %-17s %-15s %-12s%n",
+                "Priority", "Reg ID", "Guest ID", "Guest Name", "Tier", "Requested Room", "Guests", "Request Time","Waiting Time", "Available"
         );
 
         System.out.println("-".repeat(93));
 
         for (int i = 0; i < registrations.length; i++) {
             String[] registration = registrations[i];
-            int readyMatches = Integer.parseInt(registration[6]);
+            int readyMatches = Integer.parseInt(registration[8]);
 
             System.out.printf(
-                    "%-11s %-8s %-9s %-18s %-10s %-16s %-7s %-18s%n",
-                    i + 1,
-                    registration[0],
-                    registration[1],
-                    shorten(registration[2], 18),
-                    registration[3],
-                    formatRoomType(registration[4]),
-                    Integer.parseInt(registration[5]),
-                    formatSuitableRoomCount(readyMatches)
-            );
+                "%-9s %-8s %-9s %-16s %-10s %-15s %-7s %-17s %-15s %-12s%n",
+                i + 1,
+                registration[0],
+                registration[1],
+                shorten(registration[2], 16),
+                registration[3],
+                formatRoomType(registration[4]),
+                Integer.parseInt(registration[5]),
+                registration[6],
+                registration[7],
+                formatSuitableRoomCount(readyMatches)
+        );
         }
 
         System.out.println("-".repeat(93));
@@ -550,7 +552,7 @@ public class VipAllocationUI {
         System.out.println("  Phone Number         : " + nextRegistration[2]);
         System.out.println("  VIP Tier             : " + nextRegistration[3]);
         System.out.println("  Registration ID      : " + nextRegistration[4]);
-        System.out.println("  Registered At        : " + nextRegistration[6]);
+        System.out.println("  Request Time         : " + nextRegistration[6]);
         System.out.println("\nSTAY & ROOM REQUEST");
         System.out.println("-".repeat(104));
         System.out.println("  Requested Room Type  : " + formatRoomType(nextRegistration[7]));
@@ -734,7 +736,7 @@ public class VipAllocationUI {
         System.out.println("\nWAITING REGISTRATION");
         System.out.println("  Registration ID       : " + registration[4]);
         System.out.println("  Registration Status   : " + registration[5]);
-        System.out.println("  Registered At         : " + registration[6]);
+        System.out.println("  Request Time         : " + registration[6]);
         System.out.println("\nROOM REQUEST");
         System.out.println("  Requested Room Type   : " + formatRoomType(registration[7]));
         System.out.println("  Number of Guests      : " + registration[8]);

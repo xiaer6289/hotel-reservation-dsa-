@@ -1,88 +1,145 @@
 package dao;
 
 import entity.LoyaltyProfile;
-import java.io.EOFException;
+import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
+import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
+import java.io.PrintWriter;
 
 /**
- * Persists hotel loyalty membership profiles.
- *
- * LoyaltyProfile is long-lived master data used to determine whether a guest
- * qualifies for VIP priority and which loyalty tier applies.
+ * Persists hotel loyalty membership profiles using text format.
  *
  * @author Low Enn Toong
  */
 public class LoyaltyProfileDao {
+
     private static final String FILE_NAME = "loyalty_profile.dat";
 
     public void saveToFile(LoyaltyProfile[] profiles) {
-        try (ObjectOutputStream output = new ObjectOutputStream(new FileOutputStream(FILE_NAME))) {
-            output.writeObject(profiles == null ? new LoyaltyProfile[0] : profiles);
+
+        try (PrintWriter writer =
+                new PrintWriter(new FileWriter(FILE_NAME))) {
+
+            if (profiles == null) {
+                return;
+            }
+
+            for (LoyaltyProfile profile : profiles) {
+
+                if (profile == null) {
+                    continue;
+                }
+
+                writer.println(
+                        profile.getGuestId()
+                        + "|"
+                        + profile.getCompletedStays());
+            }
+
         } catch (IOException exception) {
-            System.out.println("Unable to save " + FILE_NAME + ".");
+
+            System.out.println(
+                    "Unable to save " + FILE_NAME + ".");
         }
     }
 
     public LoyaltyProfile[] retrieveFromFile() {
+
         File file = new File(FILE_NAME);
 
         if (!file.exists()) {
             return new LoyaltyProfile[0];
         }
 
-        try (ObjectInputStream input = new ObjectInputStream(new FileInputStream(file))) {
-            Object data = input.readObject();
-            return data instanceof LoyaltyProfile[] ? (LoyaltyProfile[]) data : new LoyaltyProfile[0];
-        } catch (EOFException exception) {
-            return new LoyaltyProfile[0];
-        } catch (IOException | ClassNotFoundException exception) {
-            System.out.println("Unable to read " + FILE_NAME + ".");
+        LoyaltyProfile[] temporary =
+                new LoyaltyProfile[100];
+
+        int count = 0;
+
+        try (BufferedReader reader =
+                new BufferedReader(new FileReader(file))) {
+
+            String line;
+
+            while ((line = reader.readLine()) != null) {
+
+                String[] parts =
+                        line.split("\\|", -1);
+
+                if (parts.length < 2) {
+                    continue;
+                }
+
+                String guestId =
+                        parts[0].trim();
+
+                int completedStays =
+                        Integer.parseInt(parts[1].trim());
+
+                temporary[count++] =
+                        new LoyaltyProfile(
+                                guestId,
+                                completedStays);
+            }
+
+        } catch (IOException | NumberFormatException exception) {
+
+            System.out.println(
+                    "Unable to read "
+                    + FILE_NAME
+                    + ".");
+
             return new LoyaltyProfile[0];
         }
+
+        LoyaltyProfile[] profiles =
+                new LoyaltyProfile[count];
+
+        System.arraycopy(
+                temporary,
+                0,
+                profiles,
+                0,
+                count);
+
+        return profiles;
     }
 
     public LoyaltyProfile[] loadOrSeed() {
+
         File file = new File(FILE_NAME);
 
         if (file.exists()) {
-            LoyaltyProfile[] loaded = retrieveFromFile();
+
+            LoyaltyProfile[] loaded =
+                    retrieveFromFile();
+
             if (loaded.length > 0) {
-                boolean changed = false;
-
-                for (LoyaltyProfile profile : loaded) {
-                    if (profile != null && profile.normalizeLegacyCompletedStays()) {
-                        changed = true;
-                    }
-                }
-
-                if (changed) {
-                    saveToFile(loaded);
-                }
-
                 return loaded;
             }
         }
 
-        LoyaltyProfile[] seeded = seedSampleData();
+        LoyaltyProfile[] seeded =
+                seedSampleData();
+
         saveToFile(seeded);
+
         return seeded;
     }
 
-    /**
-     * Sample profiles match the simple completed-stay thresholds. These are
-     * seed/demo records only; future guests qualify automatically from their
-     * completed stay history.
-     */
     public LoyaltyProfile[] seedSampleData() {
+
         return new LoyaltyProfile[] {
-            new LoyaltyProfile("G0001", 10), // DIAMOND
-            new LoyaltyProfile("G0002", 6),  // PLATINUM
-            new LoyaltyProfile("G0003", 3)   // ELITE
+
+            new LoyaltyProfile("G0001", 12), // DIAMOND
+            new LoyaltyProfile("G0002", 10), // DIAMOND
+
+            new LoyaltyProfile("G0003", 8),  // PLATINUM
+            new LoyaltyProfile("G0004", 6),  // PLATINUM
+
+            new LoyaltyProfile("G0005", 4)   // ELITE
         };
     }
 }

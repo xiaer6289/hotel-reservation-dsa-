@@ -18,6 +18,7 @@ import entity.Room;
 import entity.RoomStatus;
 import entity.RoomType;
 import entity.WalkInRegistration;
+import java.time.Duration;
 import java.io.File;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -1126,17 +1127,24 @@ public class VipPriorityController {
 
     public String[][] getVipPriorityQueueDisplayData() {
         WalkInRegistration[] registrations = getVipRegistrationsByPriority();
-        String[][] rows = new String[registrations.length][7];
+
+        String[][] rows = new String[registrations.length][9];
+
         for (int i = 0; i < registrations.length; i++) {
+
             WalkInRegistration registration = registrations[i];
+
             rows[i][0] = registration.getRegistrationId();
             rows[i][1] = registration.getGuest().getGuestId();
             rows[i][2] = registration.getGuest().getName();
             rows[i][3] = String.valueOf(getLoyaltyTier(registration));
             rows[i][4] = registration.getRequestedRoomType();
             rows[i][5] = String.valueOf(registration.getNumberOfGuests());
-            rows[i][6] = String.valueOf(countMatchingReadyRoomsForBoundary(registration));
+            rows[i][6] = formatBoundaryDateTime(registration.getRegistrationTime());
+            rows[i][7] = formatWaitingTime(registration.getRegistrationTime());
+            rows[i][8] = String.valueOf(countMatchingReadyRoomsForBoundary(registration));
         }
+
         return rows;
     }
 
@@ -1325,6 +1333,37 @@ public class VipPriorityController {
             }
         }
         return "PROFILE ONLY";
+    }
+
+    private String formatWaitingTime(LocalDateTime requestTime) {
+
+        if (requestTime == null) {
+            return "-";
+        }
+
+        long totalMinutes = Math.max(
+                0,
+                Duration.between(
+                        requestTime,
+                        LocalDateTime.now())
+                        .toMinutes()
+        );
+
+        if (totalMinutes < 60) {
+            return totalMinutes + " min";
+        }
+
+        long hours = totalMinutes / 60;
+        long minutes = totalMinutes % 60;
+
+        if (minutes == 0) {
+            return hours + (hours == 1 ? " hr" : " hrs");
+        }
+
+        return hours
+                + (hours == 1 ? " hr " : " hrs ")
+                + minutes
+                + " min";
     }
 
     private String formatBoundaryDateTime(LocalDateTime value) {

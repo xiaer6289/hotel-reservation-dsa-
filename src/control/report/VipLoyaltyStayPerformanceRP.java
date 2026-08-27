@@ -67,8 +67,17 @@ public class VipLoyaltyStayPerformanceRP {
 
     private void printReport(LoyaltyEntry[] entries, Booking[] bookings, String keyword, LoyaltyTier tierFilter, String activityFilter, int minimumCompletedStays, String roomTypeFilter, LocalDate startDate, LocalDate endDate, int sortOption) {
         System.out.println("\n" + "=".repeat(142));
-        System.out.println("                                         VIP LOYALTY & STAY PERFORMANCE REPORT");
+        System.out.println("                                         VIP LOYALTY ENGAGEMENT REPORT");
+        
         System.out.println("=".repeat(142));
+
+        System.out.println("REPORT PURPOSE");
+        System.out.println("To identify valuable repeat VIP guests and monitor " + "their loyalty tier progress.");
+        System.out.println();
+        System.out.println("HOTEL VALUE");
+        System.out.println("Helps the hotel recognise loyal repeat guests, " + "provide personalised service and identify guests " + "who are close to the next loyalty tier." );
+        System.out.println("-".repeat(142));
+
         System.out.println("Generated On        : " + LocalDateTime.now().format(DATE_TIME_FORMAT));
         System.out.println("Stay History Period : " + formatPeriod(startDate, endDate));
         System.out.println("Search Keyword      : " + displayFilter(keyword));
@@ -87,17 +96,14 @@ public class VipLoyaltyStayPerformanceRP {
             return;
         }
 
-        System.out.printf(
-                "%-4s %-8s %-18s %-10s %-12s %-13s %-16s %-20s %-18s%n",
-                "No.", "Guest ID", "Guest Name", "Tier", "Total Stays", "Period Stays", "Activity", "Last Room", "Next Tier Progress");
+       System.out.printf(
+            "%-4s %-8s %-18s %-10s %-12s %-13s %-20s%n",
+            "No.","Guest ID","Guest Name","Tier","Total Stays","Period Stays","Next Tier Progress");
         System.out.println("-".repeat(142));
 
         int[] tierCounts = new int[LoyaltyTier.values().length];
         int totalCompletedStays = 0;
         int totalPeriodStays = 0;
-        int waitingCount = 0;
-        int inHouseCount = 0;
-        int profileOnlyCount = 0;
         int nearUpgradeCount = 0;
         LoyaltyEntry mostActive = null;
 
@@ -107,18 +113,6 @@ public class VipLoyaltyStayPerformanceRP {
             tierCounts[profile.getTier().ordinal()]++;
             totalCompletedStays += profile.getCompletedStays();
             totalPeriodStays += entry.periodStayCount;
-
-            switch (entry.activity) {
-                case "WAITING":
-                    waitingCount++;
-                    break;
-                case "IN HOUSE":
-                    inHouseCount++;
-                    break;
-                default:
-                    profileOnlyCount++;
-                    break;
-            }
 
             int staysUntilNext = profile.getStaysUntilNextTier();
             if (staysUntilNext > 0 && staysUntilNext <= 2) {
@@ -130,17 +124,16 @@ public class VipLoyaltyStayPerformanceRP {
             }
 
             System.out.printf(
-                    "%-4d %-8s %-18s %-10s %-12d %-13d %-16s %-20s %-18s%n",
-                    i + 1,
-                    entry.guest.getGuestId(),
-                    shorten(entry.guest.getName(), 18),
-                    profile.getTier(),
-                    profile.getCompletedStays(),
-                    entry.periodStayCount,
-                    entry.activity,
-                    getLastRoom(entry.lastBooking),
-                    nextTierProgress(profile));
-        }
+                "%-4d %-8s %-18s %-10s %-12d %-13d %-20s%n",
+                i + 1,
+                entry.guest.getGuestId(),
+                shorten(entry.guest.getName(), 18),
+                profile.getTier(),
+                profile.getCompletedStays(),
+                entry.periodStayCount,
+                nextTierProgress(profile)
+        );
+    }
 
         System.out.println("-".repeat(142));
         System.out.println("LOYALTY TIER SUMMARY");
@@ -155,7 +148,7 @@ public class VipLoyaltyStayPerformanceRP {
             System.out.printf("%-12s %-14d %-22s%n", tier, count, shareText);
         }
 
-        RoomType mostUsedRoomType = findMostUsedRoomType(entries, bookings, roomTypeFilter, startDate, endDate);
+        
 
         System.out.println("\nMANAGEMENT SUMMARY");
         System.out.println("Matching VIP Guests         : " + entries.length);
@@ -165,13 +158,23 @@ public class VipLoyaltyStayPerformanceRP {
         System.out.println("Total Completed VIP Stays   : " + totalCompletedStays);
         System.out.printf("Average Completed Stays     : %.1f stay(s)%n", (double) totalCompletedStays / entries.length);
         System.out.println("Matching Booking Stays      : " + totalPeriodStays);
-        System.out.println("Currently Waiting VIPs      : " + waitingCount);
-        System.out.println("Currently In-House VIPs     : " + inHouseCount);
-        System.out.println("Profile Only VIPs           : " + profileOnlyCount);
-        System.out.println("VIPs Near Next Tier (<=2)   : " + nearUpgradeCount);
         System.out.println("Most Active VIP             : " + (mostActive == null ? "-" : mostActive.guest.getName() + " (" + mostActive.guest.getGuestId() + ", " + mostActive.profile.getCompletedStays() + " stays)"));
-        System.out.println("Most Used VIP Room Type     : " + (mostUsedRoomType == null ? "-" : formatRoomType(mostUsedRoomType.name())));
         System.out.println("=".repeat(142));
+
+        System.out.println("\nMANAGEMENT SUGGESTION");
+
+        if (nearUpgradeCount > 0) {
+
+            System.out.println( nearUpgradeCount + " VIP guest(s) are close to the next loyalty tier.");
+
+            System.out.println("Suggestion: Offer personalised promotions or stay packages " + "to encourage repeat visits.");
+
+        } else {
+
+            System.out.println("No VIP guests are currently close to the next loyalty tier.");
+
+            System.out.println("Suggestion: Continue monitoring VIP stay frequency "+ "and loyalty activity.");
+        }
     }
 
     private String findActivity(String guestId, WalkInRegistration[] registrations, Booking[] currentVipBookings) {

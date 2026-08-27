@@ -69,8 +69,14 @@ public class VipPriorityAllocationPerformanceRP {
 
     private void printReport(AllocationEntry[] entries, String keyword, LoyaltyTier tierFilter, String roomTypeFilter, String statusFilter, LocalDate startDate, LocalDate endDate, int minimumGuests, int sortOption) {
         System.out.println("\n" + "=".repeat(142));
-        System.out.println("                                      VIP PRIORITY ALLOCATION PERFORMANCE REPORT");
+        System.out.println("                                      VIP ROOM ALLOCATION & WAITING TIME REPORT");
         System.out.println("=".repeat(142));
+        System.out.println("REPORT PURPOSE");
+        System.out.println("To monitor VIP waiting time and evaluate the effectiveness " + "of priority-based room allocation." );
+        System.out.println();
+        System.out.println("HOTEL VALUE");
+        System.out.println("Helps Front Desk and hotel management identify long VIP " + "waiting times, room shortages and allocation bottlenecks.");
+        System.out.println("-".repeat(142));
         System.out.println("Generated On        : " + LocalDateTime.now().format(DATE_TIME_FORMAT));
         System.out.println("Report Period       : " + formatPeriod(startDate, endDate));
         System.out.println("Search Keyword      : " + displayFilter(keyword));
@@ -91,7 +97,7 @@ public class VipPriorityAllocationPerformanceRP {
 
         System.out.printf(
                 "%-4s %-7s %-8s %-17s %-10s %-16s %-12s %-6s %-12s %-16s %-9s%n",
-                "No.", "Reg ID", "Guest ID", "Guest Name", "Tier", "Room Request", "Status", "Room", "Confirm No.", "Registered At", "Wait Min");
+                "No.", "Reg ID", "Guest ID", "Guest Name", "Tier", "Room Request", "Status", "Room", "Confirm No.", "Request Time", "Waiting Time");
         System.out.println("-".repeat(142));
 
         int allocated = 0;
@@ -160,7 +166,7 @@ public class VipPriorityAllocationPerformanceRP {
                     getRoomNumber(entry),
                     getConfirmation(entry),
                     registration.getRegistrationTime().format(DATE_TIME_FORMAT),
-                    entry.waitMinutes < 0 ? "-" : Long.toString(entry.waitMinutes));
+                    entry.waitMinutes < 0 ? "-": formatWaitingTime(entry.waitMinutes));
         }
 
         System.out.println("-".repeat(142));
@@ -172,7 +178,7 @@ public class VipPriorityAllocationPerformanceRP {
             if (tierRequests[index] == 0) {
                 continue;
             }
-            String average = tierWaitCount[index] == 0 ? "-" : String.format("%.1f min", (double) tierWaitTotal[index] / tierWaitCount[index]);
+            String average = tierWaitCount[index] == 0? "-": formatWaitingTime(Math.round((double) tierWaitTotal[index] / tierWaitCount[index]));
             System.out.printf("%-12s %-10d %-11d %-15d %-20s%n", tier, tierRequests[index], tierAllocated[index], tierRequests[index] - tierAllocated[index], average);
         }
 
@@ -198,12 +204,70 @@ public class VipPriorityAllocationPerformanceRP {
         System.out.println("Currently VIP Waiting       : " + waiting);
         System.out.println("Cancelled Requests          : " + cancelled);
         System.out.printf("Allocation Success Rate     : %.1f%%%n", successRate);
-        System.out.println("Average Allocation Wait     : " + (allocatedWithWait == 0 ? "-" : String.format("%.1f minute(s)", (double) totalAllocatedWait / allocatedWithWait)));
-        System.out.println("Longest Allocation Wait     : " + (longestEntry == null ? "-" : longestWait + " minute(s) - " + longestEntry.registration.getRegistrationId() + " / " + longestEntry.registration.getGuest().getName()));
+        
+        long averageWait =
+        allocatedWithWait == 0
+        ? -1
+        : Math.round((double) totalAllocatedWait/ allocatedWithWait);
+
+        System.out.println( "Average Allocation Wait     : " + (averageWait < 0 ? "-" : formatWaitingTime(averageWait)));
+        System.out.println("Longest Allocation Wait     : "+ (longestEntry == null ? "-" : formatWaitingTime(longestWait) + " - " + longestEntry.registration.getRegistrationId() + " / " + longestEntry.registration.getGuest().getName()));
         System.out.println("Highest Demand VIP Tier     : " + (highestDemandTier == null ? "-" : highestDemandTier));
         System.out.println("Highest Demand Room Type    : " + (highestDemandRoom == null ? "-" : formatRoomType(highestDemandRoom.name())));
+
+        System.out.println("\nMANAGEMENT SUGGESTION");
+
+if (allocatedWithWait > 0
+        && ((double) totalAllocatedWait / allocatedWithWait) >= 60) {
+
+    System.out.println(
+            "Average VIP waiting time exceeds 1 hour."
+    );
+
+    System.out.println(
+            "Suggestion: Improve room preparation and prioritise "
+            + "ready rooms for VIP requests."
+    );
+
+} else if (waiting > 0) {
+
+    System.out.println(
+            "There are still VIP guests waiting for room allocation.");
+
+    System.out.println("Suggestion: Review requested room types and coordinate " + "with Housekeeping to prepare suitable rooms earlier.");
+
+} else {
+
+    System.out.println("VIP allocation waiting time is currently under control.");
+
+    System.out.println( "Suggestion: Maintain the current priority allocation " + "and room readiness process.");
+}
+
         System.out.println("=".repeat(142));
     }
+
+    private String formatWaitingTime(long totalMinutes) {
+
+            if (totalMinutes < 0) {
+                return "-";
+            }
+
+            if (totalMinutes < 60) {
+                return totalMinutes + " min";
+            }
+
+            long hours = totalMinutes / 60;
+            long minutes = totalMinutes % 60;
+
+            if (minutes == 0) {
+                return hours + (hours == 1 ? " hr" : " hrs");
+            }
+
+            return hours
+                    + (hours == 1 ? " hr " : " hrs ")
+                    + minutes
+                    + " min";
+        }
 
     private LoyaltyProfile findProfile(LoyaltyProfile[] profiles, String guestId) {
         for (LoyaltyProfile profile : profiles) {
