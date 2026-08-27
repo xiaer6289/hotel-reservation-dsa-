@@ -76,6 +76,19 @@ public class WalkInArrivalPatternRP {
                 System.out.println(
                                 "========================================================================================");
 
+                System.out.println("REPORT PURPOSE");
+                System.out.println(
+                                "To identify peak walk-in arrival periods and guest demand patterns.");
+
+                System.out.println();
+
+                System.out.println("HOTEL VALUE");
+                System.out.println(
+                                "Helps hotel management plan front-desk staffing and room preparation before busy arrival periods.");
+
+                System.out.println(
+                                "----------------------------------------------------------------------------------------");
+
                 System.out.println(
                                 "Generated On          : "
                                                 + LocalDateTime.now()

@@ -94,7 +94,12 @@ public class GuestDao {
             new Guest("G0007", "Sarah", 60123456783L),
             new Guest("G0008", "Siti", 60123456782L),
             new Guest("G0009", "Marcus", 60123456781L),
-            new Guest("G0010", "Ming", 60123456780L)
+            new Guest("G0010", "Ming", 60123456780L),
+            new Guest("G0011", "Jason", 60189891130L),
+            new Guest("G0012", "Lai", 60126648770L),
+            new Guest("G0013", "Sheldon", 60189891131L),
+            new Guest("G0014", "Eunice", 60126640666L),
+            new Guest("G0015", "Chris", 60121112222L)
         };
     }
 }

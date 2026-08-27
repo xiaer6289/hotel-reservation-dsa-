@@ -133,13 +133,13 @@ public class LoyaltyProfileDao {
 
         return new LoyaltyProfile[] {
 
-            new LoyaltyProfile("G0001", 12), // DIAMOND
-            new LoyaltyProfile("G0002", 10), // DIAMOND
+            new LoyaltyProfile("G0011", 12), // DIAMOND
+            new LoyaltyProfile("G0012", 10), // DIAMOND
 
-            new LoyaltyProfile("G0003", 8),  // PLATINUM
-            new LoyaltyProfile("G0004", 6),  // PLATINUM
+            new LoyaltyProfile("G0013", 8),  // PLATINUM
+            new LoyaltyProfile("G0014", 6),  // PLATINUM
 
-            new LoyaltyProfile("G0005", 4)   // ELITE
+            new LoyaltyProfile("G0015", 4)   // ELITE
         };
     }
 }

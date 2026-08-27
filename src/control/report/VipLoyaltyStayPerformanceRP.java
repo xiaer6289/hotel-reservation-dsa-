@@ -158,6 +158,7 @@ public class VipLoyaltyStayPerformanceRP {
         System.out.println("Total Completed VIP Stays   : " + totalCompletedStays);
         System.out.printf("Average Completed Stays     : %.1f stay(s)%n", (double) totalCompletedStays / entries.length);
         System.out.println("Matching Booking Stays      : " + totalPeriodStays);
+        System.out.println("VIPs Near Next Tier (<=2)   : " + nearUpgradeCount);
         System.out.println("Most Active VIP             : " + (mostActive == null ? "-" : mostActive.guest.getName() + " (" + mostActive.guest.getGuestId() + ", " + mostActive.profile.getCompletedStays() + " stays)"));
         System.out.println("=".repeat(142));
 

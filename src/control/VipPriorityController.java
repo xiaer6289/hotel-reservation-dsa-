@@ -504,6 +504,24 @@ public class VipPriorityController {
         Booking booking = new Booking(confirmationNo, registration.getGuest(), suitableRoom,payment);
         bookings = appendBooking(bookings, booking);
 
+        PaymentDao paymentDao = new PaymentDao();
+
+        Payment[] savedPayments = paymentDao.loadOrSeed();
+
+        Payment[] updatedPayments =
+                new Payment[savedPayments.length + 1];
+
+        System.arraycopy(
+                savedPayments,
+                0,
+                updatedPayments,
+                0,
+                savedPayments.length);
+
+        updatedPayments[savedPayments.length] = payment;
+
+        paymentDao.saveToFile(updatedPayments);
+
         roomDao.saveToFile(rooms);
         bookingDao.saveToFile(bookings);
         registrationDao.upsert(registration);

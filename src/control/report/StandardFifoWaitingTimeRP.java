@@ -49,6 +49,19 @@ public class StandardFifoWaitingTimeRP {
         System.out.println(
                 "==============================================================================================================");
 
+        System.out.println("REPORT PURPOSE");
+        System.out.println(
+                "To monitor Standard guest waiting time and evaluate FIFO queue performance.");
+
+        System.out.println();
+
+        System.out.println("HOTEL VALUE");
+        System.out.println(
+                "Helps the hotel identify long waiting times and improve room readiness to serve Standard guests efficiently.");
+
+        System.out.println(
+                "--------------------------------------------------------------------------------------------------------------");
+
         System.out.println(
                 "Generated On          : "
                 + LocalDateTime.now().format(DATE_TIME_FORMAT));

@@ -116,8 +116,8 @@ public class VipAllocationUI {
         System.out.println("    8.  Assign Ready Room & Check In VIP");
         System.out.println();
         Utility.printSectionTitle("REPORTS");
-        System.out.println("    9.  VIP Priority Allocation Performance Report");
-        System.out.println("   10.  VIP Loyalty & Stay Performance Report");
+        System.out.println("    9.  VIP Room Allocation & Waiting Time Report");
+        System.out.println("   10.  VIP Loyalty Engagement Report");
         System.out.println("-".repeat(menuWidth));
         System.out.println("    0.  Return to Main Menu");
         System.out.println("=".repeat(menuWidth));
@@ -228,14 +228,14 @@ public class VipAllocationUI {
         }
 
         System.out.println("Suitable room = READY + requested room type + enough capacity.");
-        System.out.println("-".repeat(93));
+        System.out.println("-".repeat(127));
 
         System.out.printf(
                  "%-9s %-8s %-9s %-16s %-10s %-15s %-7s %-17s %-15s %-12s%n",
                 "Priority", "Reg ID", "Guest ID", "Guest Name", "Tier", "Requested Room", "Guests", "Request Time","Waiting Time", "Available"
         );
 
-        System.out.println("-".repeat(93));
+        System.out.println("-".repeat(127));
 
         for (int i = 0; i < registrations.length; i++) {
             String[] registration = registrations[i];
@@ -256,7 +256,7 @@ public class VipAllocationUI {
         );
         }
 
-        System.out.println("-".repeat(93));
+        System.out.println("-".repeat(127));
     }
 
     private void searchVipRegistration() {
@@ -629,7 +629,7 @@ public class VipAllocationUI {
     }
 
     private void generatePriorityAllocationPerformanceReport() {
-        displayScreenHeader("VIP PRIORITY ALLOCATION PERFORMANCE REPORT - FILTER SETUP", "Generate a management report from current and historical VIP registration and booking records.");
+        displayScreenHeader("VIP ROOM ALLOCATION & WAITING TIME REPORT - FILTER SETUP", "Generate a management report from current and historical VIP registration and booking records.");
 
         System.out.println("REPORT SCOPE");
         System.out.println("  - Uses saved VIP registration history, booking/check-in records and current loyalty tiers.");
@@ -642,7 +642,7 @@ public class VipAllocationUI {
 
         int reportAction = readMenuChoice("Select action (0-1): ", 0, 1);
         if (reportAction == 0) {
-            printActionCancelled("VIP Priority Allocation Performance Report generation cancelled.");
+            printActionCancelled("VIP Room Allocation & Waiting Time Report generation cancelled.");
             return;
         }
 
@@ -673,11 +673,11 @@ public class VipAllocationUI {
     }
 
     private void generateLoyaltyStayPerformanceReport() {
-        displayScreenHeader("VIP LOYALTY & STAY PERFORMANCE REPORT - FILTER SETUP", "Generate a management report from VIP loyalty profiles, booking history and current guest activity.");
+        displayScreenHeader("VIP LOYALTY ENGAGEMENT REPORT - FILTER SETUP", "Generate a management report from VIP loyalty profiles, booking history and current guest activity.");
 
         System.out.println("REPORT SCOPE");
         System.out.println("  - Uses all current VIP profiles, completed-stay totals and saved booking history.");
-        System.out.println("  - Current activity is shown as WAITING, IN HOUSE or PROFILE ONLY.");
+        System.out.println("  - Current activity can be used as an optional report filter.");
         System.out.println("  - The report does not depend on the current VIP waiting queue.");
         System.out.println("-".repeat(104));
         System.out.println("REPORT ACTION");
@@ -686,7 +686,7 @@ public class VipAllocationUI {
 
         int reportAction = readMenuChoice("Select action (0-1): ", 0, 1);
         if (reportAction == 0) {
-            printActionCancelled("VIP Loyalty & Stay Performance Report generation cancelled.");
+            printActionCancelled("VIP Loyalty Engagement Report generation cancelled.");
             return;
         }
 
