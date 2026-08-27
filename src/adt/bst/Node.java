@@ -4,7 +4,6 @@
  */
 package adt.bst;
 
-import java.io.Serializable;
 
 /**
  * Internal BST node. Package-private visibility prevents business modules from

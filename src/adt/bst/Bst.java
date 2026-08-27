@@ -4,9 +4,6 @@
  */
 package adt.bst;
 
-import java.io.Serializable;
-
-
 /**
  * Generic Binary Search Tree implementation.
  *
