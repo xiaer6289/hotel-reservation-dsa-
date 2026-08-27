@@ -8,13 +8,16 @@ import entity.Booking;
 import entity.Guest;
 import entity.Payment;
 import entity.Room;
+import dao.GuestDao;
+import dao.RoomDao;
+import dao.PaymentDao;
+import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
+import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
+import java.io.PrintWriter;
 
 /**
  *
@@ -23,15 +26,20 @@ import java.io.ObjectOutputStream;
 public class BookingDao {
     private String fileName = "booking.dat";
     private static final String[] CONFIRMATION_NOS =
-        {"10000001", "10000002", "10000003", "10000004", "10000005"};
+        {"10000001", "10000002", "10000003", "10000004", "10000005",
+     "10000006", "10000007", "10000008", "10000009", "10000010"};
     
     public void saveToFile(Booking[] bookings) {
         File file = new File(fileName);
         System.out.println("saving to: " + file.getAbsolutePath());
-        try {
-            ObjectOutputStream ooStream = new ObjectOutputStream(new FileOutputStream(file));
-            ooStream.writeObject(bookings);
-            ooStream.close();
+        try (PrintWriter writer = new PrintWriter(new FileWriter(file))) {
+            for (Booking booking : bookings) {
+                if (booking == null) continue;
+                writer.println(booking.getConfirmationNo() + "|"
+                        + booking.getGuest().getGuestId() + "|"
+                        + booking.getRoom().getRoomNumber() + "|"
+                        + booking.getPayment().getPaymentId());
+            }
         } catch (FileNotFoundException ex) {
             System.out.println("\n" + fileName + " not found");
             ex.printStackTrace();
@@ -41,31 +49,63 @@ public class BookingDao {
         }
     }
     
+    /**
+     * No-arg convenience overload used by controllers that do not hold
+     * pre-loaded Guest/Room/Payment arrays. Each dependency is loaded from its
+     * own DAO file before delegating to the three-arg method.
+     */
     public Booking[] retrieveFromFile() {
+        Guest[]   guests   = new GuestDao().loadOrSeed();
+        Room[]    rooms    = new RoomDao().loadOrSeed();
+        Payment[] payments = new PaymentDao().loadOrSeed();
+        return retrieveFromFile(guests, rooms, payments);
+    }
+
+    public Booking[] retrieveFromFile(Guest[] guests, Room[] rooms, Payment[] payments) {
         File file = new File(fileName);
-        Booking[] bookings = new Booking[0];
-        try {
-            ObjectInputStream oiStream = new ObjectInputStream(new FileInputStream(file));
-            bookings = (Booking[]) (oiStream.readObject());
-            oiStream.close();
+        Booking[] temp = new Booking[100];
+        int count = 0;
+        try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                String[] parts = line.split("\\|");
+                if (parts.length < 4) continue;
+                Guest guest = findGuestById(guests, parts[1]);
+                Room room = findRoomByNumber(rooms, parts[2]);
+                Payment payment = findPaymentById(payments, parts[3]);
+                if (guest == null || room == null || payment == null) continue;
+                temp[count++] = new Booking(parts[0], guest, room, payment);
+            }
         } catch (FileNotFoundException ex) {
             System.out.println("\n" + fileName + " not found");
-            ex.printStackTrace();
         } catch (IOException ex) {
             System.out.println("\nCannot read from " + fileName);
             ex.printStackTrace();
-        } catch (ClassNotFoundException ex) {
-            System.out.println("\nclass not found");
-            ex.printStackTrace();
-        } finally {
-            return bookings;
         }
+        Booking[] bookings = new Booking[count];
+        System.arraycopy(temp, 0, bookings, 0, count);
+        return bookings;
+    }
+    
+    private Guest findGuestById(Guest[] guests, String id) {
+        for (Guest g : guests) if (g != null && g.getGuestId().equals(id)) return g;
+        return null;
+    }
+
+    private Room findRoomByNumber(Room[] rooms, String number) {
+        for (Room r : rooms) if (r != null && r.getRoomNumber().equals(number)) return r;
+        return null;
+    }
+
+    private Payment findPaymentById(Payment[] payments, String id) {
+        for (Payment p : payments) if (p != null && p.getPaymentId().equals(id)) return p;
+        return null;
     }
     
     public Booking[] loadOrSeed(Guest[] guests, Room[] rooms, Payment[] payments) {
         File file = new File(fileName);
         if (file.exists()) {
-            Booking[] loaded = retrieveFromFile();
+            Booking[] loaded = retrieveFromFile(guests, rooms, payments);
             if (loaded.length > 0) return loaded;
         }
         return seedSampleData(guests, rooms, payments);
