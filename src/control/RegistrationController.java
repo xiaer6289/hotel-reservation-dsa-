@@ -17,6 +17,7 @@ import entity.Room;
 import entity.RoomStatus;
 import entity.WalkInRegistration;
 import java.io.File;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import utility.Utility;
 
@@ -581,8 +582,31 @@ public class RegistrationController {
         bookings = appendBooking(bookings, booking);
 
         roomDao.saveToFile(rooms);
+
+        PaymentDao paymentDao = new PaymentDao();
+
+        Payment[] savedPayments
+                = paymentDao.loadOrSeed();
+
+        Payment[] updatedPayments
+                = new Payment[savedPayments.length + 1];
+
+        System.arraycopy(
+                savedPayments,
+                0,
+                updatedPayments,
+                0,
+                savedPayments.length);
+
+        updatedPayments[savedPayments.length]
+                = payment;
+
+        paymentDao.saveToFile(updatedPayments);
+
         bookingDao.saveToFile(bookings);
+
         registrationQueue.removeFirst();
+
         registrationDao.upsert(registration);
 
         return booking;
@@ -1273,16 +1297,20 @@ public class RegistrationController {
     }
 
     public String[][] getStandardWaitingQueueDisplayData() {
-        String[][] rows = new String[registrationQueue.size()][6];
+        String[][] rows = new String[registrationQueue.size()][7];
+
         for (int i = 0; i < registrationQueue.size(); i++) {
             WalkInRegistration registration = registrationQueue.get(i);
+
             rows[i][0] = registration.getRegistrationId();
             rows[i][1] = registration.getGuest().getGuestId();
             rows[i][2] = registration.getGuest().getName();
             rows[i][3] = registration.getRequestedRoomType();
             rows[i][4] = String.valueOf(registration.getNumberOfGuests());
             rows[i][5] = formatBoundaryDateTime(registration.getRegistrationTime());
+            rows[i][6] = formatWaitingTime(registration);
         }
+
         return rows;
     }
 
@@ -1315,8 +1343,66 @@ public class RegistrationController {
                     : formatBoundaryDateTime(registration.getCheckInDateTime()),
             formatBoundaryDateTime(registration.getCheckOutDateTime()),
             formatBoundaryDateTime(registration.getActualCheckOutDateTime()), 
-            String.valueOf(registration.getStatus())
+            String.valueOf(registration.getStatus()),
+            formatWaitingTime(registration)
         };
+    }
+
+    private String formatWaitingTime(
+            WalkInRegistration registration) {
+
+        if (registration == null
+                || registration.getRegistrationTime() == null) {
+            return "N/A";
+        }
+
+        LocalDateTime endTime
+                = registration.getCheckInDateTime();
+
+        if (endTime == null) {
+
+            RegistrationStatus status
+                    = registration.getStatus();
+
+            if (status != RegistrationStatus.WAITING
+                    && status != RegistrationStatus.VIP_WAITING) {
+                return "N/A";
+            }
+
+            endTime = LocalDateTime.now();
+        }
+
+        long totalMinutes = Math.max(
+                0,
+                Duration.between(
+                        registration.getRegistrationTime(),
+                        endTime)
+                        .toMinutes());
+
+        if (totalMinutes < 60) {
+            return totalMinutes
+                    + (totalMinutes == 1
+                    ? " minute"
+                    : " minutes");
+        }
+
+        long hours = totalMinutes / 60;
+        long minutes = totalMinutes % 60;
+
+        String result = hours
+                + (hours == 1
+                ? " hour"
+                : " hours");
+
+        if (minutes > 0) {
+            result += " "
+                    + minutes
+                    + (minutes == 1
+                    ? " minute"
+                    : " minutes");
+        }
+
+        return result;
     }
 
     public boolean registrationExists(String registrationId) {

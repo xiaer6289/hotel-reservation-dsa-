@@ -355,36 +355,65 @@ public class RegistrationUI {
     }
 
     private void viewWaitingQueue() {
-        System.out.println("\n===== STANDARD WAITING QUEUE  =====");
 
-        String[][] waitingRows = controller.getStandardWaitingQueueDisplayData();
-        int waitingCount = waitingRows.length;
+        System.out.println(
+                "\n===== STANDARD WAITING QUEUE =====");
+
+        String[][] waitingRows
+                = controller.getStandardWaitingQueueDisplayData();
+
+        int waitingCount
+                = waitingRows.length;
 
         if (waitingCount == 0) {
-            System.out.println("No Standard walk-in registrations are waiting.");
+
+            System.out.println(
+                    "No Standard walk-in registrations are waiting.");
+
             return;
         }
 
         System.out.printf(
-                "%-4s %-7s %-10s %-20s %-17s %-6s %-16s%n",
-                "Pos", "Reg ID", "Guest ID", "Guest Name", "Room Type", "Party", "Arrival");
-        System.out.println(
-                "----------------------------------------------------------------------------------------");
+                "%-4s %-7s %-10s %-20s %-17s %-6s %-16s %-20s%n",
+                "Pos",
+                "Reg ID",
+                "Guest ID",
+                "Guest Name",
+                "Room Type",
+                "Party",
+                "Arrival",
+                "Waiting Time");
 
-        for (int i = 0; i < waitingRows.length; i++) {
-            String[] registration = waitingRows[i];
+        System.out.println(
+                "-------------------------------------------------------------------------------------------------------------");
+
+        for (int i = 0;
+                i < waitingRows.length;
+                i++) {
+
+            String[] registration
+                    = waitingRows[i];
+
             System.out.printf(
-                    "%-4d %-7s %-10s %-20s %-17s %-6d %-16s%n",
+                    "%-4d %-7s %-10s %-20s %-17s %-6d %-16s %-20s%n",
                     i + 1,
                     registration[0],
                     registration[1],
-                    shorten(registration[2], 20),
-                    formatRoomType(registration[3]),
-                    Integer.parseInt(registration[4]),
-                    registration[5]);
+                    shorten(
+                            registration[2],
+                            20),
+                    formatRoomType(
+                            registration[3]),
+                    Integer.parseInt(
+                            registration[4]),
+                    registration[5],
+                    registration[6]);
         }
 
-        System.out.println("\nTotal Standard Guests Waiting: " + waitingCount);
+        System.out.println(
+                "\nTotal Standard Registrations Waiting: "
+                + waitingCount);
+
         System.out.println(
                 "FIFO Head / Next Standard Guest: "
                 + controller.getNextRegistrationId());
@@ -672,70 +701,53 @@ public class RegistrationUI {
     }
 
     private void generateWalkInArrivalPatternReport() {
+
         System.out.println(
                 "\n===== WALK-IN ARRIVAL PATTERN REPORT OPTIONS =====");
 
         if (controller.getTotalRegistrationCount() == 0) {
-            Utility.printInfo("No walk-in registration records are available. Showing empty report...");
-            new WalkInArrivalPatternRP().generateReport(controller, null, null, "", 0, 1);
+
+            Utility.printInfo(
+                    "No walk-in registration records are available. Showing empty report...");
+
+            new WalkInArrivalPatternRP().generateReport(
+                    controller,
+                    null,
+                    null);
+
             return;
         }
 
-        System.out.println("Date format: YYYY-MM-DD");
-        System.out.println("Press Enter to include all dates.");
+        System.out.println(
+                "Date format: YYYY-MM-DD");
+
+        System.out.println(
+                "Press Enter to include all dates.");
 
         LocalDate startDate = readOptionalDate(
                 "Start Date (Enter = No Start Date): ");
+
         LocalDate endDate = readOptionalDate(
                 "End Date (Enter = No End Date): ");
 
-        while (startDate != null && endDate != null && endDate.isBefore(startDate)) {
-            Utility.printError("End Date cannot be earlier than Start Date.");
+        while (startDate != null
+                && endDate != null
+                && endDate.isBefore(startDate)) {
+
+            Utility.printError(
+                    "End Date cannot be earlier than Start Date.");
+
             endDate = readOptionalDate(
                     "Re-enter End Date (Enter = No End Date): ");
         }
 
-        String[] roomTypes = controller.getRoomTypeNames();
+        WalkInArrivalPatternRP report
+                = new WalkInArrivalPatternRP();
 
-        System.out.println("\nFilter by Room Type:");
-        System.out.println("0. All Room Types");
-
-        for (int i = 0; i < roomTypes.length; i++) {
-            System.out.println((i + 1) + ". " + formatRoomType(roomTypes[i]));
-        }
-
-        int roomTypeChoice = readIntegerInRange(
-                "Select Room Type (0-" + roomTypes.length + "): ",
-                0,
-                roomTypes.length);
-
-        String roomTypeFilter = "";
-        if (roomTypeChoice > 0) {
-            roomTypeFilter = roomTypes[roomTypeChoice - 1];
-        }
-
-        int maximumOccupancy = controller.getMaximumRoomCapacity();
-        int minimumGuests = readIntegerInRange(
-                "Minimum Party Size (0 = All, 1-" + maximumOccupancy + "): ",
-                0,
-                maximumOccupancy);
-
-        System.out.println("\nSort Report Display By:");
-        System.out.println("1. Arrival Time (Earliest First)");
-        System.out.println("2. Arrival Time (Latest First)");
-        System.out.println("3. Party Size (Largest First)");
-
-        int sortOption = readIntegerInRange(
-                "Select Sort Option (1-3): ", 1, 3);
-
-        WalkInArrivalPatternRP report = new WalkInArrivalPatternRP();
         report.generateReport(
                 controller,
                 startDate,
-                endDate,
-                roomTypeFilter,
-                minimumGuests,
-                sortOption);
+                endDate);
     }
 
     private void displayVipAddError(int result) {
@@ -768,7 +780,8 @@ public class RegistrationUI {
         System.out.println("Requested Room    : " + formatRoomType(registration[4]));
         System.out.println("Assigned Room     : " + registration[5]);
         System.out.println("Number of Guests  : " + registration[6]);
-        System.out.println("Registration Time : " + registration[7]);
+        System.out.println("Arrival Time      : " + registration[7]);
+        System.out.println("Waiting Time      : " + registration[12]);
         System.out.println("Actual Check-In   : " + registration[8]);
         System.out.println("Expected Check-Out: " + registration[9]);
         System.out.println("Actual Check-Out  : " + registration[10]);

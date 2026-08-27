@@ -43,11 +43,11 @@ public class StandardFifoWaitingTimeRP {
         sortEntries(entries, sortOption);
 
         System.out.println(
-                "\n================================================================================================");
+                "\n==============================================================================================================");
         System.out.println(
-                "                      STANDARD FIFO WAITING TIME ANALYSIS REPORT");
+                "                                  STANDARD FIFO WAITING TIME ANALYSIS REPORT");
         System.out.println(
-                "================================================================================================");
+                "==============================================================================================================");
 
         System.out.println(
                 "Generated On          : "
@@ -67,8 +67,7 @@ public class StandardFifoWaitingTimeRP {
 
         System.out.println(
                 "Minimum Waiting Time  : "
-                + minimumWaitingMinutes
-                + " minute(s)");
+                + formatWaitingTime(minimumWaitingMinutes));
 
         System.out.println(
                 "Search Technique      : Linear Search");
@@ -78,12 +77,10 @@ public class StandardFifoWaitingTimeRP {
                 + getSortDescription(sortOption));
 
         System.out.println(
-                "------------------------------------------------------------------------------------------------");
-
-      
+                "--------------------------------------------------------------------------------------------------------------");
 
         System.out.printf(
-                "%-5s %-7s %-8s %-18s %-17s %-7s %-16s %-9s%n",
+                "%-5s %-7s %-8s %-18s %-17s %-7s %-16s %-20s%n",
                 "FIFO",
                 "Reg ID",
                 "Guest ID",
@@ -91,19 +88,23 @@ public class StandardFifoWaitingTimeRP {
                 "Room Type",
                 "Party",
                 "Arrival",
-                "Wait Min");
+                "Waiting Time");
 
         System.out.println(
-        "------------------------------------------------------------------------------------------------");
+                "--------------------------------------------------------------------------------------------------------------");
 
         if (entries.length == 0) {
-        if (controller.getWaitingCount() == 0) {
+
+            if (controller.getWaitingCount() == 0) {
+
                 System.out.println(
                         "No Standard waiting registrations are currently available.");
-        } else {
+
+            } else {
+
                 System.out.println(
                         "No Standard waiting registrations match the selected criteria.");
-        }
+            }
         }
 
         int totalGuests = 0;
@@ -118,7 +119,7 @@ public class StandardFifoWaitingTimeRP {
                     = entry.registration;
 
             System.out.printf(
-                    "%-5d %-7s %-8s %-18s %-17s %-7d %-16s %-9d%n",
+                    "%-5d %-7s %-8s %-18s %-17s %-7d %-16s %-20s%n",
                     entry.fifoPosition,
                     registration.getRegistrationId(),
                     registration.getGuest().getGuestId(),
@@ -130,7 +131,7 @@ public class StandardFifoWaitingTimeRP {
                     registration.getNumberOfGuests(),
                     registration.getRegistrationTime()
                             .format(DATE_TIME_FORMAT),
-                    entry.waitingMinutes);
+                    formatWaitingTime(entry.waitingMinutes));
 
             totalGuests
                     += registration.getNumberOfGuests();
@@ -159,7 +160,7 @@ public class StandardFifoWaitingTimeRP {
                 : (double) totalGuests / entries.length;
 
         System.out.println(
-                "------------------------------------------------------------------------------------------------");
+                "--------------------------------------------------------------------------------------------------------------");
 
         System.out.println(
                 "MANAGEMENT SUMMARY");
@@ -180,45 +181,93 @@ public class StandardFifoWaitingTimeRP {
                 "Average Party Size          : %.2f guest(s)%n",
                 averagePartySize);
 
-        System.out.printf(
-                "Average Waiting Time        : %.2f minute(s)%n",
-                averageWaitingMinutes);
+        System.out.println(
+                "Average Waiting Time        : "
+                + formatWaitingTime(
+                        Math.round(averageWaitingMinutes)));
 
         System.out.println(
                 "Longest Waiting Time        : "
-                + (longestWaitingEntry == null ? 0 : longestWaitingMinutes)
-                + " minute(s)");
+                + formatWaitingTime(
+                        longestWaitingEntry == null
+                        ? 0
+                        : longestWaitingMinutes));
 
         if (longestWaitingEntry != null) {
-        System.out.println(
-                "Longest Waiting Registration: "
-                + longestWaitingEntry.registration
-                        .getRegistrationId()
-                + " / "
-                + longestWaitingEntry.registration
-                        .getGuest()
-                        .getName());
+
+            System.out.println(
+                    "Longest Waiting Registration: "
+                    + longestWaitingEntry.registration
+                            .getRegistrationId()
+                    + " / "
+                    + longestWaitingEntry.registration
+                            .getGuest()
+                            .getName());
+
         } else {
-        System.out.println(
-                "Longest Waiting Registration: N/A");
+
+            System.out.println(
+                    "Longest Waiting Registration: N/A");
         }
 
         WalkInRegistration fifoHead
                 = controller.getNextRegistration();
 
         if (fifoHead != null) {
-        System.out.println(
-                "Current FIFO Head           : "
-                + fifoHead.getRegistrationId()
-                + " / "
-                + fifoHead.getGuest().getName());
+
+            System.out.println(
+                    "Current FIFO Head           : "
+                    + fifoHead.getRegistrationId()
+                    + " / "
+                    + fifoHead.getGuest().getName());
+
         } else {
-        System.out.println(
-                "Current FIFO Head           : N/A");
+
+            System.out.println(
+                    "Current FIFO Head           : N/A");
         }
 
         System.out.println(
-                "================================================================================================");
+                "--------------------------------------------------------------------------------------------------------------");
+
+        System.out.println(
+                "ANALYSIS & SUGGESTION");
+
+        if (entries.length == 0) {
+
+            System.out.println(
+                    "Analysis   : No matching Standard waiting data is available for analysis.");
+
+            System.out.println(
+                    "Suggestion : Continue monitoring Standard guest arrivals and waiting time.");
+
+        } else if (averageWaitingMinutes >= 60) {
+
+            System.out.println(
+                    "Analysis   : The average Standard guest waiting time exceeds 1 hour.");
+
+            System.out.println(
+                    "Suggestion : Prepare more ready rooms during busy periods to reduce guest waiting time.");
+
+        } else if (averageWaitingMinutes >= 30) {
+
+            System.out.println(
+                    "Analysis   : Standard guest waiting time is at a moderate level.");
+
+            System.out.println(
+                    "Suggestion : Monitor room readiness closely to prevent waiting time from exceeding 1 hour.");
+
+        } else {
+
+            System.out.println(
+                    "Analysis   : Standard guests are currently being served within a short waiting period.");
+
+            System.out.println(
+                    "Suggestion : Maintain the current FIFO service and room preparation performance.");
+        }
+
+        System.out.println(
+                "==============================================================================================================");
     }
 
     /**
@@ -338,14 +387,15 @@ public class StandardFifoWaitingTimeRP {
         }
     }
 
-        private boolean comesBefore(
-                WaitingEntry first,
-                WaitingEntry second,
-                int sortOption) {
+    private boolean comesBefore(
+            WaitingEntry first,
+            WaitingEntry second,
+            int sortOption) {
 
         switch (sortOption) {
 
-                case 2:
+            case 2:
+
                 int firstParty
                         = first.registration
                                 .getNumberOfGuests();
@@ -355,25 +405,29 @@ public class StandardFifoWaitingTimeRP {
                                 .getNumberOfGuests();
 
                 if (firstParty != secondParty) {
-                        return firstParty
-                                > secondParty;
+
+                    return firstParty
+                            > secondParty;
                 }
 
                 return first.fifoPosition
                         < second.fifoPosition;
 
-                case 1:
-                default:
+            case 1:
+            default:
+
                 return first.fifoPosition
                         < second.fifoPosition;
         }
-        }
+    }
+
     private boolean matchesKeyword(
             WalkInRegistration registration,
             String keyword) {
 
         if (keyword == null
                 || keyword.isBlank()) {
+
             return true;
         }
 
@@ -413,13 +467,61 @@ public class StandardFifoWaitingTimeRP {
             int sortOption) {
 
         switch (sortOption) {
+
             case 2:
-                return "Selection Sort " + "(Largest Party Size First)";
+
+                return "Selection Sort (Largest Party Size First)";
 
             case 1:
-                default:
-                return "Selection Sort " + "(Earliest Arrival First)";       
+            default:
+
+                return "Selection Sort (Earliest Arrival First)";
         }
+    }
+
+    /**
+     * Formats waiting time according to lecturer requirement:
+     * less than 60 minutes = minutes,
+     * 60 minutes or more = hours and minutes.
+     */
+    private String formatWaitingTime(
+            long totalMinutes) {
+
+        totalMinutes
+                = Math.max(
+                        0,
+                        totalMinutes);
+
+        if (totalMinutes < 60) {
+
+            return totalMinutes
+                    + (totalMinutes == 1
+                    ? " minute"
+                    : " minutes");
+        }
+
+        long hours
+                = totalMinutes / 60;
+
+        long minutes
+                = totalMinutes % 60;
+
+        String result
+                = hours
+                + (hours == 1
+                ? " hour"
+                : " hours");
+
+        if (minutes > 0) {
+
+            result += " "
+                    + minutes
+                    + (minutes == 1
+                    ? " minute"
+                    : " minutes");
+        }
+
+        return result;
     }
 
     private String displayFilter(
@@ -437,10 +539,12 @@ public class StandardFifoWaitingTimeRP {
 
         if (roomType == null
                 || roomType.isBlank()) {
+
             return "ALL";
         }
 
-        return formatRoomType(roomType);
+        return formatRoomType(
+                roomType);
     }
 
     private String formatRoomType(
@@ -448,7 +552,9 @@ public class StandardFifoWaitingTimeRP {
 
         return roomType == null
                 ? "-"
-                : roomType.replace('_', ' ');
+                : roomType.replace(
+                        '_',
+                        ' ');
     }
 
     private String shorten(
@@ -456,11 +562,13 @@ public class StandardFifoWaitingTimeRP {
             int maximumLength) {
 
         if (value == null) {
+
             return "-";
         }
 
         if (value.length()
                 <= maximumLength) {
+
             return value;
         }
 
@@ -485,9 +593,14 @@ public class StandardFifoWaitingTimeRP {
                 int fifoPosition,
                 long waitingMinutes) {
 
-            this.registration = registration;
-            this.fifoPosition = fifoPosition;
-            this.waitingMinutes = waitingMinutes;
+            this.registration
+                    = registration;
+
+            this.fifoPosition
+                    = fifoPosition;
+
+            this.waitingMinutes
+                    = waitingMinutes;
         }
     }
 }
