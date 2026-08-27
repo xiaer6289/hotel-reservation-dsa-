@@ -33,15 +33,21 @@ public class FrontDeskUI {
                     checkRoomAvailability();
                     break;
                 case 4:
-                    processCheckout();
+                    updatePaymentStatus();
                     break;
                 case 5:
-                    viewReadyRoomNotifications();
+                    updateGuestPhoneNo();
                     break;
                 case 6:
-                    roomOccupancyRP();
+                    processCheckout();
                     break;
                 case 7:
+                    viewReadyRoomNotifications();
+                    break;
+                case 8:
+                    roomOccupancyRP();
+                    break;
+                case 9:
                     billingSummaryRP();
                     break;
                 case 0: 
@@ -62,11 +68,13 @@ public class FrontDeskUI {
         System.out.println(" 1. Search Booking by Confirmation No");
         System.out.println(" 2. View All Booking");
         System.out.println(" 3. Check Room Availability");
-        System.out.println(" 4. Process Guest Check Out");
-        System.out.println(" 5. View Ready Room Notifications\n");
+        System.out.println(" 4. Update Payment Status");
+        System.out.println(" 5. Update Guest Phone No");
+        System.out.println(" 6. Process Guest Check Out");
+        System.out.println(" 7. View Ready Room Notifications\n");
         Utility.printSectionTitle("REPORTS");
-        System.out.println(" 6. Room Occupancy Report");
-        System.out.println(" 7. Billing Summary Report");
+        System.out.println(" 8. Room Occupancy Report");
+        System.out.println(" 9. Billing Summary Report");
         System.out.println(" 0. Save & Return to Main Menu");
         System.out.print(" Enter choice: ");
     }
@@ -80,7 +88,7 @@ public class FrontDeskUI {
     }
     
     private void searchBooking() {
-        System.out.print("Enter Confirmation Number (8 digits): ");
+        System.out.print(" Enter Confirmation Number (8 digits): ");
         String confirmationNo = scanner.nextLine().toLowerCase().trim();
         
         if (!Utility.isValidConfirmationNo(confirmationNo)) {
@@ -113,6 +121,107 @@ public class FrontDeskUI {
             Utility.printSuccess("Room " + roomNo + " is available.");
         } else {
             Utility.printError("Room " + roomNo + " is not available.");
+        }
+    }
+    
+    private void updatePaymentStatus() {
+        System.out.print("Enter Confirmation Number (8 digits): ");
+        String confirmationNo = scanner.nextLine().trim();
+
+        if (!Utility.isValidConfirmationNo(confirmationNo)) {
+            Utility.printError("Invalid Confirmation number format.");
+            return;
+        }
+
+        String[] booking = control.getBookingDisplayData(confirmationNo);
+        if (booking == null) {
+            Utility.printError("No booking found for " + confirmationNo);
+            return;
+        }
+        
+        System.out.println("Payment Amount: " + booking[5]);
+        System.out.println("Current Payment Status: " + booking[6]);
+        System.out.println("P = Pending, C = Completed, X = Cancelled, R = Refunded");
+        System.out.print("Enter New Payment Status: ");
+        char newStatus = scanner.nextLine().trim().toUpperCase().charAt(0);
+
+        if (newStatus != 'P' && newStatus != 'C' && newStatus != 'X' && newStatus != 'R') {
+            Utility.printError("Invalid status. Must be P, C, X, or R.");
+            return;
+        }
+
+        if (control.updatePaymentStatus(confirmationNo, newStatus)) {
+            Utility.printSuccess("Payment status updated to " + newStatus + ".");
+        } else {
+            Utility.printError("Failed to update payment status.");
+        }
+    }
+    
+    private void updateGuestPhoneNo() {
+        System.out.print("Enter Guest ID or Name: ");
+        String input = scanner.nextLine().trim();
+
+        if (input.isEmpty()) {
+            Utility.printError("Input cannot be empty.");
+            return;
+        }
+
+        String[][] matches = control.searchGuestsByIdOrName(input);
+        if (matches.length == 0) {
+            Utility.printError("No guest found matching \"" + input + "\".");
+            return;
+        }
+
+        String confirmationNo;
+        if (matches.length == 1) {
+            confirmationNo = matches[0][0];
+        } else {
+            System.out.println("\nMultiple guests matched. Please select one:");
+            System.out.printf("%-4s %-12s %-10s %-20s%n", "No.", "Conf. No", "Guest ID", "Guest Name");
+            for (int i = 0; i < matches.length; i++) {
+                System.out.printf("%-4d %-12s %-10s %-20s%n", i + 1, matches[i][0], matches[i][1], matches[i][2]);
+            }
+            System.out.print("Enter selection number (0 = Cancel): ");
+            int selection;
+            try {
+                selection = Integer.parseInt(scanner.nextLine().trim());
+            } catch (NumberFormatException ex) {
+                Utility.printError("Invalid selection.");
+                return;
+            }
+            if (selection == 0) {
+                System.out.println("Update cancelled.");
+                return;
+            }
+            if (selection < 1 || selection > matches.length) {
+                Utility.printError("Invalid selection.");
+                return;
+            }
+            confirmationNo = matches[selection - 1][0];
+        }
+
+        String[] booking = control.getBookingDisplayData(confirmationNo);
+        System.out.println("Current Phone Number: " + booking[2]);
+        System.out.print("Enter New Phone Number: ");
+        String phoneInput = scanner.nextLine().trim();
+
+        if (!Utility.isValidPhoneNo(phoneInput)) {
+            Utility.printError("Invalid phone number format.");
+            return;
+        }
+
+        long newPhoneNo;
+        try {
+            newPhoneNo = Long.parseLong(phoneInput);
+        } catch (NumberFormatException ex) {
+            Utility.printError("Invalid phone number format.");
+            return;
+        }
+
+        if (control.updateGuestPhoneNoByConfirmationNo(confirmationNo, newPhoneNo)) {
+            Utility.printSuccess("Phone number updated successfully.");
+        } else {
+            Utility.printError("Failed to update: phone number is already used by another guest.");
         }
     }
     
@@ -268,37 +377,73 @@ public class FrontDeskUI {
                 return;
         }
         
-        System.out.println("\n Availability Filter: ");
-        System.out.print(" A = Available   O = Occupied");
+        System.out.println("\n Date Range Filter: ");
+        System.out.print(" 1. Today   2. Select Month  3. Year");
         System.out.print("\nChoice: ");
-        String statusInput = scanner.nextLine().trim().toUpperCase();
-        if (!statusInput.equals("A") && !statusInput.equals("O")) {
-            Utility.printError("Invalid Option");
+        int rangeOption = getMenuChoice();
+        if (rangeOption < 1 || rangeOption > 3) {
+            Utility.printError("Invalid Option. Please try again...");
             return;
         }
-        boolean availabilityFilter = statusInput.equals("A");
-        
-        String[][] report = control.generateRoomOccupancyReportDisplay(
-                roomTypeFilter,
-                availabilityFilter);
-        
-        System.out.println("\n Filter: Room Type = " + (roomTypeFilter == null ? "ALL" : roomTypeFilter) 
-        + "  | Status = " + (availabilityFilter ? "AVAILABLE" : "OCCUPIED\n"));
-
-        String hdr = String.format("\n  %-8s %-15s %-6s %-20s %-17s %-17s",
-            "Room No", "Type", "Floor", "Guest Name", "Check-In", "Check-Out");
-        System.out.println(hdr);
-        
-        if (report.length == 0) {
-            System.out.println("  No rooms match the selected filter.");
-        } else {
-            for (String[] row : report) {
-                System.out.printf("  %-8s %-15s %-6s %-20s %-17s %-17s", 
-                row[0], row[1], row[2], row[3],
-                formatDT(row[4]), formatDT(row[5]));
+        int selectedMonth = 0;
+        String rangeLabel;
+        if (rangeOption == 1) {
+            rangeLabel = "TODAY";
+        } else if (rangeOption == 2) {
+            System.out.println("1. January   2. February  3. March     4. April");
+            System.out.println("5. May       6. June      7. July      8. August");
+            System.out.println("9. September 10. October  11. November 12. December");
+            System.out.print("Select Month: ");
+            selectedMonth = getMenuChoice();
+            if (selectedMonth < 1 || selectedMonth > 12) {
+                Utility.printError("Invalid Option. Please try again...");
+                return;
             }
+            rangeLabel = control.getMonthNameLabel(selectedMonth);
+        } else {
+            rangeLabel = String.valueOf(java.time.LocalDate.now().getYear());
         }
-        System.out.println("\n Total matching rooms: " + report.length);
+
+    String[][] report = control.generateRoomOccupancyReportDisplay(roomTypeFilter, rangeOption, selectedMonth);
+    String[] summary = control.getRoomOccupancySummary(roomTypeFilter, rangeOption, selectedMonth);
+
+    String generatedOn = java.time.LocalDateTime.now()
+            .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"));
+
+            System.out.println("=".repeat(110));
+        System.out.printf("%42s%n", "ROOM OCCUPANCY ANALYSIS REPORT");
+        System.out.println("=".repeat(110));
+        System.out.println("Generated On       : " + generatedOn);
+        System.out.println("Room Type          : " + (roomTypeFilter == null ? "ALL" : roomTypeFilter));
+        System.out.println("Date Range         : " + rangeLabel);
+        System.out.println("-".repeat(110));
+        System.out.printf("%-8s %-14s %-6s %-15s %-24s %-24s %-10s%n",
+                "Room No", "Type", "Floor", "Guest Name", "Check-In", "Check-Out", "Status");
+        System.out.println("-".repeat(110));
+        for (String[] row : report) {
+            System.out.printf("%-8s %-14s %-6s %-15s %-24s %-24s %-10s%n",
+                    row[0], row[1], row[2], row[3], row[4], row[5], row[6]);
+        }
+        System.out.println("-".repeat(110));
+        System.out.println("MANAGEMENT SUMMARY");
+        System.out.println("Matching Bookings       : " + summary[0]);
+        System.out.println("Rooms of This Type      : " + summary[1]);
+        System.out.println("Days in Range           : " + summary[2]);
+        System.out.println("Occupied Room-Days      : " + summary[3]);
+        System.out.println("Total Room-Days         : " + summary[4]);
+        System.out.println("Occupancy Rate          : " + summary[5] + "%");
+        System.out.println("=".repeat(110));
+
+        double rate = Double.parseDouble(summary[5]);
+        if (rate >= 80) {
+            System.out.println("Suggestion: High demand detected — consider dynamic/premium pricing and prioritize fast housekeeping turnaround.");
+        } else if (rate >= 50) {
+            System.out.println("Suggestion: Occupancy is healthy and stable — no immediate action needed.");
+        } else if (rate >= 20) {
+            System.out.println("Suggestion: Below-average occupancy — consider promotions or targeted marketing for underused room types.");
+        } else {
+            System.out.println("Suggestion: Low occupancy — recommend reviewing pricing strategy or investigating underlying causes.");
+        }
     }
     
     private void billingSummaryRP() {
@@ -307,44 +452,54 @@ public class FrontDeskUI {
         System.out.println(" P = Pending  C = Completed  X = Cancelled  R = Refunded");
         System.out.print(" Choice: ");
         String statusInput = scanner.nextLine().trim().toUpperCase();
-        
+
         if (statusInput.isEmpty()) {
             Utility.printError("No input entered.");
             return;
         }
-
         char status = statusInput.charAt(0);
         if (status != 'P' && status != 'C' && status != 'X' && status != 'R') {
             Utility.printError("Invalid Status. Enter P, C, X or R");
             return;
         }
-
         String[][] report = control.generateBillingSummaryReportDisplay(status);
-        double total = control.getBillingSummaryTotal(status);
-        
-        System.out.println("\n  Filter: Status = " + status + "\n");
+        String[] summary = control.getBillingSummaryBreakdown(status);
 
-        String hdr = String.format("\n  %-12s %-20s %-15s %-12s %-10s",
-            "Conf. No", "Guest Name", "Room Type", "Amount (RM)", "Status");
-        System.out.println(hdr);
-        System.out.println("  " + "-".repeat(hdr.trim().length() + 2));
-
-        if (report.length == 0) {
-            System.out.println("  No bookings match the selected status.");
-        } else {
-            for (String[] booking : report) {
-                System.out.printf("  %-12s %-20s %-15s %-12.2f %-10s%n", 
-                        booking[0], booking[1], booking[2],
-                        Double.parseDouble(booking[3]), booking[4]);
-            }
+        String generatedOn = java.time.LocalDateTime.now()
+            .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"));
+        System.out.println("=".repeat(70));
+        System.out.printf("%40s%n", "BILLING SUMMARY ANALYSIS REPORT");
+        System.out.println("=".repeat(70));
+        System.out.println("Generated On       : " + generatedOn);
+        System.out.println("Payment Status     : " + status);
+        System.out.println("-".repeat(70));
+        System.out.printf("%-12s %-15s %-14s %-10s %-10s%n",
+                "Conf. No", "Guest Name", "Room Type", "Amount", "Status");
+        System.out.println("-".repeat(70));
+        for (String[] row : report) {
+            System.out.printf("%-12s %-15s %-14s %-10.2f %-10s%n",
+                    row[0], row[1], row[2], Double.parseDouble(row[3]), row[4]);
         }
-        
-        System.out.printf("\n  Total Revenue: RM %.2f  |  Bookings count: %d%n", total, report.length);
-            
+        System.out.println("-".repeat(70));
+        System.out.println("MANAGEMENT SUMMARY");
+        System.out.println("Matching Bookings        : " + summary[0]);
+        System.out.println("Completed                : " + summary[1]);
+        System.out.println("Pending                  : " + summary[2]);
+        System.out.println("Cancelled                : " + summary[3]);
+        System.out.println("Refunded                 : " + summary[4]);
+        System.out.println("Total Revenue (Completed): RM " + summary[5]);
+        System.out.println("=".repeat(70));
+        int pending = Integer.parseInt(summary[2]);
+        if (pending > 0) {
+            System.out.println("Suggestion: " + pending + " pending payment(s) detected — recommend following up before checkout.");
+        } else {
+            System.out.println("Suggestion: No pending payments outstanding in this view.");
+        }
     }
 
     private String selectStaff(Scanner scanner) {
-        Utility.printSectionTitle("\nSELECT STAFF");
+        System.out.println();
+        Utility.printSectionTitle("SELECT STAFF");
         System.out.println(" 1. S001 - Tan");
         System.out.println(" 2. S002 - Choo");
         System.out.println(" 3. S003 - Michelle");

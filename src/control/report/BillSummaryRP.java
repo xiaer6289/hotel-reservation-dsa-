@@ -49,4 +49,12 @@ public class BillSummaryRP {
         }
         return total;
     }
+    
+    public int countByStatus(Booking[] bookings, char status) {
+        int count = 0;
+        for (Booking booking : bookings) {
+            if (booking != null && booking.getPayment().getStatus() == status) count++;
+        }
+        return count;
+    }
 }

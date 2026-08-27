@@ -18,6 +18,9 @@ import entity.Room;
 import entity.RoomStatus;
 import entity.TaskLogEntry;
 import entity.WalkInRegistration;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
 
 /**
  *
@@ -447,21 +450,113 @@ public class FrontDeskControl implements RoomAvailabilityNotifier.RoomReadyListe
         }
         return rows;
     }
+    
+    public boolean updatePaymentStatus(String confirmationNo, char newStatus) {
+        Booking booking = bookingBst.search(confirmationNo);
+        if (booking == null || booking.getPayment() == null) return false;
+        
+        booking.getPayment().setStatus(newStatus);
+        bookingBst.insert(confirmationNo, booking);
+        return true;
+    }
+    
+    public String[][] searchGuestsByIdOrName(String guestIdOrName) {
+        Booking[] matches = findBookingsByGuestIdOrName(guestIdOrName.trim());
+        String[][] rows = new String[matches.length][3];
+        for (int i = 0; i < matches.length; i++) {
+            rows[i][0] = matches[i].getConfirmationNo();
+            rows[i][1] = matches[i].getGuest().getGuestId();
+            rows[i][2] = matches[i].getGuest().getName();
+        }
+        return rows;
+    }
 
-    public String[][] generateRoomOccupancyReportDisplay(String roomTypeFilter, boolean availabilityFilter) {
+    public boolean updateGuestPhoneNoByConfirmationNo(String confirmationNo, long newPhoneNo) {
+        Booking booking = bookingBst.search(confirmationNo);
+        if (booking == null || booking.getGuest() == null) return false;
+
+        Long normalized = normalizeStoredPhoneNo(newPhoneNo);
+        if (normalized == null) return false;
+
+        if (isPhoneNoTakenByOtherGuest(normalized, confirmationNo)) return false;
+
+        booking.getGuest().setPhoneNo(normalized);
+        bookingBst.insert(confirmationNo, booking);
+        return true;
+    }
+    
+    public String[] getRoomOccupancySummary(String roomTypeFilter, int rangeOption, int selectedMonth) {
+        LocalDate[] range = computeDateRange(rangeOption, selectedMonth);
+        long daysInRange = ChronoUnit.DAYS.between(range[0], range[1]) + 1;
+
+        refreshRooms();
+        int matchingRoomCount = 0;
+        for (Room room : rooms) {
+            if (room != null && (roomTypeFilter == null || String.valueOf(room.getRoomType()).equals(roomTypeFilter))) {
+                matchingRoomCount++;
+            }
+        }
+
         control.report.RoomOccupancyRP reportGenerator = new control.report.RoomOccupancyRP();
-        Booking[] report = reportGenerator.generateReport(sortBooking(), roomTypeFilter, availabilityFilter);
-        String[][] rows = new String[report.length][6];
+        Booking[] filtered = reportGenerator.generateReport(sortBooking(), roomTypeFilter, range[0], range[1]);
+
+        long occupiedRoomDays = 0;
+        for (Booking booking : filtered) {
+            occupiedRoomDays += countOverlapDays(
+                    booking.getRoom().getCheckInDateTime(),
+                    booking.getRoom().getCheckOutDateTime(),
+                    range[0], range[1]);
+        }
+
+        long totalRoomDays = matchingRoomCount * daysInRange;
+        double occupancyRate = totalRoomDays == 0 ? 0 : (occupiedRoomDays * 100.0 / totalRoomDays);
+
+        return new String[] {
+            String.valueOf(filtered.length),
+            String.valueOf(matchingRoomCount),
+            String.valueOf(daysInRange),
+            String.valueOf(occupiedRoomDays),
+            String.valueOf(totalRoomDays),
+            String.format("%.1f", occupancyRate)
+        };
+    }
+
+    public String[][] generateRoomOccupancyReportDisplay(String roomTypeFilter, int rangeOption, int selectedMonth) {
+        LocalDate[] range = computeDateRange(rangeOption, selectedMonth);
+        control.report.RoomOccupancyRP reportGenerator = new control.report.RoomOccupancyRP();
+        Booking[] report = reportGenerator.generateReport(sortBooking(), roomTypeFilter, range[0], range[1]);
+
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SS");
+        String[][] rows = new String[report.length][7];
         for (int i = 0; i < report.length; i++) {
             Booking booking = report[i];
             rows[i][0] = booking.getRoom().getRoomNumber();
             rows[i][1] = String.valueOf(booking.getRoom().getRoomType());
             rows[i][2] = String.valueOf(booking.getRoom().getFloor());
             rows[i][3] = booking.getGuest().getName();
-            rows[i][4] = String.valueOf(booking.getRoom().getCheckInDateTime());
-            rows[i][5] = String.valueOf(booking.getRoom().getCheckOutDateTime());
+            rows[i][4] = booking.getRoom().getCheckInDateTime() == null ? "N/A" : booking.getRoom().getCheckInDateTime().format(formatter);
+            rows[i][5] = booking.getRoom().getCheckOutDateTime() == null ? "N/A" : booking.getRoom().getCheckOutDateTime().format(formatter);
+            rows[i][6] = booking.getRoom().isAvailability() ? "Available" : "Occupied";
         }
         return rows;
+    }
+    
+    public String[] getBillingSummaryBreakdown(char statusFilter) {
+        control.report.BillSummaryRP reportGenerator = new control.report.BillSummaryRP();
+        Booking[] filtered = reportGenerator.generateReport(sortBooking(), statusFilter);
+        int completed = reportGenerator.countByStatus(filtered, 'C');
+        int pending = reportGenerator.countByStatus(filtered, 'P');
+        int cancelled = reportGenerator.countByStatus(filtered, 'X');
+        int refunded = reportGenerator.countByStatus(filtered, 'R');
+        double totalRevenue = reportGenerator.calcTotalRevenue(filtered);
+        return new String[] {
+            String.valueOf(filtered.length),
+            String.valueOf(completed),
+            String.valueOf(pending),
+            String.valueOf(cancelled),
+            String.valueOf(refunded),
+            String.format("%.2f", totalRevenue)
+        };
     }
 
     public String[][] generateBillingSummaryReportDisplay(char statusFilter) {
@@ -483,6 +578,111 @@ public class FrontDeskControl implements RoomAvailabilityNotifier.RoomReadyListe
         control.report.BillSummaryRP reportGenerator = new control.report.BillSummaryRP();
         Booking[] report = reportGenerator.generateReport(sortBooking(), statusFilter);
         return reportGenerator.calcTotalRevenue(report);
+    }
+    
+    public String getMonthNameLabel(int month) {
+        return getMonthName(month);
+    }
+    
+    private boolean isPhoneNoTakenByOtherGuest(Long normalizedPhoneNo, String excludeConfirmationNo) {
+        final boolean[] taken = {false};
+        bookingBst.inorderTraversal(booking -> {
+            if (booking.getConfirmationNo().equals(excludeConfirmationNo)) return;
+            if (booking.getGuest() == null || booking.getGuest().getPhoneNo() == null) return;
+
+            Long existingNormalized = normalizeStoredPhoneNo(booking.getGuest().getPhoneNo());
+            if (existingNormalized != null && existingNormalized.equals(normalizedPhoneNo)) {
+                taken[0] = true;
+            }
+        });
+        return taken[0];
+    }
+    
+    private Long normalizeStoredPhoneNo(Long phoneNumber) {
+        if (phoneNumber == null) {
+            return null;
+        }
+        String digits = String.valueOf(phoneNumber);
+        if (digits.startsWith("60")
+                && (digits.length() == 11 || digits.length() == 12)) {
+            return phoneNumber;
+        }
+        if (digits.startsWith("1")
+                && (digits.length() == 9 || digits.length() == 10)) {
+            try {
+                return Long.valueOf("60" + digits);
+            } catch (NumberFormatException exception) {
+                return null;
+            }
+        }
+        return phoneNumber;
+    }
+    
+    private Booking[] findBookingsByGuestIdOrName(String guestIdOrName) {
+        Booking[] temp = new Booking[bookingBst.size()];
+        final int[] count = {0};
+
+        bookingBst.inorderTraversal(booking -> {
+            if (booking.getGuest() == null) return;
+
+            boolean matchesId = booking.getGuest().getGuestId() != null
+                    && booking.getGuest().getGuestId().equalsIgnoreCase(guestIdOrName);
+            boolean matchesName = booking.getGuest().getName() != null
+                    && booking.getGuest().getName().equalsIgnoreCase(guestIdOrName);
+
+            if (matchesId || matchesName) {
+                temp[count[0]++] = booking;
+            }
+        });
+
+        Booking[] result = new Booking[count[0]];
+        System.arraycopy(temp, 0, result, 0, count[0]);
+        return result;
+    }
+    
+    private LocalDate[] computeDateRange(int rangeOption, int selectedMonth) {
+        LocalDate today = LocalDate.now();
+        int year = today.getYear();
+
+        switch (rangeOption) {
+            case 1:
+                return new LocalDate[]{today, today};
+            case 2:
+                LocalDate firstOfMonth = LocalDate.of(year, selectedMonth, 1);
+                return new LocalDate[]{firstOfMonth, firstOfMonth.withDayOfMonth(firstOfMonth.lengthOfMonth())};
+            case 3:
+                return new LocalDate[]{LocalDate.of(year, 1, 1), LocalDate.of(year, 12, 31)};
+            default:
+                return new LocalDate[]{today, today};
+        }
+    }
+    
+    private long countOverlapDays(java.time.LocalDateTime checkIn, java.time.LocalDateTime checkOut, LocalDate rangeStart, LocalDate rangeEnd) {
+        if (checkIn == null || checkOut == null) return 0;
+        LocalDate bookingStart = checkIn.toLocalDate();
+        LocalDate bookingEnd = checkOut.toLocalDate();
+        LocalDate overlapStart = bookingStart.isAfter(rangeStart) ? bookingStart : rangeStart;
+        LocalDate overlapEnd = bookingEnd.isBefore(rangeEnd) ? bookingEnd : rangeEnd;
+        if (overlapStart.isAfter(overlapEnd)) return 0;
+        return ChronoUnit.DAYS.between(overlapStart, overlapEnd) + 1;
+    }
+    
+    private String getMonthName(int month) {
+        switch (month) {
+            case 1: return "JANUARY";
+            case 2: return "FEBRUARY";
+            case 3: return "MARCH";
+            case 4: return "APRIL";
+            case 5: return "MAY";
+            case 6: return "JUNE";
+            case 7: return "JULY";
+            case 8: return "AUGUST";
+            case 9: return "SEPTEMBER";
+            case 10: return "OCTOBER";
+            case 11: return "NOVEMBER";
+            case 12: return "DECEMBER";
+            default: return "UNKNOWN";
+        }
     }
 
     private String formatBoundaryDateTime(java.time.LocalDateTime value) {
