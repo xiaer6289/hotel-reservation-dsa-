@@ -66,7 +66,7 @@ public class VipLoyaltyEngagementRP {
     }
 
     private void printReport(LoyaltyEntry[] entries, Booking[] bookings, String keyword, LoyaltyTier tierFilter, String activityFilter, int minimumCompletedStays, String roomTypeFilter, LocalDate startDate, LocalDate endDate, int sortOption) {
-        final int reportWidth = 118;
+        final int reportWidth = calculateReportWidth(entries);
         String border = "=".repeat(reportWidth);
         String divider = "-".repeat(reportWidth);
 
@@ -75,28 +75,27 @@ public class VipLoyaltyEngagementRP {
         printCentered("Management Report", reportWidth);
         System.out.println(border);
 
-        printKeyValue("Generated On", LocalDateTime.now().format(DATE_TIME_FORMAT), 16);
-        printKeyValue("Purpose", "Identify repeat VIP guests and monitor progress toward the next loyalty tier.", 16);
-        printKeyValue("Hotel Value", "Supports guest retention and helps staff recognise VIPs who are close to a tier upgrade.", 16);
+        printSection("REPORT INFORMATION", divider);
+        printWrappedKeyValue("Generated On", LocalDateTime.now().format(DATE_TIME_FORMAT), 18, reportWidth);
+        printWrappedKeyValue("Purpose", "Identify repeat VIP guests and monitor progress toward the next loyalty tier.", 18, reportWidth);
+        printWrappedKeyValue("Hotel Value", "Supports guest retention and helps staff recognise VIPs who are close to a tier upgrade.", 18, reportWidth);
 
         printSection("REPORT SCOPE", divider);
-        printTwoColumnHeader("Parameter", "Selected Value", 20);
-        printTwoColumnRow("Stay Period", formatPeriod(startDate, endDate), 20);
-        printTwoColumnRow("Keyword", displayFilter(keyword), 20);
-        printTwoColumnRow("Loyalty Tier", tierFilter == null ? ALL : tierFilter.toString(), 20);
-        printTwoColumnRow("Activity", normalizeActivity(activityFilter), 20);
-        printTwoColumnRow("Minimum Stays", minimumCompletedStays == 0 ? ALL : String.valueOf(minimumCompletedStays), 20);
-        printTwoColumnRow("Room Type", roomTypeFilter == null ? ALL : formatRoomType(roomTypeFilter), 20);
+        printWrappedKeyValue("Stay Period", formatPeriod(startDate, endDate), 18, reportWidth);
+        printWrappedKeyValue("Keyword", displayFilter(keyword), 18, reportWidth);
+        printWrappedKeyValue("Loyalty Tier", tierFilter == null ? ALL : tierFilter.toString(), 18, reportWidth);
+        printWrappedKeyValue("Activity", normalizeActivity(activityFilter), 18, reportWidth);
+        printWrappedKeyValue("Minimum Stays", minimumCompletedStays == 0 ? ALL : String.valueOf(minimumCompletedStays), 18, reportWidth);
+        printWrappedKeyValue("Room Type", roomTypeFilter == null ? ALL : formatRoomType(roomTypeFilter), 18, reportWidth);
 
         printSection("ANALYSIS METHOD", divider);
-        printTwoColumnHeader("Method", "Implementation", 20);
-        printTwoColumnRow("Search", "Linear Search", 20);
-        printTwoColumnRow("Sort", "Selection Sort - " + sortDescription(sortOption), 20);
+        printWrappedKeyValue("Search", "Linear Search", 18, reportWidth);
+        printWrappedKeyValue("Sort", "Selection Sort - " + sortDescription(sortOption), 18, reportWidth);
 
         if (entries.length == 0) {
             printSection("REPORT RESULT", divider);
-            System.out.println("No VIP loyalty records match the selected report criteria.");
-            System.out.println("The report uses VIP profiles and booking history, so it can still run when no VIP is currently waiting.");
+            printWrappedText("No VIP loyalty records match the selected report criteria.", 2, reportWidth);
+            printWrappedText("The report uses VIP profiles and booking history, so it can still run when no VIP is currently waiting.", 2, reportWidth);
             System.out.println(border);
             return;
         }
@@ -124,29 +123,32 @@ public class VipLoyaltyEngagementRP {
         }
 
         printSection("KEY LOYALTY INDICATORS", divider);
-        printTwoColumnHeader("Indicator", "Result", 31);
-        printTwoColumnRow("Matching VIP Guests", String.valueOf(entries.length), 31);
-        printTwoColumnRow("Total Completed Stays", String.valueOf(totalCompletedStays), 31);
-        printTwoColumnRow("Matching Period Stays", String.valueOf(totalPeriodStays), 31);
-        printTwoColumnRow("Average Completed Stays", String.format("%.1f", (double) totalCompletedStays / entries.length), 31);
-        printTwoColumnRow("VIPs Near Next Tier (<=2)", String.valueOf(nearUpgradeCount), 31);
-        printTwoColumnRow("Most Active VIP", mostActive == null ? "-" : mostActive.guest.getName() + " (" + mostActive.guest.getGuestId() + ", " + mostActive.profile.getCompletedStays() + " stays)", 31);
-        printTwoColumnRow("Tier Distribution", "DIAMOND " + tierCounts[LoyaltyTier.DIAMOND.ordinal()]
+        printWrappedKeyValue("Matching VIP Guests", String.valueOf(entries.length), 29, reportWidth);
+        printWrappedKeyValue("Total Completed Stays", String.valueOf(totalCompletedStays), 29, reportWidth);
+        printWrappedKeyValue("Matching Period Stays", String.valueOf(totalPeriodStays), 29, reportWidth);
+        printWrappedKeyValue("Average Completed Stays", String.format("%.1f", (double) totalCompletedStays / entries.length), 29, reportWidth);
+        printWrappedKeyValue("VIPs Near Next Tier (<=2)", String.valueOf(nearUpgradeCount), 29, reportWidth);
+        printWrappedKeyValue("Most Active VIP", mostActive == null ? "-" : mostActive.guest.getName() + " (" + mostActive.guest.getGuestId() + ", " + mostActive.profile.getCompletedStays() + " stays)", 29, reportWidth);
+        printWrappedKeyValue("Tier Distribution", "DIAMOND " + tierCounts[LoyaltyTier.DIAMOND.ordinal()]
                 + " | PLATINUM " + tierCounts[LoyaltyTier.PLATINUM.ordinal()]
-                + " | ELITE " + tierCounts[LoyaltyTier.ELITE.ordinal()], 31);
+                + " | ELITE " + tierCounts[LoyaltyTier.ELITE.ordinal()], 29, reportWidth);
 
         printSection("VIP LOYALTY DETAIL", divider);
-        System.out.printf("%-4s  %-9s  %-22s  %-10s  %11s  %12s  %-20s%n",
+        int guestNameWidth = getGuestNameWidth(entries);
+        int nextTierWidth = getNextTierWidth(entries);
+        String detailFormat = "%-3s  %-8s  %-" + guestNameWidth + "s  %-10s  %11s  %12s  %-" + nextTierWidth + "s%n";
+
+        System.out.printf(detailFormat,
                 "No.", "Guest ID", "Guest Name", "Tier", "Total Stays", "Period Stays", "Next Tier");
-        System.out.println("-".repeat(105));
+        System.out.println(divider);
 
         for (int i = 0; i < entries.length; i++) {
             LoyaltyEntry entry = entries[i];
             LoyaltyProfile profile = entry.profile;
-            System.out.printf("%-4d  %-9s  %-22s  %-10s  %11d  %12d  %-20s%n",
+            System.out.printf(detailFormat,
                     i + 1,
                     entry.guest.getGuestId(),
-                    shorten(entry.guest.getName(), 22),
+                    entry.guest.getName(),
                     profile.getTier(),
                     profile.getCompletedStays(),
                     entry.periodStayCount,
@@ -155,7 +157,7 @@ public class VipLoyaltyEngagementRP {
 
         printSection("LOYALTY TIER DISTRIBUTION", divider);
         System.out.printf("%-14s  %12s  %12s%n", "Tier", "VIP Guests", "Share");
-        System.out.println("-".repeat(42));
+        System.out.println(divider);
         for (LoyaltyTier tier : new LoyaltyTier[]{LoyaltyTier.DIAMOND, LoyaltyTier.PLATINUM, LoyaltyTier.ELITE}) {
             int count = tierCounts[tier.ordinal()];
             if (count == 0) {
@@ -167,26 +169,53 @@ public class VipLoyaltyEngagementRP {
 
         printSection("MANAGEMENT INTERPRETATION", divider);
         if (nearUpgradeCount > 0) {
-            System.out.println(nearUpgradeCount + " VIP guest(s) are within 2 completed stays of the next loyalty tier.");
-            System.out.println("These guests are strong candidates for targeted retention offers because an upgrade is within reach.");
+            printWrappedText(nearUpgradeCount + " VIP guest(s) are within 2 completed stays of the next loyalty tier.", 2, reportWidth);
+            printWrappedText("These guests are strong candidates for targeted retention offers because an upgrade is within reach.", 2, reportWidth);
         } else {
-            System.out.println("No matching VIP guest is currently within 2 completed stays of the next loyalty tier.");
-            System.out.println("Current loyalty activity should continue to be monitored for future upgrade opportunities.");
+            printWrappedText("No matching VIP guest is currently within 2 completed stays of the next loyalty tier.", 2, reportWidth);
+            printWrappedText("Current loyalty activity should continue to be monitored for future upgrade opportunities.", 2, reportWidth);
         }
 
         printSection("RECOMMENDED ACTION", divider);
         if (nearUpgradeCount > 0) {
-            System.out.println("Offer personalised stay packages or loyalty rewards to guests who are close to a tier upgrade.");
+            printWrappedText("Offer personalised stay packages or loyalty rewards to guests who are close to a tier upgrade.", 2, reportWidth);
         } else {
-            System.out.println("Maintain regular VIP engagement and review completed-stay patterns in the next reporting period.");
+            printWrappedText("Maintain regular VIP engagement and review completed-stay patterns in the next reporting period.", 2, reportWidth);
         }
         System.out.println(border);
+    }
+
+    private int calculateReportWidth(LoyaltyEntry[] entries) {
+        int guestNameWidth = getGuestNameWidth(entries);
+        int nextTierWidth = getNextTierWidth(entries);
+        int detailWidth = 3 + 8 + guestNameWidth + 10 + 11 + 12 + nextTierWidth + (6 * 2);
+        return Math.max(116, detailWidth);
+    }
+
+    private int getGuestNameWidth(LoyaltyEntry[] entries) {
+        int width = "Guest Name".length();
+        for (LoyaltyEntry entry : entries) {
+            if (entry != null && entry.guest != null) {
+                width = Math.max(width, safeText(entry.guest.getName()).length());
+            }
+        }
+        return Math.max(width, 18);
+    }
+
+    private int getNextTierWidth(LoyaltyEntry[] entries) {
+        int width = "Next Tier".length();
+        for (LoyaltyEntry entry : entries) {
+            if (entry != null && entry.profile != null) {
+                width = Math.max(width, nextTierProgress(entry.profile).length());
+            }
+        }
+        return Math.max(width, 20);
     }
 
     private void printSection(String title, String divider) {
         System.out.println();
         System.out.println(divider);
-        System.out.println(title);
+        System.out.println(" " + title);
         System.out.println(divider);
     }
 
@@ -195,17 +224,42 @@ public class VipLoyaltyEngagementRP {
         System.out.println(" ".repeat(padding) + text);
     }
 
-    private void printKeyValue(String label, String value, int labelWidth) {
-        System.out.printf("%-" + labelWidth + "s : %s%n", label, value);
+    private void printWrappedKeyValue(String label, String value, int labelWidth, int reportWidth) {
+        String safeLabel = safeText(label);
+        String safeValue = safeText(value);
+        String prefix = String.format("%-" + labelWidth + "s : ", safeLabel);
+        String continuation = " ".repeat(labelWidth + 3);
+        int availableWidth = Math.max(20, reportWidth - prefix.length());
+        printWrappedWithPrefix(prefix, continuation, safeValue, availableWidth);
     }
 
-    private void printTwoColumnHeader(String leftHeader, String rightHeader, int leftWidth) {
-        System.out.printf("%-" + leftWidth + "s  %s%n", leftHeader, rightHeader);
-        System.out.printf("%-" + leftWidth + "s  %s%n", "-".repeat(leftWidth), "-".repeat(72));
+    private void printWrappedWithPrefix(String firstPrefix, String continuationPrefix, String text, int availableWidth) {
+        String[] words = text.trim().isEmpty() ? new String[]{"-"} : text.trim().split("\\s+");
+        StringBuilder line = new StringBuilder();
+        boolean firstLine = true;
+
+        for (String word : words) {
+            if (line.length() > 0 && line.length() + 1 + word.length() > availableWidth) {
+                System.out.println((firstLine ? firstPrefix : continuationPrefix) + line);
+                firstLine = false;
+                line.setLength(0);
+            }
+            if (line.length() > 0) {
+                line.append(' ');
+            }
+            line.append(word);
+        }
+        System.out.println((firstLine ? firstPrefix : continuationPrefix) + line);
     }
 
-    private void printTwoColumnRow(String leftValue, String rightValue, int leftWidth) {
-        System.out.printf("%-" + leftWidth + "s  %s%n", leftValue, rightValue);
+    private void printWrappedText(String text, int indent, int reportWidth) {
+        String prefix = " ".repeat(Math.max(0, indent));
+        int availableWidth = Math.max(20, reportWidth - prefix.length());
+        printWrappedWithPrefix(prefix, prefix, safeText(text), availableWidth);
+    }
+
+    private String safeText(String value) {
+        return value == null || value.isBlank() ? "-" : value;
     }
 
     private String findActivity(String guestId, WalkInRegistration[] registrations, Booking[] currentVipBookings) {
@@ -495,13 +549,6 @@ public class VipLoyaltyEngagementRP {
 
     private String formatRoomType(String roomType) {
         return roomType == null ? "-" : roomType.replace('_', ' ');
-    }
-
-    private String shorten(String value, int maximumLength) {
-        if (value == null) {
-            return "-";
-        }
-        return value.length() <= maximumLength ? value : value.substring(0, maximumLength - 3) + "...";
     }
 
     private static class LoyaltyEntry {
