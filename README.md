@@ -166,7 +166,7 @@ The generic `<T>` allows the MaxHeap to manage entity objects independently from
 ### Billing Summary Report
 - **Filters:** Payment status (Pending / Completed / Cancelled / Refunded)
 - **Sort:** Top-value bookings ranked by payment amount descending (selection sort)
-- **Purpose:** revenue review to check where th revenue comes from and how healthy is the collections
+- **Purpose:** revenue review to check where the revenue comes from and how healthy is the collections
 
 ### Standard FIFO Waiting Time Analysis Report
 - **Filters:** Registration ID / Guest ID / Guest name + Room type + Minimum party size + Minimum waiting time

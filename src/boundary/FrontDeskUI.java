@@ -465,35 +465,37 @@ public class FrontDeskUI {
         
         String[][] revenueByType = control.getBillingRevenueByRoomType(status);
         String[][] topBookings = control.getBillingTopValueBookings(status, 5);
-        String[] health = control.getBillingCollectionHealth(status);
+        String[] health = control.getBillingSummaryBreakdown(status);
 
         String generatedOn = java.time.LocalDateTime.now()
             .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"));
-        System.out.println("=".repeat(70));
+        System.out.println("=".repeat(85));
         System.out.printf("%40s%n", "BILLING SUMMARY ANALYSIS REPORT");
-        System.out.println("=".repeat(70));
+        System.out.println("=".repeat(85));
         System.out.println("Generated On       : " + generatedOn);
         System.out.println("Payment Status     : " + status);
-        System.out.println("-".repeat(70));
+        System.out.println("-".repeat(85));
         System.out.println("REVENUE BREAKDOWN BY ROOM TYPE");
         System.out.printf("%-16s %-10s %-14s %-14s %-10s%n", "Room Type", "Bookings", "Total (RM)", "Avg/Booking", "% Revenue");
         for (String[] row : revenueByType) {
             System.out.printf("%-16s %-10s %-14s %-14s %-10s%n", row[0], row[1], row[2], row[3], row[4] + "%");
         }
-        System.out.println("-".repeat(70));
+        System.out.println("-".repeat(85));
 
         System.out.println("PAYMENT COLLECTION HEALTH");
-        System.out.println("Collection Rate (Completed vs Pending) : " + health[0] + "%");
-        System.out.println("Outstanding Exposure (Pending Amount)  : RM " + health[1]);
-        System.out.println("Average Transaction Value (this filter): RM " + health[2]);
-        System.out.println("-".repeat(70));
+        System.out.println("Collection Rate (Completed vs Pending)  : " + health[0] + "% (" + health[4] + " Completed / " + health[5] + " Pending)");
+        System.out.println("Outstanding Exposure (Pending)          : RM " + health[1] + " (" + health[5] + " bookings, " + health[10] + "% of total)");
+        System.out.println("Cancelled Bookings                      : " + health[6] + " (" + health[11] + "% of total, RM " + health[13] + ")");
+        System.out.println("Refunded Bookings                       : " + health[7] + " (" + health[12] + "% of total, RM " + health[8] + ")");
+        System.out.println("Average Transaction Value (this filter) : RM " + health[2]);
+        System.out.println("-".repeat(85));
 
         System.out.println("TOP " + topBookings.length + " HIGHEST-VALUE BOOKINGS (this filter)");
         System.out.printf("%-5s %-12s %-15s %-10s%n", "Rank", "Conf. No", "Guest Name", "Amount");
         for (String[] row : topBookings) {
             System.out.printf("%-5s %-12s %-15s %-10s%n", row[0], row[1], row[2], row[3]);
         }
-        System.out.println("=".repeat(70));
+        System.out.println("=".repeat(85));
 
         double rate = Double.parseDouble(health[0]);
         if (rate < 60 && (status == 'P' || status == 'C')) {

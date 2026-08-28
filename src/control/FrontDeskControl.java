@@ -564,20 +564,43 @@ public class FrontDeskControl implements RoomAvailabilityNotifier.RoomReadyListe
     }
     
     public String[] getBillingSummaryBreakdown(char statusFilter) {
-        control.report.BillSummaryRP reportGenerator = new control.report.BillSummaryRP();
-        Booking[] filtered = reportGenerator.generateReport(sortBooking(), statusFilter);
-        int completed = reportGenerator.countByStatus(filtered, 'C');
-        int pending = reportGenerator.countByStatus(filtered, 'P');
-        int cancelled = reportGenerator.countByStatus(filtered, 'X');
-        int refunded = reportGenerator.countByStatus(filtered, 'R');
-        double totalRevenue = reportGenerator.calcTotalRevenue(filtered);
+        control.report.BillSummaryRP rp = new control.report.BillSummaryRP();
+        Booking[] all = sortBooking();
+        int total = all.length;
+
+        double rate = rp.calcCollectionRate(all);
+        double outstanding = rp.calcOutstandingAmount(all);
+        Booking[] filtered = rp.generateReport(all, statusFilter);
+        double avgValue = rp.calcAverageTransactionValue(filtered);
+
+        int completedCount = rp.countByStatus(all, 'C');
+        int pendingCount = rp.countByStatus(all, 'P');
+        int cancelledCount = rp.countByStatus(all, 'X');
+        int refundedCount = rp.countByStatus(all, 'R');
+
+        double cancelledAmount = rp.calcCancelledAmount(all);
+        double refundedAmount = rp.calcRefundedAmount(all);
+
+        double completedPct = total == 0 ? 0 : (completedCount * 100.0 / total);
+        double pendingPct = total == 0 ? 0 : (pendingCount * 100.0 / total);
+        double cancelledPct = total == 0 ? 0 : (cancelledCount * 100.0 / total);
+        double refundedPct = total == 0 ? 0 : (refundedCount * 100.0 / total);
+
         return new String[] {
-            String.valueOf(filtered.length),
-            String.valueOf(completed),
-            String.valueOf(pending),
-            String.valueOf(cancelled),
-            String.valueOf(refunded),
-            String.format("%.2f", totalRevenue)
+            String.format("%.1f", rate),  
+            String.format("%.2f", outstanding),
+            String.format("%.2f", avgValue),  
+            String.valueOf(filtered.length), 
+            String.valueOf(completedCount), 
+            String.valueOf(pendingCount), 
+            String.valueOf(cancelledCount), 
+            String.valueOf(refundedCount), 
+            String.format("%.2f", refundedAmount), 
+            String.format("%.1f", completedPct), 
+            String.format("%.1f", pendingPct), 
+            String.format("%.1f", cancelledPct), 
+            String.format("%.1f", refundedPct), 
+            String.format("%.2f", cancelledAmount) 
         };
     }
 
@@ -629,11 +652,15 @@ public class FrontDeskControl implements RoomAvailabilityNotifier.RoomReadyListe
         double outstanding = rp.calcOutstandingAmount(all);
         Booking[] filtered = rp.generateReport(all, statusFilter);
         double avgValue = rp.calcAverageTransactionValue(filtered);
+        int completedCount = rp.countByStatus(all, 'C');
+        int pendingCount = rp.countByStatus(all, 'P');
         return new String[] {
-            String.format("%1f", rate),
+            String.format("%.1f", rate),
             String.format("%.2f", outstanding),
             String.format("%.2f", avgValue),
-            String.valueOf(filtered.length)
+            String.valueOf(filtered.length),
+            String.valueOf(completedCount),
+            String.valueOf(pendingCount)
         };
     }
     

@@ -122,4 +122,24 @@ public class BillSummaryRP {
         for (Booking b : filteredBookings) total += b.getPayment().getAmount();
         return total / filteredBookings.length;
     }
+    
+    public double calcCancelledAmount(Booking[] allBookings) {
+        double total = 0;
+        for (Booking b : allBookings) {
+            if (b != null && b.getPayment().getStatus() == 'C') {
+                total += b.getPayment().getAmount();
+            }
+        }
+        return total;
+    }
+    
+    public double calcRefundedAmount(Booking[] allBookings) {
+        double total = 0;
+        for (Booking b : allBookings) {
+            if (b != null && b.getPayment().getStatus() == 'R') {
+                total += b.getPayment().getAmount();
+            }
+        }
+        return total;
+    }
 }
