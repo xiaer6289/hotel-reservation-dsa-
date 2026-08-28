@@ -310,16 +310,7 @@ public class FrontDeskUI {
             break;
         }
     
-        String staff = selectStaff(scanner);
-        if (staff == null) {
-            return;
-        }
-
-        String taskId = control.processCheckoutAndGetTaskId(
-                confirmationNo,
-                staff,
-                null
-        );
+        String taskId = control.processCheckoutAndGetTaskId(confirmationNo);
         
         if (taskId == null) {
             Utility.printError("Unable to process check-out.");
@@ -502,24 +493,6 @@ public class FrontDeskUI {
             System.out.println("Suggestion: Collection rate is below 60% — recommend following up on pending payments before checkout.");
         } else {
             System.out.println("Suggestion: Collection health is stable for the current filter.");
-        }
-    }
-
-    private String selectStaff(Scanner scanner) {
-        System.out.println();
-        Utility.printSectionTitle("SELECT STAFF");
-        System.out.println(" 1. S001 - Tan");
-        System.out.println(" 2. S002 - Choo");
-        System.out.println(" 3. S003 - Michelle");
-        System.out.print(" Enter staff choice: ");
-        int choice = getMenuChoice();
-        switch (choice) {
-            case 1: return "S001";
-            case 2: return "S002";
-            case 3: return "S003";
-            default:
-                Utility.printError("Invalid staff selection.");
-                return null;
         }
     }
 

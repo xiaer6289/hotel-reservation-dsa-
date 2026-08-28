@@ -197,3 +197,8 @@ The generic `<T>` allows the MaxHeap to manage entity objects independently from
 - **Filters:** Date + Staff + Minimum task time
 - **Sort:** Task created time / Task completion time (selection sort)
 - **Purpose:** Analyze daily housekeeping workload and staff task performance to support housekeeping supervision and operational planning
+
+### Housekeeping KPIs Report
+- **Filters:** Staff ID + Task ID + Guest ID + Guest Name + Room Type + Status + Start Date - End Date
+- **Sort:** Task Completion Time (selection sort)
+- **Purpose:** Provide a comprehensive overview of housekeeping operations, including task assignments, cleaning progress, and staff performance metrics. This report helps management monitor cleaning efficiency, identify bottlenecks, and assess staff productivity.

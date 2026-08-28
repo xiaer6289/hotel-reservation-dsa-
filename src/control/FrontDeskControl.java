@@ -111,73 +111,64 @@ public class FrontDeskControl implements RoomAvailabilityNotifier.RoomReadyListe
         return assignableRooms;
     }
 
-    public TaskLogEntry processCheckout(String confirmationNo, String staffId) {
-        return processCheckout(confirmationNo, staffId, null);
+    public TaskLogEntry processCheckout(String confirmationNo) {
+
+    if (confirmationNo == null || confirmationNo.isBlank()) {
+        return null;
     }
 
-    public TaskLogEntry processCheckout(String confirmationNo, String staffId, String remarks) {
-        if (confirmationNo == null || confirmationNo.isBlank()) {
-            return null;
-        }
+    Booking booking = searchBookingByConfirmationNo(confirmationNo.trim());
 
-        Booking booking = searchBookingByConfirmationNo(confirmationNo.trim());
-        if (booking == null) {
-            return null;
-        }
-
-        if (booking.getRoom() == null || booking.getRoom().getRoomNumber() == null) {
-            return null;
-        }
-
-        /*
-         * A historical Booking must not be allowed to check out again. A
-         * guest is considered currently checked in only when the matching
-         * WalkInRegistration is still CHECKED_IN and the live room record is
-         * still OCCUPIED for the same check-in time.
-         */
-        WalkInRegistration activeRegistration
-                = findCheckedInRegistrationForBooking(booking);
-
-        if (activeRegistration == null) {
-            return null;
-        }
-
-        /*
-         * Booking.room is a serialized snapshot of the room at booking time.
-         * Never use that snapshot as the current room-state object. The
-         * Housekeeping controller updates the shared RoomDao room instead.
-         */
-        String roomNumber = booking.getRoom().getRoomNumber();
-        Room currentRoom = findRoomByNumber(roomNumber);
-        if (currentRoom == null) {
-            return null;
-        }
-
-        boolean sameLiveStay
-                = currentRoom.getRoomStatus() == RoomStatus.OCCUPIED
-                && currentRoom.getCheckInDateTime() != null
-                && activeRegistration.getCheckInDateTime() != null
-                && currentRoom.getCheckInDateTime()
-                        .equals(activeRegistration.getCheckInDateTime());
-
-        if (!sameLiveStay) {
-            return null;
-        }
-
-        TaskLogEntry task = housekeepingController.createCheckoutTask(roomNumber, staffId, remarks);
-        if (task == null) {
-            return null;
-        }
-
-        refreshRooms();
-        
-        if (booking.getGuest() != null) {
-            registrationController.markGuestCheckedOut(
-                booking.getGuest().getGuestId());
-        }
-
-        return task;
+    if (booking == null) {
+        return null;
     }
+
+    if (booking.getRoom() == null || booking.getRoom().getRoomNumber() == null) {
+        return null;
+    }
+
+    WalkInRegistration activeRegistration = findCheckedInRegistrationForBooking(booking);
+
+    if (activeRegistration == null) {
+        return null;
+    }
+
+    String roomNumber = booking.getRoom().getRoomNumber();
+
+    Room currentRoom = findRoomByNumber(roomNumber);
+
+    if (currentRoom == null) {
+        return null;
+    }
+
+    boolean sameLiveStay = currentRoom.getRoomStatus() == RoomStatus.OCCUPIED
+            && currentRoom.getCheckInDateTime() != null
+            && activeRegistration.getCheckInDateTime() != null
+            && currentRoom.getCheckInDateTime().equals(activeRegistration.getCheckInDateTime());
+
+    if (!sameLiveStay) {
+        return null;
+    }
+
+    /*
+     * Housekeeping staff assignment is automatic.
+     * The dirty room enters the FIFO queue and the
+     * HousekeepingController assigns the next free staff.
+     */
+    TaskLogEntry task = housekeepingController.createCheckoutTask(roomNumber);
+
+    if (task == null) {
+        return null;
+    }
+
+    refreshRooms();
+
+    if (booking.getGuest() != null) {
+        registrationController.markGuestCheckedOut(booking.getGuest().getGuestId());
+    }
+
+    return task;
+}
 
     /**
      * Returns only bookings that represent guests who are currently staying
@@ -436,8 +427,10 @@ public class FrontDeskControl implements RoomAvailabilityNotifier.RoomReadyListe
         return null;
     }
 
-    public String processCheckoutAndGetTaskId(String confirmationNo, String staffId, String remarks) {
-        TaskLogEntry task = processCheckout(confirmationNo, staffId, remarks);
+    public String processCheckoutAndGetTaskId(String confirmationNo) {
+
+        TaskLogEntry task = processCheckout(confirmationNo);
+
         return task == null ? null : task.getTaskId();
     }
 

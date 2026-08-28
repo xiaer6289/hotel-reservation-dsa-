@@ -653,7 +653,7 @@ public class HousekeepingController {
             if (room == null) continue;
 
             String housekeepingStatus = mapRoomStatusToTaskStatus(room.getRoomStatus());
-            String countdown = "—";
+            String countdown = "-";
 
             // Show countdown for in-progress rooms
             if (room.getRoomStatus() == RoomStatus.CLEANING_IN_PROGRESS) {
@@ -824,7 +824,7 @@ public class HousekeepingController {
         for (int i = 0; i < taskLog.size(); i++) {
             TaskLogEntry task = taskLog.get(i);
             if (task == null || "Ready".equals(task.getStatus())) continue;
-            String countdown = "—";
+            String countdown = "-";
             if (task.isCleaningCountdownActive()) {
                 long mins = task.getRemainingCleaningMinutes();
                 countdown = mins == 0 ? "⚠ Overdue" : mins + " min left";
