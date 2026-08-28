@@ -79,10 +79,10 @@ public class VipAllocationUI {
                     allocateRoom();
                     break;
                 case 9:
-                    generatePriorityAllocationPerformanceReport();
+                    generateRoomAllocationWaitingTimeReport();
                     break;
                 case 10:
-                    generateLoyaltyStayPerformanceReport();
+                    generateLoyaltyEngagementReport();
                     break;
                 default:
                     Utility.printError("Invalid option. Please try again.");
@@ -629,7 +629,7 @@ public class VipAllocationUI {
         System.out.println("Next step: Use Confirmation No. " + booking[0] + " at Front Desk when the guest checks out.");
     }
 
-    private void generatePriorityAllocationPerformanceReport() {
+    private void generateRoomAllocationWaitingTimeReport() {
         displayScreenHeader("VIP ROOM ALLOCATION & WAITING TIME REPORT - FILTER SETUP", "Generate a management report from current and historical VIP registration and booking records.");
 
         System.out.println("REPORT SCOPE");
@@ -670,10 +670,10 @@ public class VipAllocationUI {
         int sortOption = readMenuChoice("Select sort option (1-4): ", 1, 4);
 
         Utility.clearScreen();
-        controller.generatePriorityAllocationPerformanceReport(keyword, tierFilter, roomTypeFilter, statusFilter, startDate, endDate, minimumGuests, sortOption);
+        controller.generateRoomAllocationWaitingTimeReport(keyword, tierFilter, roomTypeFilter, statusFilter, startDate, endDate, minimumGuests, sortOption);
     }
 
-    private void generateLoyaltyStayPerformanceReport() {
+    private void generateLoyaltyEngagementReport() {
         displayScreenHeader("VIP LOYALTY ENGAGEMENT REPORT - FILTER SETUP", "Generate a management report from VIP loyalty profiles, booking history and current guest activity.");
 
         System.out.println("REPORT SCOPE");
@@ -714,7 +714,7 @@ public class VipAllocationUI {
         int sortOption = readMenuChoice("Select sort option (1-5): ", 1, 5);
 
         Utility.clearScreen();
-        controller.generateLoyaltyStayPerformanceReport(
+        controller.generateLoyaltyEngagementReport(
                 keyword, tierFilter, activityFilter, minimumCompletedStays,
                 roomTypeFilter, startDate, endDate, sortOption);
     }

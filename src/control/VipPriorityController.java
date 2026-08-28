@@ -1322,14 +1322,14 @@ public class VipPriorityController {
         };
     }
 
-    public void generatePriorityAllocationPerformanceReport(String keyword, String tierName, String roomTypeFilter, String statusFilter, LocalDate startDate, LocalDate endDate, int minimumGuests, int sortOption) {
+    public void generateRoomAllocationWaitingTimeReport(String keyword, String tierName, String roomTypeFilter, String statusFilter, LocalDate startDate, LocalDate endDate, int minimumGuests, int sortOption) {
         LoyaltyTier tier = parseBoundaryTier(tierName);
-        new control.report.VipPriorityAllocationPerformanceRP().generateReport(this, keyword, tier, roomTypeFilter, statusFilter, startDate, endDate, minimumGuests, sortOption);
+        new control.report.VipRoomAllocationWaitingTimeRP().generateReport(this, keyword, tier, roomTypeFilter, statusFilter, startDate, endDate, minimumGuests, sortOption);
     }
 
-    public void generateLoyaltyStayPerformanceReport(String keyword, String tierName, String activityFilter, int minimumCompletedStays, String roomTypeFilter, LocalDate startDate, LocalDate endDate, int sortOption) {
+    public void generateLoyaltyEngagementReport(String keyword, String tierName, String activityFilter, int minimumCompletedStays, String roomTypeFilter, LocalDate startDate, LocalDate endDate, int sortOption) {
         LoyaltyTier tier = parseBoundaryTier(tierName);
-        new control.report.VipLoyaltyStayPerformanceRP().generateReport(this, keyword, tier, activityFilter, minimumCompletedStays, roomTypeFilter, startDate, endDate, sortOption);
+        new control.report.VipLoyaltyEngagementRP().generateReport(this, keyword, tier, activityFilter, minimumCompletedStays, roomTypeFilter, startDate, endDate, sortOption);
     }
 
     private LoyaltyTier parseBoundaryTier(String tierName) {

@@ -13,14 +13,14 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
 /**
- * Management report for VIP priority room-allocation performance.
+ * Management report for VIP room allocation and waiting-time performance.
  * Uses historical/current registrations plus booking records rather than only
  * the current VIP waiting heap. Linear search/filtering and Selection Sort are
  * implemented explicitly to satisfy the report-generation requirements.
  *
  * @author Low Enn Toong
  */
-public class VipPriorityAllocationPerformanceRP {
+public class VipRoomAllocationWaitingTimeRP {
     private static final DateTimeFormatter DATE_TIME_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
     private static final String ALL = "ALL";
 
@@ -68,37 +68,40 @@ public class VipPriorityAllocationPerformanceRP {
     }
 
     private void printReport(AllocationEntry[] entries, String keyword, LoyaltyTier tierFilter, String roomTypeFilter, String statusFilter, LocalDate startDate, LocalDate endDate, int minimumGuests, int sortOption) {
-        System.out.println("\n" + "=".repeat(153));
-        System.out.println("                                      VIP ROOM ALLOCATION & WAITING TIME REPORT");
-        System.out.println("=".repeat(153));
-        System.out.println("REPORT PURPOSE");
-        System.out.println("To monitor VIP waiting time and evaluate the effectiveness " + "of priority-based room allocation." );
-        System.out.println();
-        System.out.println("HOTEL VALUE");
-        System.out.println("Helps Front Desk and hotel management identify long VIP " + "waiting times, room shortages and allocation bottlenecks.");
-        System.out.println("-".repeat(153));
-        System.out.println("Generated On        : " + LocalDateTime.now().format(DATE_TIME_FORMAT));
-        System.out.println("Report Period       : " + formatPeriod(startDate, endDate));
-        System.out.println("Search Keyword      : " + displayFilter(keyword));
-        System.out.println("Loyalty Tier        : " + (tierFilter == null ? ALL : tierFilter));
-        System.out.println("Requested Room Type : " + (roomTypeFilter == null ? ALL : formatRoomType(roomTypeFilter)));
-        System.out.println("Registration Status : " + normalizeStatus(statusFilter));
-        System.out.println("Minimum Party Size  : " + (minimumGuests == 0 ? ALL : minimumGuests + " guest(s)"));
-        System.out.println("Search Technique    : Linear Search with Multiple Criteria Filters");
-        System.out.println("Sorting Technique   : Selection Sort - " + sortDescription(sortOption));
-        System.out.println("-".repeat(153));
+        final int reportWidth = 124;
+        String border = "=".repeat(reportWidth);
+        String divider = "-".repeat(reportWidth);
+
+        System.out.println("\n" + border);
+        printCentered("VIP ROOM ALLOCATION & WAITING TIME REPORT", reportWidth);
+        printCentered("Operational Performance Report", reportWidth);
+        System.out.println(border);
+
+        printKeyValue("Generated On", LocalDateTime.now().format(DATE_TIME_FORMAT), 16);
+        printKeyValue("Purpose", "Monitor VIP waiting time and evaluate priority-based room allocation performance.", 16);
+        printKeyValue("Hotel Value", "Highlights long waits, room shortages and allocation bottlenecks for faster operational action.", 16);
+
+        printSection("REPORT SCOPE", divider);
+        printTwoColumnHeader("Parameter", "Selected Value", 20);
+        printTwoColumnRow("Report Period", formatPeriod(startDate, endDate), 20);
+        printTwoColumnRow("Keyword", displayFilter(keyword), 20);
+        printTwoColumnRow("Loyalty Tier", tierFilter == null ? ALL : tierFilter.toString(), 20);
+        printTwoColumnRow("Room Type", roomTypeFilter == null ? ALL : formatRoomType(roomTypeFilter), 20);
+        printTwoColumnRow("Status", normalizeStatus(statusFilter), 20);
+        printTwoColumnRow("Minimum Party", minimumGuests == 0 ? ALL : minimumGuests + " guest(s)", 20);
+
+        printSection("ANALYSIS METHOD", divider);
+        printTwoColumnHeader("Method", "Implementation", 20);
+        printTwoColumnRow("Search", "Linear Search", 20);
+        printTwoColumnRow("Sort", "Selection Sort - " + sortDescription(sortOption), 20);
 
         if (entries.length == 0) {
+            printSection("REPORT RESULT", divider);
             System.out.println("No VIP allocation records match the selected report criteria.");
-            System.out.println("The report can still be generated even when the current VIP waiting queue is empty.");
-            System.out.println("=".repeat(153));
+            System.out.println("The report uses historical and current VIP registrations, so it can run even when the waiting queue is empty.");
+            System.out.println(border);
             return;
         }
-
-        System.out.printf(
-                "%-4s %-7s %-8s %-17s %-10s %-16s %-12s %-6s %-12s %-16s %-20s%n",
-                "No.", "Reg ID", "Guest ID", "Guest Name", "Tier", "Room Request", "Status", "Room", "Confirm No.", "Request Time", "Waiting Time");
-        System.out.println("-".repeat(153));
 
         int allocated = 0;
         int waiting = 0;
@@ -115,8 +118,7 @@ public class VipPriorityAllocationPerformanceRP {
         int[] roomRequests = new int[RoomType.values().length];
         int[] roomAllocated = new int[RoomType.values().length];
 
-        for (int i = 0; i < entries.length; i++) {
-            AllocationEntry entry = entries[i];
+        for (AllocationEntry entry : entries) {
             WalkInRegistration registration = entry.registration;
             boolean wasAllocated = registration.getCheckInDateTime() != null;
 
@@ -153,97 +155,131 @@ public class VipPriorityAllocationPerformanceRP {
                     roomAllocated[roomIndex]++;
                 }
             }
-
-            System.out.printf(
-                    "%-4d %-7s %-8s %-17s %-10s %-16s %-12s %-6s %-12s %-16s %-20s%n",
-                    i + 1,
-                    registration.getRegistrationId(),
-                    registration.getGuest().getGuestId(),
-                    shorten(registration.getGuest().getName(), 17),
-                    entry.profile.getTier(),
-                    shorten(formatRoomType(registration.getRequestedRoomType()), 16),
-                    shorten(registration.getStatus().toString(), 12),
-                    getRoomNumber(entry),
-                    getConfirmation(entry),
-                    registration.getRegistrationTime().format(DATE_TIME_FORMAT),
-                    entry.waitMinutes < 0 ? "-": formatWaitingTime(entry.waitMinutes));
         }
 
-        System.out.println("-".repeat(153));
-        System.out.println("TIER PERFORMANCE SUMMARY");
-        System.out.printf("%-12s %-10s %-11s %-15s %-20s%n", "Tier", "Requests", "Allocated", "Not Allocated", "Avg Allocation Wait");
+        LoyaltyTier highestDemandTier = findHighestDemandTier(tierRequests);
+        RoomType highestDemandRoom = findHighestDemandRoom(roomRequests);
+        double successRate = (double) allocated * 100.0 / entries.length;
+        long averageWait = allocatedWithWait == 0
+                ? -1
+                : Math.round((double) totalAllocatedWait / allocatedWithWait);
 
+        printSection("KEY ALLOCATION INDICATORS", divider);
+        printTwoColumnHeader("Indicator", "Result", 31);
+        printTwoColumnRow("Matching VIP Requests", String.valueOf(entries.length), 31);
+        printTwoColumnRow("Successfully Allocated", String.valueOf(allocated), 31);
+        printTwoColumnRow("Currently VIP Waiting", String.valueOf(waiting), 31);
+        printTwoColumnRow("Cancelled Requests", String.valueOf(cancelled), 31);
+        printTwoColumnRow("Allocation Success Rate", String.format("%.1f%%", successRate), 31);
+        printTwoColumnRow("Average Allocation Wait", averageWait < 0 ? "-" : formatWaitingTime(averageWait), 31);
+        printTwoColumnRow("Longest Allocation Wait", longestEntry == null
+                ? "-"
+                : formatWaitingTime(longestWait) + " - " + longestEntry.registration.getRegistrationId()
+                + " / " + longestEntry.registration.getGuest().getName(), 31);
+        printTwoColumnRow("Highest Demand VIP Tier", highestDemandTier == null ? "-" : highestDemandTier.toString(), 31);
+        printTwoColumnRow("Highest Demand Room Type", highestDemandRoom == null ? "-" : formatRoomType(highestDemandRoom.name()), 31);
+
+        printSection("VIP REQUEST DETAIL", divider);
+        System.out.printf("%-4s  %-7s  %-24s  %-10s  %-16s  %-13s  %-16s  %-16s%n",
+                "No.", "Reg ID", "Guest (ID)", "Tier", "Room Request", "Status", "Request Time", "Waiting Time");
+        System.out.println("-".repeat(120));
+
+        for (int i = 0; i < entries.length; i++) {
+            AllocationEntry entry = entries[i];
+            WalkInRegistration registration = entry.registration;
+            String guestDisplay = registration.getGuest().getName() + " (" + registration.getGuest().getGuestId() + ")";
+            System.out.printf("%-4d  %-7s  %-24s  %-10s  %-16s  %-13s  %-16s  %-16s%n",
+                    i + 1,
+                    registration.getRegistrationId(),
+                    shorten(guestDisplay, 24),
+                    entry.profile.getTier(),
+                    shorten(formatRoomType(registration.getRequestedRoomType()), 16),
+                    shorten(registration.getStatus().toString(), 13),
+                    registration.getRegistrationTime().format(DATE_TIME_FORMAT),
+                    entry.waitMinutes < 0 ? "-" : formatWaitingTime(entry.waitMinutes));
+        }
+
+        printSection("TIER PERFORMANCE", divider);
+        System.out.printf("%-14s   %10s   %11s   %14s   %-20s%n",
+                "Tier", "Requests", "Allocated", "Not Allocated", "Avg Wait");
+        System.out.println("-".repeat(85));
         for (LoyaltyTier tier : new LoyaltyTier[]{LoyaltyTier.DIAMOND, LoyaltyTier.PLATINUM, LoyaltyTier.ELITE}) {
             int index = tier.ordinal();
             if (tierRequests[index] == 0) {
                 continue;
             }
-            String average = tierWaitCount[index] == 0? "-": formatWaitingTime(Math.round((double) tierWaitTotal[index] / tierWaitCount[index]));
-            System.out.printf("%-12s %-10d %-11d %-15d %-20s%n", tier, tierRequests[index], tierAllocated[index], tierRequests[index] - tierAllocated[index], average);
+            String average = tierWaitCount[index] == 0
+                    ? "-"
+                    : formatWaitingTime(Math.round((double) tierWaitTotal[index] / tierWaitCount[index]));
+            System.out.printf("%-14s   %10d   %11d   %14d   %-20s%n",
+                    tier,
+                    tierRequests[index],
+                    tierAllocated[index],
+                    tierRequests[index] - tierAllocated[index],
+                    average);
         }
 
-        System.out.println("\nROOM TYPE ALLOCATION SUMMARY");
-        System.out.printf("%-22s %-10s %-11s %-16s%n", "Requested Room Type", "Requests", "Allocated", "Allocation Rate");
+        printSection("ROOM TYPE PERFORMANCE", divider);
+        System.out.printf("%-24s   %10s   %11s   %17s%n",
+                "Requested Room Type", "Requests", "Allocated", "Allocation Rate");
+        System.out.println("-".repeat(76));
         for (RoomType roomType : RoomType.values()) {
             int index = roomType.ordinal();
             if (roomRequests[index] == 0) {
                 continue;
             }
             double rate = (double) roomAllocated[index] * 100.0 / roomRequests[index];
-            String rateText = String.format("%.1f%%", rate);
-            System.out.printf("%-22s %-10d %-11d %-16s%n", formatRoomType(roomType.name()), roomRequests[index], roomAllocated[index], rateText);
+            System.out.printf("%-24s   %10d   %11d   %16.1f%%%n",
+                    formatRoomType(roomType.name()),
+                    roomRequests[index],
+                    roomAllocated[index],
+                    rate);
         }
 
-        LoyaltyTier highestDemandTier = findHighestDemandTier(tierRequests);
-        RoomType highestDemandRoom = findHighestDemandRoom(roomRequests);
-        double successRate = entries.length == 0 ? 0.0 : (double) allocated * 100.0 / entries.length;
+        printSection("MANAGEMENT INTERPRETATION", divider);
+        if (averageWait >= 60) {
+            System.out.println("Average VIP allocation waiting time is above 1 hour, indicating a significant room-readiness delay.");
+        } else if (waiting > 0) {
+            System.out.println(waiting + " VIP guest(s) are still waiting for room allocation, so current room readiness requires attention.");
+        } else {
+            System.out.println("No VIP guest is currently waiting and the observed allocation waiting time is under control.");
+        }
 
-        System.out.println("\nMANAGEMENT SUMMARY");
-        System.out.println("Matching VIP Requests       : " + entries.length);
-        System.out.println("Successfully Allocated      : " + allocated);
-        System.out.println("Currently VIP Waiting       : " + waiting);
-        System.out.println("Cancelled Requests          : " + cancelled);
-        System.out.printf("Allocation Success Rate     : %.1f%%%n", successRate);
-        
-        long averageWait =
-        allocatedWithWait == 0
-        ? -1
-        : Math.round((double) totalAllocatedWait/ allocatedWithWait);
+        printSection("RECOMMENDED ACTION", divider);
+        if (averageWait >= 60) {
+            System.out.println("Coordinate earlier room preparation with Housekeeping and prioritise ready rooms for high-priority VIP requests.");
+        } else if (waiting > 0) {
+            System.out.println("Review the requested room types of waiting VIPs and prepare suitable rooms before the queue grows further.");
+        } else {
+            System.out.println("Maintain the current priority-allocation process and continue monitoring room readiness and VIP waiting time.");
+        }
 
-        System.out.println( "Average Allocation Wait     : " + (averageWait < 0 ? "-" : formatWaitingTime(averageWait)));
-        System.out.println("Longest Allocation Wait     : "+ (longestEntry == null ? "-" : formatWaitingTime(longestWait) + " - " + longestEntry.registration.getRegistrationId() + " / " + longestEntry.registration.getGuest().getName()));
-        System.out.println("Highest Demand VIP Tier     : " + (highestDemandTier == null ? "-" : highestDemandTier));
-        System.out.println("Highest Demand Room Type    : " + (highestDemandRoom == null ? "-" : formatRoomType(highestDemandRoom.name())));
+        System.out.println(border);
+    }
 
-        System.out.println("\nMANAGEMENT SUGGESTION");
+    private void printSection(String title, String divider) {
+        System.out.println();
+        System.out.println(divider);
+        System.out.println(title);
+        System.out.println(divider);
+    }
 
-if (allocatedWithWait > 0
-        && ((double) totalAllocatedWait / allocatedWithWait) >= 60) {
+    private void printCentered(String text, int width) {
+        int padding = Math.max(0, (width - text.length()) / 2);
+        System.out.println(" ".repeat(padding) + text);
+    }
 
-    System.out.println(
-            "Average VIP waiting time exceeds 1 hour."
-    );
+    private void printKeyValue(String label, String value, int labelWidth) {
+        System.out.printf("%-" + labelWidth + "s : %s%n", label, value);
+    }
 
-    System.out.println(
-            "Suggestion: Improve room preparation and prioritise "
-            + "ready rooms for VIP requests."
-    );
+    private void printTwoColumnHeader(String leftHeader, String rightHeader, int leftWidth) {
+        System.out.printf("%-" + leftWidth + "s  %s%n", leftHeader, rightHeader);
+        System.out.printf("%-" + leftWidth + "s  %s%n", "-".repeat(leftWidth), "-".repeat(76));
+    }
 
-} else if (waiting > 0) {
-
-    System.out.println(
-            "There are still VIP guests waiting for room allocation.");
-
-    System.out.println("Suggestion: Review requested room types and coordinate " + "with Housekeeping to prepare suitable rooms earlier.");
-
-} else {
-
-    System.out.println("VIP allocation waiting time is currently under control.");
-
-    System.out.println( "Suggestion: Maintain the current priority allocation " + "and room readiness process.");
-}
-
-        System.out.println("=".repeat(153));
+    private void printTwoColumnRow(String leftValue, String rightValue, int leftWidth) {
+        System.out.printf("%-" + leftWidth + "s  %s%n", leftValue, rightValue);
     }
 
     private String formatWaitingTime(long totalMinutes) {
