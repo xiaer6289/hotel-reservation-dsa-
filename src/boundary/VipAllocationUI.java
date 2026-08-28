@@ -580,9 +580,9 @@ public class VipAllocationUI {
 
         System.out.println("\nPAYMENT SUMMARY");
         System.out.println("-".repeat(104));
-        System.out.println("  Room Rate              : RM" + paymentPreview[0] + " / night");
-        System.out.println("  Number of Nights       : " + paymentPreview[1]);
-        System.out.println("  Total Amount           : RM" + paymentPreview[2]);
+        System.out.println("  Room Rate            : RM" + paymentPreview[0] + " / night");
+        System.out.println("  Number of Nights     : " + paymentPreview[1]);
+        System.out.println("  Total Amount         : RM" + paymentPreview[2]);
         System.out.println();
         boolean confirm = readYesNo("Confirm payment of RM" + paymentPreview[2] + " and proceed with VIP check-in? (Y/N): ");
 
