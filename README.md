@@ -159,14 +159,14 @@ The generic `<T>` allows the MaxHeap to manage entity objects independently from
 ## 📊 3. Reports
 
 ### Room Occupancy & Availability Report
-- **Filters:** Room type + Available status
-- **Sort:** Room number ascending
-- **Purpose:** Allow staff or admin to have a review of occupied or available room by type
+- **Filters:** Room type + data range based on check in date time
+- **Sort:** Top-utilized rooms ranked by occupied room-days descending (selection sort)
+- **Purpose:** provide clear picture of day-by-day occupancy of the rooms to support pricing, housekeeping prioritization, and marketing decisions across based on month (season)
 
 ### Billing Summary Report
 - **Filters:** Payment status (Pending / Completed / Cancelled / Refunded)
-- **Sort:** Payment amount descending (selection sort)
-- **Purpose:** Revenue review, surfacing highest-value bookings and compute total revenue
+- **Sort:** Top-value bookings ranked by payment amount descending (selection sort)
+- **Purpose:** revenue review to check where th revenue comes from and how healthy is the collections
 
 ### Standard FIFO Waiting Time Analysis Report
 - **Filters:** Registration ID / Guest ID / Guest name + Room type + Minimum party size + Minimum waiting time
