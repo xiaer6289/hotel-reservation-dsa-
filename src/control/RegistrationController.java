@@ -285,6 +285,31 @@ public class RegistrationController {
         return false;
     }
 
+    /**
+     * Keeps guest names in proper-name capitalisation before saving.
+     */
+    private String normalizeGuestName(String name) {
+        String trimmed = name.trim();
+        StringBuilder formatted = new StringBuilder(trimmed.length());
+        boolean capitalizeNext = true;
+
+        for (int i = 0; i < trimmed.length(); i++) {
+            char current = trimmed.charAt(i);
+
+            if (Character.isLetter(current)) {
+                formatted.append(capitalizeNext
+                        ? Character.toUpperCase(current)
+                        : Character.toLowerCase(current));
+                capitalizeNext = false;
+            } else {
+                formatted.append(current);
+                capitalizeNext = current == ' ' || current == '-' || current == '\'';
+            }
+        }
+
+        return formatted.toString();
+    }
+
     public Guest addNewGuest(
             String guestName,
             Long phoneNumber) {
@@ -302,7 +327,7 @@ public class RegistrationController {
 
         Guest newGuest = new Guest(
                 guestId,
-                guestName.trim(),
+                normalizeGuestName(guestName),
                 normalizedPhoneNumber);
 
         Guest[] updatedGuests = new Guest[guests.length + 1];

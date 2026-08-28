@@ -870,12 +870,42 @@ public class RegistrationUI {
         System.out.println("Category     : " + guest[3]);
     }
 
+    /**
+     * Formats guest names consistently for input and display.
+     * Examples: "ali" -> "Ali", "tan wei jie" -> "Tan Wei Jie".
+     */
+    private String formatGuestName(String name) {
+        if (name == null) {
+            return null;
+        }
+
+        String trimmed = name.trim();
+        StringBuilder formatted = new StringBuilder(trimmed.length());
+        boolean capitalizeNext = true;
+
+        for (int i = 0; i < trimmed.length(); i++) {
+            char current = trimmed.charAt(i);
+
+            if (Character.isLetter(current)) {
+                formatted.append(capitalizeNext
+                        ? Character.toUpperCase(current)
+                        : Character.toLowerCase(current));
+                capitalizeNext = false;
+            } else {
+                formatted.append(current);
+                capitalizeNext = current == ' ' || current == '-' || current == '\'';
+            }
+        }
+
+        return formatted.toString();
+    }
+
     private String readGuestName(String message) {
         while (true) {
             String input = readNonEmptyString(message);
 
             if (Utility.isValidPersonName(input)) {
-                return input;
+                return formatGuestName(input);
             }
 
             Utility.printError(
@@ -893,7 +923,7 @@ public class RegistrationUI {
             }
 
             if (Utility.isValidPersonName(input)) {
-                return input;
+                return formatGuestName(input);
             }
 
             Utility.printError(
