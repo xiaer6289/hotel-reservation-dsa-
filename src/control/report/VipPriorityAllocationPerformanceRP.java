@@ -278,20 +278,43 @@ if (allocatedWithWait > 0
         return null;
     }
 
-    private Booking findBookingForRegistration(WalkInRegistration registration, Booking[] bookings) {
-        if (registration.getCheckInDateTime() == null) {
+    private Booking findBookingForRegistration(
+            WalkInRegistration registration,
+            Booking[] bookings) {
+
+        if (registration == null
+                || registration.getGuest() == null
+                || registration.getCheckInDateTime() == null) {
             return null;
         }
+
         for (Booking booking : bookings) {
-            if (booking == null || booking.getGuest() == null || booking.getRoom() == null || booking.getRoom().getCheckInDateTime() == null) {
+
+            if (booking == null
+                    || booking.getGuest() == null
+                    || booking.getGuest().getGuestId() == null
+                    || booking.getPayment() == null
+                    || booking.getPayment().getDateTime() == null) {
                 continue;
             }
-            boolean sameGuest = booking.getGuest().getGuestId().equalsIgnoreCase(registration.getGuest().getGuestId());
-            boolean sameCheckIn = booking.getRoom().getCheckInDateTime().equals(registration.getCheckInDateTime());
+
+            boolean sameGuest
+                    = booking.getGuest()
+                            .getGuestId()
+                            .equalsIgnoreCase(
+                                    registration.getGuest().getGuestId());
+
+            boolean sameCheckIn
+                    = booking.getPayment()
+                            .getDateTime()
+                            .equals(
+                                    registration.getCheckInDateTime());
+
             if (sameGuest && sameCheckIn) {
                 return booking;
             }
         }
+
         return null;
     }
 

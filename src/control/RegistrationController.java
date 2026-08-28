@@ -203,6 +203,7 @@ public class RegistrationController {
 
         String normalizedGuestId = guestId.trim();
 
+        // First check registration status.
         for (int i = 0; i < registrationRecords.size(); i++) {
             WalkInRegistration registration = registrationRecords.get(i);
 
@@ -210,10 +211,12 @@ public class RegistrationController {
                 continue;
             }
 
-            boolean sameGuest = registration.getGuest().getGuestId()
+            boolean sameGuest = registration.getGuest()
+                    .getGuestId()
                     .equalsIgnoreCase(normalizedGuestId);
 
             RegistrationStatus status = registration.getStatus();
+
             boolean activeRegistrationOrStay
                     = status == RegistrationStatus.WAITING
                     || status == RegistrationStatus.VIP_WAITING
@@ -225,12 +228,13 @@ public class RegistrationController {
         }
 
         /*
-         * Legacy/fallback protection for bookings that may not have a matching
-         * registration record. Check the live RoomDao state instead of the
-         * room-status snapshot stored inside booking.dat. The room number and
-         * check-in time must both still match the booking before that booking
-         * can represent the current stay.
-         */
+        * Fallback protection for bookings that may not have a matching
+        * registration record.
+        *
+        * Payment date/time is created at the actual check-in time, so it is
+        * safer than Booking.room check-in time because BookingDao reloads the
+        * current Room object from room.dat.
+        */
         bookings = loadExistingBookings();
         rooms = roomDao.loadOrSeed();
 
@@ -242,7 +246,8 @@ public class RegistrationController {
                 continue;
             }
 
-            boolean sameGuest = booking.getGuest().getGuestId()
+            boolean sameGuest = booking.getGuest()
+                    .getGuestId()
                     .equalsIgnoreCase(normalizedGuestId);
 
             if (!sameGuest) {
@@ -263,9 +268,10 @@ public class RegistrationController {
                         = currentRoom.getRoomStatus() == RoomStatus.OCCUPIED;
 
                 boolean sameCheckInTime
-                        = bookingRoom.getCheckInDateTime() != null
+                        = booking.getPayment() != null
+                        && booking.getPayment().getDateTime() != null
                         && currentRoom.getCheckInDateTime() != null
-                        && bookingRoom.getCheckInDateTime().equals(
+                        && booking.getPayment().getDateTime().equals(
                                 currentRoom.getCheckInDateTime());
 
                 if (liveRoomOccupied && sameCheckInTime) {
@@ -631,8 +637,8 @@ public class RegistrationController {
 
             if (booking == null
                     || booking.getGuest() == null
-                    || booking.getRoom() == null
-                    || booking.getRoom().getCheckInDateTime() == null) {
+                    || booking.getPayment() == null
+                    || booking.getPayment().getDateTime() == null) {
 
                 continue;
             }
@@ -643,8 +649,8 @@ public class RegistrationController {
                             .equalsIgnoreCase(guestId);
 
             boolean sameCheckInTime
-                    = booking.getRoom()
-                            .getCheckInDateTime()
+                    = booking.getPayment()
+                            .getDateTime()
                             .equals(
                                     registration.getCheckInDateTime());
 
