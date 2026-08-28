@@ -520,6 +520,28 @@ public class FrontDeskControl implements RoomAvailabilityNotifier.RoomReadyListe
             String.format("%.1f", occupancyRate)
         };
     }
+    
+    public String[][] getOccupancyByRoomType(String roomTypeFilter, int rangeOption, int selectedMonth) {
+        LocalDate[] range = computeDateRange(rangeOption, selectedMonth);
+        refreshRooms();
+        control.report.RoomOccupancyRP rp = new control.report.RoomOccupancyRP();
+        Booking[] filtered = rp.generateReport(sortBooking(), roomTypeFilter, range[0], range[1]);
+        return rp.getOccupancyByRoomType(filtered, rooms, range[0], range[1]);
+    }
+    
+    public String[][] getTopUtilizedRooms(String roomTypeFilter, int rangeOption, int selectedMonth, int topN) {
+        LocalDate[] range = computeDateRange(rangeOption, selectedMonth);
+        control.report.RoomOccupancyRP rp = new control.report.RoomOccupancyRP();
+        Booking[] filtered = rp.generateReport(sortBooking(), roomTypeFilter, range[0], range[1]);
+        return rp.getTopUtilizedRooms(filtered, range[0], range[1], topN);
+    }
+    
+    public String getAverageLengthOfStay(String roomTypeFilter, int rangeOption, int selectedMonth) {
+        LocalDate[] range = computeDateRange(rangeOption, selectedMonth);
+        control.report.RoomOccupancyRP rp = new control.report.RoomOccupancyRP();
+        Booking[] filtered = rp.generateReport(sortBooking(), roomTypeFilter, range[0], range[1]);
+        return String.format("%.1f", rp.calcAverageLengthOfStay(filtered));
+    }
 
     public String[][] generateRoomOccupancyReportDisplay(String roomTypeFilter, int rangeOption, int selectedMonth) {
         LocalDate[] range = computeDateRange(rangeOption, selectedMonth);
@@ -578,6 +600,41 @@ public class FrontDeskControl implements RoomAvailabilityNotifier.RoomReadyListe
         control.report.BillSummaryRP reportGenerator = new control.report.BillSummaryRP();
         Booking[] report = reportGenerator.generateReport(sortBooking(), statusFilter);
         return reportGenerator.calcTotalRevenue(report);
+    }
+    
+    public String[][] getBillingRevenueByRoomType(char statusFilter) {
+        control.report.BillSummaryRP rp = new control.report.BillSummaryRP();
+        Booking[] filtered = rp.generateReport(sortBooking(), statusFilter);
+        return rp.getRevenueRoomType(filtered);
+    }
+    
+    public String[][] getBillingTopValueBookings(char statusFilter, int topN) {
+        control.report.BillSummaryRP rp = new control.report.BillSummaryRP();
+        Booking[] filtered = rp.generateReport(sortBooking(), statusFilter);
+        Booking[] top = rp.getTopValueBookings(filtered, topN);
+        String[][] rows = new String[top.length][4];
+        for (int i = 0; i < top.length; i++) {
+            rows[i][0] = String.valueOf(i + 1);
+            rows[i][1] = top[i].getConfirmationNo();
+            rows[i][2] = top[i].getGuest().getName();
+            rows[i][3] = String.format("%.2f", top[i].getPayment().getAmount());
+        }
+        return rows;
+    }
+    
+    public String[] getBillingCollectionHealth(char statusFilter) {
+        control.report.BillSummaryRP rp = new control.report.BillSummaryRP();
+        Booking[] all = sortBooking();
+        double rate = rp.calcCollectionRate(all);
+        double outstanding = rp.calcOutstandingAmount(all);
+        Booking[] filtered = rp.generateReport(all, statusFilter);
+        double avgValue = rp.calcAverageTransactionValue(filtered);
+        return new String[] {
+            String.format("%1f", rate),
+            String.format("%.2f", outstanding),
+            String.format("%.2f", avgValue),
+            String.valueOf(filtered.length)
+        };
     }
     
     public String getMonthNameLabel(int month) {

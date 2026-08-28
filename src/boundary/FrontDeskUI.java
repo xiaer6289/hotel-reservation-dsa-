@@ -5,6 +5,7 @@
 package boundary;
 
 import control.FrontDeskControl;
+import java.time.LocalDate;
 import java.util.Scanner;
 import utility.Utility;
 
@@ -143,7 +144,13 @@ public class FrontDeskUI {
         System.out.println("Current Payment Status: " + booking[6]);
         System.out.println("P = Pending, C = Completed, X = Cancelled, R = Refunded");
         System.out.print("Enter New Payment Status: ");
-        char newStatus = scanner.nextLine().trim().toUpperCase().charAt(0);
+        String statusInput = scanner.nextLine().trim().toUpperCase();
+
+        if (statusInput.isEmpty()) {
+            Utility.printError("No input entered");
+            return;
+        }
+        char newStatus = statusInput.charAt(0);
 
         if (newStatus != 'P' && newStatus != 'C' && newStatus != 'X' && newStatus != 'R') {
             Utility.printError("Invalid status. Must be P, C, X, or R.");
@@ -388,7 +395,7 @@ public class FrontDeskUI {
         int selectedMonth = 0;
         String rangeLabel;
         if (rangeOption == 1) {
-            rangeLabel = "TODAY";
+            rangeLabel = LocalDate.now().toString(); 
         } else if (rangeOption == 2) {
             System.out.println("1. January   2. February  3. March     4. April");
             System.out.println("5. May       6. June      7. July      8. August");
@@ -404,45 +411,50 @@ public class FrontDeskUI {
             rangeLabel = String.valueOf(java.time.LocalDate.now().getYear());
         }
 
-    String[][] report = control.generateRoomOccupancyReportDisplay(roomTypeFilter, rangeOption, selectedMonth);
-    String[] summary = control.getRoomOccupancySummary(roomTypeFilter, rangeOption, selectedMonth);
+        String[] summary = control.getRoomOccupancySummary(roomTypeFilter, rangeOption, selectedMonth);
+        String[][] occupancyByType = control.getOccupancyByRoomType(roomTypeFilter, rangeOption, selectedMonth);
+        String[][] topRooms = control.getTopUtilizedRooms(roomTypeFilter, rangeOption, selectedMonth, 5);
+        String avgStay = control.getAverageLengthOfStay(roomTypeFilter, rangeOption, selectedMonth);
 
-    String generatedOn = java.time.LocalDateTime.now()
-            .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"));
+        String generatedOn = java.time.LocalDateTime.now()
+                .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"));
 
-            System.out.println("=".repeat(110));
+        System.out.println("=".repeat(70));
         System.out.printf("%42s%n", "ROOM OCCUPANCY ANALYSIS REPORT");
-        System.out.println("=".repeat(110));
+        System.out.println("=".repeat(70));
         System.out.println("Generated On       : " + generatedOn);
         System.out.println("Room Type          : " + (roomTypeFilter == null ? "ALL" : roomTypeFilter));
         System.out.println("Date Range         : " + rangeLabel);
-        System.out.println("-".repeat(110));
-        System.out.printf("%-8s %-14s %-6s %-15s %-24s %-24s %-10s%n",
-                "Room No", "Type", "Floor", "Guest Name", "Check-In", "Check-Out", "Status");
-        System.out.println("-".repeat(110));
-        for (String[] row : report) {
-            System.out.printf("%-8s %-14s %-6s %-15s %-24s %-24s %-10s%n",
-                    row[0], row[1], row[2], row[3], row[4], row[5], row[6]);
+        System.out.println("-".repeat(70));
+
+        System.out.println("OCCUPANCY BREAKDOWN BY ROOM TYPE");
+        System.out.printf("%-16s %-8s %-16s %-16s %-10s%n", "Room Type", "Rooms", "Occupied-Days", "Total Room-Days", "Rate");
+        for (String[] row : occupancyByType) {
+            System.out.printf("%-16s %-8s %-16s %-16s %-10s%n", row[0], row[1], row[2], row[3], row[4] + "%");
         }
-        System.out.println("-".repeat(110));
-        System.out.println("MANAGEMENT SUMMARY");
-        System.out.println("Matching Bookings       : " + summary[0]);
-        System.out.println("Rooms of This Type      : " + summary[1]);
-        System.out.println("Days in Range           : " + summary[2]);
-        System.out.println("Occupied Room-Days      : " + summary[3]);
-        System.out.println("Total Room-Days         : " + summary[4]);
-        System.out.println("Occupancy Rate          : " + summary[5] + "%");
-        System.out.println("=".repeat(110));
+        System.out.println("-".repeat(70));
+
+        System.out.println("UTILIZATION HEALTH");
+        System.out.println("Overall Occupancy Rate      : " + summary[5] + "%");
+        System.out.println("Average Length of Stay      : " + avgStay + " night(s)");
+        System.out.println("-".repeat(70));
+
+        System.out.println("TOP " + topRooms.length + " MOST UTILIZED ROOMS (this filter)");
+        System.out.printf("%-5s %-8s %-16s %-14s%n", "Rank", "Room No", "Room Type", "Occupied-Days");
+        for (String[] row : topRooms) {
+            System.out.printf("%-5s %-8s %-16s %-14s%n", row[0], row[1], row[2], row[3]);
+        }
+        System.out.println("=".repeat(70));
 
         double rate = Double.parseDouble(summary[5]);
         if (rate >= 80) {
-            System.out.println("Suggestion: High demand detected — consider dynamic/premium pricing and prioritize fast housekeeping turnaround.");
+            System.out.println("Suggestion: High demand detected : consider dynamic/premium pricing and prioritize fast housekeeping turnaround.");
         } else if (rate >= 50) {
-            System.out.println("Suggestion: Occupancy is healthy and stable — no immediate action needed.");
+            System.out.println("Suggestion: Occupancy is healthy and stable : no immediate action needed.");
         } else if (rate >= 20) {
-            System.out.println("Suggestion: Below-average occupancy — consider promotions or targeted marketing for underused room types.");
+            System.out.println("Suggestion: Below-average occupancy : consider promotions or targeted marketing for underused room types.");
         } else {
-            System.out.println("Suggestion: Low occupancy — recommend reviewing pricing strategy or investigating underlying causes.");
+            System.out.println("Suggestion: Low occupancy : recommend reviewing pricing strategy or investigating underlying causes.");
         }
     }
     
@@ -462,8 +474,10 @@ public class FrontDeskUI {
             Utility.printError("Invalid Status. Enter P, C, X or R");
             return;
         }
-        String[][] report = control.generateBillingSummaryReportDisplay(status);
-        String[] summary = control.getBillingSummaryBreakdown(status);
+        
+        String[][] revenueByType = control.getBillingRevenueByRoomType(status);
+        String[][] topBookings = control.getBillingTopValueBookings(status, 5);
+        String[] health = control.getBillingCollectionHealth(status);
 
         String generatedOn = java.time.LocalDateTime.now()
             .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"));
@@ -473,27 +487,31 @@ public class FrontDeskUI {
         System.out.println("Generated On       : " + generatedOn);
         System.out.println("Payment Status     : " + status);
         System.out.println("-".repeat(70));
-        System.out.printf("%-12s %-15s %-14s %-10s %-10s%n",
-                "Conf. No", "Guest Name", "Room Type", "Amount", "Status");
-        System.out.println("-".repeat(70));
-        for (String[] row : report) {
-            System.out.printf("%-12s %-15s %-14s %-10.2f %-10s%n",
-                    row[0], row[1], row[2], Double.parseDouble(row[3]), row[4]);
+        System.out.println("REVENUE BREAKDOWN BY ROOM TYPE");
+        System.out.printf("%-16s %-10s %-14s %-14s %-10s%n", "Room Type", "Bookings", "Total (RM)", "Avg/Booking", "% Revenue");
+        for (String[] row : revenueByType) {
+            System.out.printf("%-16s %-10s %-14s %-14s %-10s%n", row[0], row[1], row[2], row[3], row[4] + "%");
         }
         System.out.println("-".repeat(70));
-        System.out.println("MANAGEMENT SUMMARY");
-        System.out.println("Matching Bookings        : " + summary[0]);
-        System.out.println("Completed                : " + summary[1]);
-        System.out.println("Pending                  : " + summary[2]);
-        System.out.println("Cancelled                : " + summary[3]);
-        System.out.println("Refunded                 : " + summary[4]);
-        System.out.println("Total Revenue (Completed): RM " + summary[5]);
+
+        System.out.println("PAYMENT COLLECTION HEALTH");
+        System.out.println("Collection Rate (Completed vs Pending) : " + health[0] + "%");
+        System.out.println("Outstanding Exposure (Pending Amount)  : RM " + health[1]);
+        System.out.println("Average Transaction Value (this filter): RM " + health[2]);
+        System.out.println("-".repeat(70));
+
+        System.out.println("TOP " + topBookings.length + " HIGHEST-VALUE BOOKINGS (this filter)");
+        System.out.printf("%-5s %-12s %-15s %-10s%n", "Rank", "Conf. No", "Guest Name", "Amount");
+        for (String[] row : topBookings) {
+            System.out.printf("%-5s %-12s %-15s %-10s%n", row[0], row[1], row[2], row[3]);
+        }
         System.out.println("=".repeat(70));
-        int pending = Integer.parseInt(summary[2]);
-        if (pending > 0) {
-            System.out.println("Suggestion: " + pending + " pending payment(s) detected — recommend following up before checkout.");
+
+        double rate = Double.parseDouble(health[0]);
+        if (rate < 60 && (status == 'P' || status == 'C')) {
+            System.out.println("Suggestion: Collection rate is below 60% — recommend following up on pending payments before checkout.");
         } else {
-            System.out.println("Suggestion: No pending payments outstanding in this view.");
+            System.out.println("Suggestion: Collection health is stable for the current filter.");
         }
     }
 
