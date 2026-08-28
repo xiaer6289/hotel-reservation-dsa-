@@ -13,20 +13,28 @@ Language: Java (Console-based, JDK 24)
 - **Guest identification** — Locate a guest's complete booking record using a unique **8-digit confirmation number**
 
 ### 🚶 Walk-In Registrations & Standard Booking Procedure
-- **Walk-in registration** — Register new or existing standard guests and create their walk-in registration records
-- **FIFO waiting queue** — Manage standard guest registrations chronologically so the earliest waiting guest is processed first
-- **Standard room assignment** — Assign a suitable ready room to the next eligible standard guest and complete the check-in process
+- **Walk-in registration** — Register new or existing guests and create Standard or VIP walk-in registration records
+- **FIFO waiting queue** — Manage Standard guest registrations chronologically so that the earliest waiting Standard guest is processed first
+- **Waiting-time monitoring** — Display each Standard guest's arrival/request time and current waiting time in minutes or hours
+- **Standard room assignment and check-in** — Assign a suitable ready room to the next eligible Standard guest and complete the check-in process
+- **Registration analysis** — Generate Standard FIFO Waiting Time and Walk-In Arrival Pattern reports for operational decision-making
 
 ### 👑 VIP & Loyalty Tier Priority Room Allocation
-- **VIP priority allocation** — Prioritize eligible loyalty members for room assignment based on their membership tier
-- **Loyalty tier ranking** — Process VIP guests according to **Diamond > Platinum > Elite**, with earlier registration time used when guests have the same tier
-- **Priority room assignment** — Automatically reorganize waiting VIP registrations and assign suitable ready rooms according to priority
+- **VIP priority allocation** — Prioritize eligible loyalty members for room assignment according to loyalty tier
+- **Loyalty tier ranking** — Process VIP guests according to **Diamond > Platinum > Elite**, with earlier request time used as the tie-breaker for guests in the same tier
+- **MaxHeap priority queue** — Automatically reorganize VIP waiting registrations whenever a VIP request is inserted, updated, cancelled, or allocated
+- **VIP waiting-time monitoring** — Display request time and waiting time using readable minute/hour wording
+- **VIP room assignment and check-in** — Assign suitable ready rooms to the highest-priority eligible VIP guest
+- **VIP analysis** — Generate VIP Room Allocation & Waiting Time and VIP Loyalty Engagement reports for management review
 
 ### 🧹 Housekeeping and Task Log
+- **FIFO dirty-room queue** — Add dirty rooms to a Linear ADT and process them according to first-in-first-out order
+- **Automatic staff assignment** — Automatically assign the next dirty room to an available housekeeping staff member
 - **Cleaning status updates** — Manage room cleaning progress sequentially from **Dirty → Cleaning In Progress → Inspected → Ready for Check-In**
-- **Housekeeping task log** — Record and track housekeeping tasks assigned to rooms and staff
-- **Status rollback** — Reverse an incorrect housekeeping status when necessary to maintain accurate room conditions
-
+- **Cleaning-time monitoring** — Track the 30-minute cleaning target and allow staff to mark an early completion
+- **Housekeeping task log** — Record and track room-cleaning tasks, assigned staff, timestamps, and completion information
+- **Status rollback** — Reverse an incorrect housekeeping status when necessary while maintaining the dirty-room queue
+- **KPI analysis** — Evaluate housekeeping staff using daily room-cleaning and cleaning-time targets
 ---
 
 ## 💻 2. Abstract Data Type (ADT)
@@ -70,54 +78,45 @@ Searching only requires confirmation number typed from front-desk staff without 
 
 ### 2.2 🔗 Doubly Linked List (applied in Walk-In Registrations & Standard Booking Procedure and Housekeeping and Task Log)
 
-1. Binary search tree is **unambiguously non-linear** which is suitable for this module requirement without interpretation risk.
-2. Its ordering property (`left < parent < right`) doubles as a genuine **searching algorithm** — average-case **O(log n)** lookup, versus **O(n)** for a linear scan through hundreds of simultaneous bookings.
-3. Bookings are sorted by confirmation number for the tree, with no separate sort step will be required.
+1. Doubly Linked List is a **Linear ADT** that stores elements sequentially through nodes containing references to both the previous and next nodes.
+
+2. It is suitable for the Standard Registration module because Standard guests must be processed chronologically using **FIFO order**. New Standard registrations can be added at the rear using `addLast()`, while the earliest waiting registration can be accessed or removed from the front.
+
+3. It is also suitable for Housekeeping because dirty rooms and housekeeping tasks must be processed sequentially. Dirty rooms can enter a FIFO queue and be dispatched to available staff according to queue order.
 
 #### 2.2.1 ADT Specification
+
 | Operation | Signature | Description | Time Complexity |
 |---|---|---|---|
-| Add First | `void addFirst(T data)` | Places a new element at the beginning of the list | O(1) |
-| Add Last | `void addLast(T data)` | Places a new element at the end of the list | O(1) |
+| Add First | `void addFirst(T data)` | Adds an element at the beginning of the list | O(1) |
+| Add Last | `void addLast(T data)` | Adds an element at the end of the list | O(1) |
 | Add At | `boolean addAt(int index, T data)` | Inserts an element at a specified index | O(n) |
 | Remove First | `T removeFirst()` | Removes and returns the first element | O(1) |
 | Remove Last | `T removeLast()` | Removes and returns the last element | O(1) |
 | Remove At | `T removeAt(int index)` | Removes and returns an element at a specified index | O(n) |
-| Get | `T get(int index)` | Retrieves data stored at a specified index | O(n) |
-| Contains | `boolean contains(T data)` | Checks whether the list contains specified data | O(n) |
-| Index Of | `int indexOf(T data)` | Returns the index of specified data, or `-1` if not found | O(n) |
-| Is Empty | `boolean isEmpty()` | Checks whether the list holds any data | O(1) |
-| Size | `int size()` | Returns count of stored elements | O(1) |
+| Get | `T get(int index)` | Retrieves an element at a specified index | O(n) |
+| Contains | `boolean contains(T data)` | Checks whether a specified element exists in the list | O(n) |
+| Index Of | `int indexOf(T data)` | Returns the index of a specified element, or `-1` when not found | O(n) |
+| Is Empty | `boolean isEmpty()` | Checks whether the list contains any elements | O(1) |
+| Size | `int size()` | Returns the number of elements | O(1) |
 | Clear | `void clear()` | Removes all elements from the list | O(1) |
 
 #### 2.2.2 Generic Design
 
-```
+```text
 DoublyLinkedList<T>
-Node<T> → data: T | previous: Node<T> | next: Node<T>
+
+Node<T>
+→ data: T
+→ previous: Node<T>
+→ next: Node<T>
 ```
- 
-- `T` = `WalkInRegistration` (registration records stored in the standard FIFO waiting queue)
-- `T` = `HousekeepingTask` (housekeeping task records stored sequentially)
-
-The generic `<T>` allows the same doubly linked list implementation to store different entity objects without the needs to construct separate linked list implementations for each module.
-
-#### 2.2.3 Sequential & iterative
-
-| Method | Style | Why |
-|---|---|---|
-| `addFirst` | Direct pointer update | Inserts a node directly through `head` without traversal |
-| `addLast` | Direct pointer update | Inserts a node directly through `tail`, suitable for adding new standard registrations to the rear of FIFO queue |
-| `removeFirst` | Direct pointer update | Removes the earliest registration through `head` in O(1) |
-| `removeLast` | Direct pointer update | Removes the final node directly through `tail` and its previous link |
-| `get` / `removeAt` | Direct pointer update | Removes the earliest registration through `head` in O(1) |
-| `contains` / `indexOf` | Direct pointer update | Removes the final node directly through `tail` and its previous link |
 
 ### 2.3 👑 MaxHeap (applied in VIP & Loyalty Tier Priority Room Allocation)
 
 1. Max heap is **unambiguously non-linear** which is suitable for VIP room allocation where guests are processed according to loyalty priority rather than normal chronological FIFO order.
 2. Its heap property keeps the highest-priority registration at the root, providing **O(1)** access to the next priority guest while insertion and removal require **O(log n)** reorganisation.
-3. VIP registrations are ordered according to membership tier (`DIAMOND > PLATINUM > ELITE`), while earlier registration time is used as the tie-breaker when two guests have the same tier, allowing the structure to automatically reorganise whenever a new VIP registration is inserted.
+3. VIP registrations are ordered according to loyalty tier (`DIAMOND > PLATINUM > ELITE`). When two VIP guests have the same tier, the earlier request time is used as the tie-breaker. This allows the MaxHeap to automatically reorganize whenever a VIP registration is inserted, updated, removed, or allocated.
 
 #### 2.3.1 ADT Specification
 | Operation | Signature | Description | Time Complexity |
@@ -152,8 +151,7 @@ The generic `<T>` allows the MaxHeap to manage entity objects independently from
 | `dequeue` | Iterative reheap-down | Removes the root and moves the replacement downward until MaxHeap priority is restored |
 | `peek` | Direct access | Retrieves the root because the highest-priority registration is maintained at the front of the heap |
 | `remove` | Linear search + reheap | Searches for a specific registration and restores heap order after removal |
-| `compareVipPriority` | Comparator-based | Compares loyalty tier first and uses registration time as the tie-breaker |
-
+| `compareVipPriority` | Comparator-based | Compares loyalty tier first and uses earlier request/registration time as the tie-breaker |
 ---
 
 ## 📊 3. Reports
@@ -170,35 +168,37 @@ The generic `<T>` allows the MaxHeap to manage entity objects independently from
 
 ### Standard FIFO Waiting Time Analysis Report
 - **Filters:** Registration ID / Guest ID / Guest name + Room type + Minimum party size + Minimum waiting time
-- **Sort:** FIFO earliest arrival / Longest waiting time / Largest party size (selection sort)
-- **Purpose:** Analyze the current standard waiting queue, identify long-waiting guests and support FIFO room allocation decisions
+- **Sort:** FIFO earliest arrival / Largest party size (Selection Sort)
+- **Purpose:** Analyze the current Standard FIFO waiting queue, identify long-waiting guests, monitor average and longest waiting times, and support room-assignment decisions while preserving chronological FIFO order
 
 ### Walk-In Arrival Pattern Analysis Report
-- **Filters:** Date range + Room type + Minimum party size
-- **Sort:** Earliest arrival / Latest arrival / Largest party size (selection sort)
-- **Purpose:** Analyze walk-in arrival patterns, guest demand and peak arrival periods for room and staffing planning
+- **Filters:** Start date + End date
+- **Sort:** Not applicable — registrations are grouped into predefined arrival-time periods for analytical comparison
+- **Purpose:** Analyze walk-in arrival patterns by time period, identify peak arrival periods, measure guest demand and average party size, and support front-desk staffing and room-readiness planning
 
-### VIP Priority Allocation Performance Report
-- **Filters:** Member ID / Registration ID / Guest ID / Guest name + Loyalty tier + Requested room type + Minimum guests
-- **Sort:** Loyalty tier descending + Arrival time ascending (selection sort)
-- **Purpose:** Analyze VIP allocation priority and waiting performance to ensure higher-tier loyalty guests are served according to the required priority rules
+### VIP Room Allocation & Waiting Time Report
+- **Filters:** Registration / Guest keyword + Loyalty tier + Requested room type + VIP registration status + Registration date range + Minimum party size
+- **Sort:** VIP tier priority then earliest request / Longest waiting time / Latest registration / Requested room type A-Z (Selection Sort)
+- **Purpose:** Monitor VIP waiting times and evaluate the effectiveness of priority-based room allocation, allowing management to identify long VIP waits, room shortages and allocation bottlenecks while confirming that higher-tier guests receive appropriate priority
 
-### VIP Loyalty & Stay Performance Report
-- **Filters:** Registration ID / Guest ID / Guest name + Loyalty tier + Room type + Minimum waiting time + Minimum party size
-- **Sort:** Loyalty tier descending + Arrival time ascending (selection sort)
-- **Purpose:** Analyze VIP guest activity by loyalty tier, room preference and stay-related performance for management review
+### VIP Loyalty Engagement Report
+- **Filters:** Guest keyword + Loyalty tier + Current VIP activity + Minimum completed stays + Stay room type + Check-in date range
+- **Sort:** Loyalty tier priority / Completed stays highest first / Most recent stay latest first / Guest name A-Z / Closest to next loyalty tier (Selection Sort)
+- **Purpose:** Identify valuable repeat VIP guests, monitor loyalty-tier activity and progression, recognise guests close to the next tier, and support personalised retention and promotion decisions
 
-### Cleaning Status Flow Report
-- **Filters:** Cleaning status + Staff + Room number
-- **Sort:** Room number / Task update time (selection sort)
-- **Purpose:** Review the cleaning progress of hotel rooms and identify rooms that are still being cleaned, inspected or ready for check-in
+### Cleaning Status Analysis Report
+- **Filters:** Cleaning status + Housekeeping staff + Room number
+- **Sort:** Room number ascending / Time spent longest first (Selection Sort)
+- **Purpose:** Review the current cleaning progress of hotel rooms, identify rooms or tasks requiring attention, and help supervisors monitor cleaning workload and operational bottlenecks
 
-### Daily Performance Report
-- **Filters:** Date + Staff + Minimum task time
-- **Sort:** Task created time / Task completion time (selection sort)
-- **Purpose:** Analyze daily housekeeping workload and staff task performance to support housekeeping supervision and operational planning
+### Daily Housekeeping Performance Report
+- **Filters:** Report date + Housekeeping staff + Minimum task time
+- **Sort:** Task created time earliest first / Task time longest first (Selection Sort)
+- **Purpose:** Analyze daily housekeeping workload and cleaning-task performance, allowing supervisors to review staff activity, identify unusually long tasks and support day-to-day manpower planning
 
-### Housekeeping KPIs Report
-- **Filters:** Staff ID + Task ID + Guest ID + Guest Name + Room Type + Status + Start Date - End Date
-- **Sort:** Task Completion Time (selection sort)
-- **Purpose:** Provide a comprehensive overview of housekeeping operations, including task assignments, cleaning progress, and staff performance metrics. This report helps management monitor cleaning efficiency, identify bottlenecks, and assess staff productivity.
+### Housekeeping KPI Report
+- **Filters:** Report date
+- **Sort:** Rooms cleaned per staff, highest first (Selection Sort)
+- **Purpose:** Evaluate daily housekeeping staff productivity using defined KPI targets, identify staff who did not meet the required performance level, and support workload review or additional staff support
+- **KPI Target:** At least 5 rooms cleaned per staff per day
+- **Time Target:** Each completed room should be cleaned within 30 minutes

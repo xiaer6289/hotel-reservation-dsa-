@@ -1164,7 +1164,8 @@ public class VipPriorityController {
             registration.getRequestedRoomType(),
             String.valueOf(registration.getNumberOfGuests()),
             formatBoundaryDateTime(registration.getCheckOutDateTime()),
-            String.valueOf(countMatchingReadyRoomsForBoundary(registration))
+            String.valueOf(countMatchingReadyRoomsForBoundary(registration)),
+            formatWaitingTime(registration.getRegistrationTime())
         };
     }
 
@@ -1393,20 +1394,29 @@ public class VipPriorityController {
         );
 
         if (totalMinutes < 60) {
-            return totalMinutes + " min";
+            return totalMinutes
+                    + (totalMinutes == 1
+                    ? " minute"
+                    : " minutes");
         }
 
         long hours = totalMinutes / 60;
         long minutes = totalMinutes % 60;
 
-        if (minutes == 0) {
-            return hours + (hours == 1 ? " hr" : " hrs");
+        String result = hours
+                + (hours == 1
+                ? " hour"
+                : " hours");
+
+        if (minutes > 0) {
+            result += " "
+                    + minutes
+                    + (minutes == 1
+                    ? " minute"
+                    : " minutes");
         }
 
-        return hours
-                + (hours == 1 ? " hr " : " hrs ")
-                + minutes
-                + " min";
+        return result;
     }
 
     private String formatBoundaryDateTime(LocalDateTime value) {

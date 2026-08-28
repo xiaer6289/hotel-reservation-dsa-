@@ -68,15 +68,15 @@ public class VipPriorityAllocationPerformanceRP {
     }
 
     private void printReport(AllocationEntry[] entries, String keyword, LoyaltyTier tierFilter, String roomTypeFilter, String statusFilter, LocalDate startDate, LocalDate endDate, int minimumGuests, int sortOption) {
-        System.out.println("\n" + "=".repeat(142));
+        System.out.println("\n" + "=".repeat(153));
         System.out.println("                                      VIP ROOM ALLOCATION & WAITING TIME REPORT");
-        System.out.println("=".repeat(142));
+        System.out.println("=".repeat(153));
         System.out.println("REPORT PURPOSE");
         System.out.println("To monitor VIP waiting time and evaluate the effectiveness " + "of priority-based room allocation." );
         System.out.println();
         System.out.println("HOTEL VALUE");
         System.out.println("Helps Front Desk and hotel management identify long VIP " + "waiting times, room shortages and allocation bottlenecks.");
-        System.out.println("-".repeat(142));
+        System.out.println("-".repeat(153));
         System.out.println("Generated On        : " + LocalDateTime.now().format(DATE_TIME_FORMAT));
         System.out.println("Report Period       : " + formatPeriod(startDate, endDate));
         System.out.println("Search Keyword      : " + displayFilter(keyword));
@@ -86,19 +86,19 @@ public class VipPriorityAllocationPerformanceRP {
         System.out.println("Minimum Party Size  : " + (minimumGuests == 0 ? ALL : minimumGuests + " guest(s)"));
         System.out.println("Search Technique    : Linear Search with Multiple Criteria Filters");
         System.out.println("Sorting Technique   : Selection Sort - " + sortDescription(sortOption));
-        System.out.println("-".repeat(142));
+        System.out.println("-".repeat(153));
 
         if (entries.length == 0) {
             System.out.println("No VIP allocation records match the selected report criteria.");
             System.out.println("The report can still be generated even when the current VIP waiting queue is empty.");
-            System.out.println("=".repeat(142));
+            System.out.println("=".repeat(153));
             return;
         }
 
         System.out.printf(
-                "%-4s %-7s %-8s %-17s %-10s %-16s %-12s %-6s %-12s %-16s %-9s%n",
+                "%-4s %-7s %-8s %-17s %-10s %-16s %-12s %-6s %-12s %-16s %-20s%n",
                 "No.", "Reg ID", "Guest ID", "Guest Name", "Tier", "Room Request", "Status", "Room", "Confirm No.", "Request Time", "Waiting Time");
-        System.out.println("-".repeat(142));
+        System.out.println("-".repeat(153));
 
         int allocated = 0;
         int waiting = 0;
@@ -155,7 +155,7 @@ public class VipPriorityAllocationPerformanceRP {
             }
 
             System.out.printf(
-                    "%-4d %-7s %-8s %-17s %-10s %-16s %-12s %-6s %-12s %-16s %-9s%n",
+                    "%-4d %-7s %-8s %-17s %-10s %-16s %-12s %-6s %-12s %-16s %-20s%n",
                     i + 1,
                     registration.getRegistrationId(),
                     registration.getGuest().getGuestId(),
@@ -169,7 +169,7 @@ public class VipPriorityAllocationPerformanceRP {
                     entry.waitMinutes < 0 ? "-": formatWaitingTime(entry.waitMinutes));
         }
 
-        System.out.println("-".repeat(142));
+        System.out.println("-".repeat(153));
         System.out.println("TIER PERFORMANCE SUMMARY");
         System.out.printf("%-12s %-10s %-11s %-15s %-20s%n", "Tier", "Requests", "Allocated", "Not Allocated", "Avg Allocation Wait");
 
@@ -243,31 +243,40 @@ if (allocatedWithWait > 0
     System.out.println( "Suggestion: Maintain the current priority allocation " + "and room readiness process.");
 }
 
-        System.out.println("=".repeat(142));
+        System.out.println("=".repeat(153));
     }
 
     private String formatWaitingTime(long totalMinutes) {
 
-            if (totalMinutes < 0) {
-                return "-";
-            }
-
-            if (totalMinutes < 60) {
-                return totalMinutes + " min";
-            }
-
-            long hours = totalMinutes / 60;
-            long minutes = totalMinutes % 60;
-
-            if (minutes == 0) {
-                return hours + (hours == 1 ? " hr" : " hrs");
-            }
-
-            return hours
-                    + (hours == 1 ? " hr " : " hrs ")
-                    + minutes
-                    + " min";
+        if (totalMinutes < 0) {
+            return "-";
         }
+
+        if (totalMinutes < 60) {
+            return totalMinutes
+                    + (totalMinutes == 1
+                    ? " minute"
+                    : " minutes");
+        }
+
+        long hours = totalMinutes / 60;
+        long minutes = totalMinutes % 60;
+
+        String result = hours
+                + (hours == 1
+                ? " hour"
+                : " hours");
+
+        if (minutes > 0) {
+            result += " "
+                    + minutes
+                    + (minutes == 1
+                    ? " minute"
+                    : " minutes");
+        }
+
+        return result;
+    }
 
     private LoyaltyProfile findProfile(LoyaltyProfile[] profiles, String guestId) {
         for (LoyaltyProfile profile : profiles) {

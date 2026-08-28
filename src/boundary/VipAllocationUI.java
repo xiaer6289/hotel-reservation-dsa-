@@ -228,21 +228,21 @@ public class VipAllocationUI {
         }
 
         System.out.println("Suitable room = READY + requested room type + enough capacity.");
-        System.out.println("-".repeat(127));
+        System.out.println("-".repeat(132));
 
         System.out.printf(
-                 "%-9s %-8s %-9s %-16s %-10s %-15s %-7s %-17s %-15s %-12s%n",
+                 "%-9s %-8s %-9s %-16s %-10s %-15s %-7s %-17s %-20s %-12s%n",
                 "Priority", "Reg ID", "Guest ID", "Guest Name", "Tier", "Requested Room", "Guests", "Request Time","Waiting Time", "Available"
         );
 
-        System.out.println("-".repeat(127));
+        System.out.println("-".repeat(132));
 
         for (int i = 0; i < registrations.length; i++) {
             String[] registration = registrations[i];
             int readyMatches = Integer.parseInt(registration[8]);
 
             System.out.printf(
-                "%-9s %-8s %-9s %-16s %-10s %-15s %-7s %-17s %-15s %-12s%n",
+                "%-9s %-8s %-9s %-16s %-10s %-15s %-7s %-17s %-20s %-12s%n",
                 i + 1,
                 registration[0],
                 registration[1],
@@ -256,7 +256,7 @@ public class VipAllocationUI {
         );
         }
 
-        System.out.println("-".repeat(127));
+        System.out.println("-".repeat(132));
     }
 
     private void searchVipRegistration() {
@@ -553,6 +553,7 @@ public class VipAllocationUI {
         System.out.println("  VIP Tier             : " + nextRegistration[3]);
         System.out.println("  Registration ID      : " + nextRegistration[4]);
         System.out.println("  Request Time         : " + nextRegistration[6]);
+        System.out.println("  Waiting Time         : " + nextRegistration[11]);
         System.out.println("\nSTAY & ROOM REQUEST");
         System.out.println("-".repeat(104));
         System.out.println("  Requested Room Type  : " + formatRoomType(nextRegistration[7]));
@@ -736,7 +737,8 @@ public class VipAllocationUI {
         System.out.println("\nWAITING REGISTRATION");
         System.out.println("  Registration ID       : " + registration[4]);
         System.out.println("  Registration Status   : " + registration[5]);
-        System.out.println("  Request Time         : " + registration[6]);
+        System.out.println("  Request Time          : " + registration[6]);
+        System.out.println("  Waiting Time          : " + registration[11]);
         System.out.println("\nROOM REQUEST");
         System.out.println("  Requested Room Type   : " + formatRoomType(registration[7]));
         System.out.println("  Number of Guests      : " + registration[8]);
