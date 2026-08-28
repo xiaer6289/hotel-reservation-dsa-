@@ -935,13 +935,23 @@ public class RegistrationUI {
             return "N/A";
         }
 
-        String digits = phoneNo;
+        String digits = phoneNo.trim();
+
+        // Keep all displayed phone numbers consistent with guest.dat:
+        // international 60... format without the '+' symbol.
+        if (digits.startsWith("+60")) {
+            return digits.substring(1);
+        }
         if (digits.startsWith("60")) {
-            return "+" + digits;
+            return digits;
+        }
+        if (digits.startsWith("0")
+                && (digits.length() == 10 || digits.length() == 11)) {
+            return "60" + digits.substring(1);
         }
         if (digits.startsWith("1")
                 && (digits.length() == 9 || digits.length() == 10)) {
-            return "0" + digits;
+            return "60" + digits;
         }
         return digits;
     }
