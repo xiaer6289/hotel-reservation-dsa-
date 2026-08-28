@@ -706,24 +706,49 @@ public class VipPriorityController {
     }
 
     private boolean isCurrentVipRoomBooking(Booking booking) {
-        if (booking == null || booking.getGuest() == null || booking.getGuest().getGuestId() == null || booking.getRoom() == null || booking.getRoom().getRoomNumber() == null) {
+        if (booking == null
+                || booking.getGuest() == null
+                || booking.getGuest().getGuestId() == null
+                || booking.getRoom() == null
+                || booking.getRoom().getRoomNumber() == null) {
+
             return false;
         }
 
-        LoyaltyProfile profile = searchLoyaltyProfileByGuestId(booking.getGuest().getGuestId());
+        LoyaltyProfile profile
+                = searchLoyaltyProfileByGuestId(
+                        booking.getGuest().getGuestId());
+
         if (profile == null || profile.getTier() == null) {
             return false;
         }
 
-        Room currentRoom = findRoomByNumber(booking.getRoom().getRoomNumber());
-        if (currentRoom == null || currentRoom.getRoomStatus() != RoomStatus.OCCUPIED) {
+        Room currentRoom
+                = findRoomByNumber(
+                        booking.getRoom().getRoomNumber());
+
+        if (currentRoom == null
+                || currentRoom.getRoomStatus()
+                != RoomStatus.OCCUPIED) {
+
             return false;
         }
 
-        LocalDateTime bookingCheckIn = booking.getRoom().getCheckInDateTime();
-        LocalDateTime currentCheckIn = currentRoom.getCheckInDateTime();
+        /*
+        * Payment date/time represents the actual check-in time of
+        * this specific booking.
+        */
+        LocalDateTime bookingCheckIn
+                = booking.getPayment() == null
+                ? null
+                : booking.getPayment().getDateTime();
 
-        return bookingCheckIn != null && currentCheckIn != null && bookingCheckIn.equals(currentCheckIn);
+        LocalDateTime currentCheckIn
+                = currentRoom.getCheckInDateTime();
+
+        return bookingCheckIn != null
+                && currentCheckIn != null
+                && bookingCheckIn.equals(currentCheckIn);
     }
 
     public Room getCurrentRoomForBooking(Booking booking) {

@@ -25,8 +25,7 @@ public class WalkInRegistrationDao {
 
         File file = new File(fileName);
 
-        System.out.println(
-                "saving to: " + file.getAbsolutePath());
+        
 
         try (PrintWriter writer
                 = new PrintWriter(new FileWriter(file))) {

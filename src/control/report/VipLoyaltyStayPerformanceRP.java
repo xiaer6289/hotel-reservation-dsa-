@@ -196,30 +196,61 @@ public class VipLoyaltyStayPerformanceRP {
 
     private Booking findLatestBooking(String guestId, Booking[] bookings) {
         Booking latest = null;
+
         for (Booking booking : bookings) {
-            if (!isBookingForGuest(booking, guestId) || booking.getRoom().getCheckInDateTime() == null) {
+            if (!isBookingForGuest(booking, guestId)
+                    || booking.getPayment() == null
+                    || booking.getPayment().getDateTime() == null) {
                 continue;
             }
-            if (latest == null || latest.getRoom().getCheckInDateTime().isBefore(booking.getRoom().getCheckInDateTime())) {
+
+            if (latest == null
+                    || latest.getPayment() == null
+                    || latest.getPayment().getDateTime() == null
+                    || latest.getPayment().getDateTime()
+                            .isBefore(booking.getPayment().getDateTime())) {
                 latest = booking;
             }
         }
+
         return latest;
     }
 
-    private int countMatchingBookings(String guestId, Booking[] bookings, String roomTypeFilter, LocalDate startDate, LocalDate endDate) {
+    private int countMatchingBookings(
+            String guestId,
+            Booking[] bookings,
+            String roomTypeFilter,
+            LocalDate startDate,
+            LocalDate endDate) {
+
         int count = 0;
+
         for (Booking booking : bookings) {
-            if (!isBookingForGuest(booking, guestId) || booking.getRoom().getCheckInDateTime() == null) {
+            if (!isBookingForGuest(booking, guestId)
+                    || booking.getPayment() == null
+                    || booking.getPayment().getDateTime() == null) {
                 continue;
             }
-            LocalDate checkInDate = booking.getRoom().getCheckInDateTime().toLocalDate();
-            boolean matchesRoom = roomTypeFilter == null || booking.getRoom().getRoomType().equalsIgnoreCase(roomTypeFilter);
-            boolean matchesDate = (startDate == null || !checkInDate.isBefore(startDate)) && (endDate == null || !checkInDate.isAfter(endDate));
+
+            LocalDate checkInDate
+                    = booking.getPayment().getDateTime().toLocalDate();
+
+            boolean matchesRoom
+                    = roomTypeFilter == null
+                    || booking.getRoom().getRoomType()
+                            .equalsIgnoreCase(roomTypeFilter);
+
+            boolean matchesDate
+                    = (startDate == null
+                    || !checkInDate.isBefore(startDate))
+                    && (endDate == null
+                    || !checkInDate.isAfter(endDate));
+
             if (matchesRoom && matchesDate) {
                 count++;
             }
         }
+
         return count;
     }
 
@@ -309,22 +340,55 @@ public class VipLoyaltyStayPerformanceRP {
         return first.guest.getGuestId().compareToIgnoreCase(second.guest.getGuestId()) < 0;
     }
 
-    private RoomType findMostUsedRoomType(LoyaltyEntry[] entries, Booking[] bookings, String roomTypeFilter, LocalDate startDate, LocalDate endDate) {
+    private RoomType findMostUsedRoomType(
+            LoyaltyEntry[] entries,
+            Booking[] bookings,
+            String roomTypeFilter,
+            LocalDate startDate,
+            LocalDate endDate) {
+
         int[] counts = new int[RoomType.values().length];
+
         for (LoyaltyEntry entry : entries) {
             for (Booking booking : bookings) {
-                if (!isBookingForGuest(booking, entry.guest.getGuestId()) || booking.getRoom().getCheckInDateTime() == null) {
+
+                if (!isBookingForGuest(
+                        booking,
+                        entry.guest.getGuestId())
+                        || booking.getPayment() == null
+                        || booking.getPayment().getDateTime() == null) {
                     continue;
                 }
-                LocalDate date = booking.getRoom().getCheckInDateTime().toLocalDate();
-                boolean matchesDate = (startDate == null || !date.isBefore(startDate)) && (endDate == null || !date.isAfter(endDate));
-                boolean matchesRoom = roomTypeFilter == null || booking.getRoom().getRoomType().equalsIgnoreCase(roomTypeFilter);
+
+                LocalDate date
+                        = booking.getPayment()
+                                .getDateTime()
+                                .toLocalDate();
+
+                boolean matchesDate
+                        = (startDate == null
+                        || !date.isBefore(startDate))
+                        && (endDate == null
+                        || !date.isAfter(endDate));
+
+                boolean matchesRoom
+                        = roomTypeFilter == null
+                        || booking.getRoom()
+                                .getRoomType()
+                                .equalsIgnoreCase(roomTypeFilter);
+
                 if (!matchesDate || !matchesRoom) {
                     continue;
                 }
+
                 try {
-                    RoomType type = RoomType.valueOf(booking.getRoom().getRoomType().toUpperCase());
+                    RoomType type = RoomType.valueOf(
+                            booking.getRoom()
+                                    .getRoomType()
+                                    .toUpperCase());
+
                     counts[type.ordinal()]++;
+
                 } catch (IllegalArgumentException exception) {
                     // Ignore unknown legacy room types in the summary.
                 }
@@ -333,17 +397,22 @@ public class VipLoyaltyStayPerformanceRP {
 
         RoomType best = null;
         int bestCount = 0;
+
         for (RoomType type : RoomType.values()) {
             if (counts[type.ordinal()] > bestCount) {
                 best = type;
                 bestCount = counts[type.ordinal()];
             }
         }
+
         return best;
     }
 
     private LocalDateTime lastStayDate(Booking booking) {
-        return booking == null || booking.getRoom() == null ? null : booking.getRoom().getCheckInDateTime();
+        return booking == null
+                || booking.getPayment() == null
+                ? null
+                : booking.getPayment().getDateTime();
     }
 
     private String getLastRoom(Booking booking) {

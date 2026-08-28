@@ -309,30 +309,18 @@ public class FrontDeskUI {
 
             break;
         }
-        
+    
         String staff = selectStaff(scanner);
         if (staff == null) {
             return;
         }
-        System.out.println("Select checkout reason: 1. Standard  2. Late Check-Out  3. Special Request");
-        System.out.print("Enter choice: ");
-        String reasonChoice = scanner.nextLine().trim();
-        String remarks = null;
 
-        switch (reasonChoice) {
-            case "2":
-                remarks = "Late check-out";
-                break;
-            case "3":
-                System.out.print("Enter special request details: ");
-                remarks = "Special request - " + scanner.nextLine().trim();
-                break;
-            default:
-                remarks = null;
-                break;
-        }
-
-        String taskId = control.processCheckoutAndGetTaskId(confirmationNo, staff, remarks);
+        String taskId = control.processCheckoutAndGetTaskId(
+                confirmationNo,
+                staff,
+                null
+        );
+        
         if (taskId == null) {
             Utility.printError("Unable to process check-out.");
             return;
