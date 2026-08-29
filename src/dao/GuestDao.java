@@ -78,10 +78,8 @@ public class GuestDao {
     
     /**
      * Demo guest master data shared by all modules.
-     * G0001-G0003 intentionally match LoyaltyProfileDao sample profiles:
-     * G0001 Ali   -> DIAMOND (10 completed stays)
-     * G0002 Aiman -> PLATINUM (6 completed stays)
-     * G0003 Mei   -> ELITE (3 completed stays)
+     * VIP sample guests are G0011-G0015 and G0017-G0021 so the
+     * loyalty reports can demonstrate DIAMOND, PLATINUM and ELITE tiers.
      */
     public Guest[] seedSampleData() {
         return new Guest[] {
@@ -99,7 +97,13 @@ public class GuestDao {
             new Guest("G0012", "Lai", 60126648770L),
             new Guest("G0013", "Sheldon", 60189891131L),
             new Guest("G0014", "Eunice", 60126640666L),
-            new Guest("G0015", "Chris", 60121112222L)
+            new Guest("G0015", "Chris", 60121112222L),
+            new Guest("G0016", "Farah", 60177777789L),
+            new Guest("G0017", "Nadia", 60131112221L),
+            new Guest("G0018", "Kelvin", 60131112222L),
+            new Guest("G0019", "Priya", 60131112223L),
+            new Guest("G0020", "Hafiz", 60131112224L),
+            new Guest("G0021", "Amanda", 60131112225L)
         };
     }
 }

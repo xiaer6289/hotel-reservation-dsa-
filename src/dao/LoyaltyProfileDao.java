@@ -134,12 +134,15 @@ public class LoyaltyProfileDao {
         return new LoyaltyProfile[] {
 
             new LoyaltyProfile("G0011", 12), // DIAMOND
-            new LoyaltyProfile("G0012", 10), // DIAMOND
-
-            new LoyaltyProfile("G0013", 8),  // PLATINUM
+            new LoyaltyProfile("G0012", 11), // DIAMOND
+            new LoyaltyProfile("G0013", 9),  // PLATINUM
             new LoyaltyProfile("G0014", 6),  // PLATINUM
-
-            new LoyaltyProfile("G0015", 4)   // ELITE
+            new LoyaltyProfile("G0015", 4),  // ELITE
+            new LoyaltyProfile("G0017", 15), // DIAMOND
+            new LoyaltyProfile("G0018", 8),  // PLATINUM
+            new LoyaltyProfile("G0019", 7),  // PLATINUM
+            new LoyaltyProfile("G0020", 5),  // ELITE
+            new LoyaltyProfile("G0021", 3)   // ELITE
         };
     }
 }
