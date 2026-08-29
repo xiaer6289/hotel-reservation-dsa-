@@ -491,7 +491,7 @@ public class VipAllocationUI {
         System.out.printf(
                 "%-3s %-9s %-8s %-13s %-9s %-5s %-12s %-17s  %-17s%n",
                 "No", "Confirm No", "Guest ID", "Guest Name", "Tier", "Room", "Room Type", "Check-In", "Exp. Check-Out");
-        System.out.println("-".repeat(116));
+        System.out.println("-".repeat(104));
 
         for (int i = 0; i < currentVipBookings.length; i++) {
             String[] booking = currentVipBookings[i];
@@ -508,7 +508,7 @@ public class VipAllocationUI {
                     booking[7]);
         }
 
-        System.out.println("-".repeat(116));
+        System.out.println("-".repeat(104));
         System.out.println("IN-HOUSE SUMMARY");
         System.out.println("  Current VIP Rooms Occupied : " + currentVipBookings.length);
         System.out.println("\nNext action: Use the Confirmation No. in Front Desk to process check-out.");
