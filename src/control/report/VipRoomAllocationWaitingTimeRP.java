@@ -70,34 +70,37 @@ public class VipRoomAllocationWaitingTimeRP {
     private void printReport(AllocationEntry[] entries, String keyword, LoyaltyTier tierFilter, String roomTypeFilter, String statusFilter, LocalDate startDate, LocalDate endDate, int minimumGuests, int sortOption) {
         final int reportWidth = calculateReportWidth(entries);
         String border = "=".repeat(reportWidth);
-        String divider = "-".repeat(reportWidth);
 
         System.out.println("\n" + border);
         printCentered("VIP ROOM ALLOCATION & WAITING TIME REPORT", reportWidth);
         printCentered("Operational Performance Report", reportWidth);
         System.out.println(border);
 
-        printSection("REPORT INFORMATION", divider);
+        printSection("REPORT INFORMATION");
         printWrappedKeyValue("Generated On", LocalDateTime.now().format(DATE_TIME_FORMAT), 18, reportWidth);
         printWrappedKeyValue("Purpose", "Monitor VIP waiting time and evaluate priority-based room allocation performance.", 18, reportWidth);
         printWrappedKeyValue("Hotel Value", "Highlights long waits, room shortages and allocation bottlenecks for faster operational action.", 18, reportWidth);
+        System.out.println();
 
-        printSection("REPORT SCOPE", divider);
+        printSection("REPORT SCOPE");
         printWrappedKeyValue("Report Period", formatPeriod(startDate, endDate), 18, reportWidth);
         printWrappedKeyValue("Keyword", displayFilter(keyword), 18, reportWidth);
         printWrappedKeyValue("Loyalty Tier", tierFilter == null ? ALL : tierFilter.toString(), 18, reportWidth);
         printWrappedKeyValue("Room Type", roomTypeFilter == null ? ALL : formatRoomType(roomTypeFilter), 18, reportWidth);
         printWrappedKeyValue("Status", normalizeStatus(statusFilter), 18, reportWidth);
         printWrappedKeyValue("Minimum Party", minimumGuests == 0 ? ALL : minimumGuests + " guest(s)", 18, reportWidth);
+        System.out.println();
 
-        printSection("ANALYSIS METHOD", divider);
+        printSection("ANALYSIS METHOD");
         printWrappedKeyValue("Search", "Linear Search", 18, reportWidth);
         printWrappedKeyValue("Sort", "Selection Sort - " + sortDescription(sortOption), 18, reportWidth);
+        System.out.println();
 
         if (entries.length == 0) {
-            printSection("REPORT RESULT", divider);
+            printSection("REPORT RESULT");
             printWrappedText("No VIP allocation records match the selected report criteria.", 2, reportWidth);
             printWrappedText("The report uses historical and current VIP registrations, so it can run even when the waiting queue is empty.", 2, reportWidth);
+            System.out.println();
             System.out.println(border);
             return;
         }
@@ -163,7 +166,7 @@ public class VipRoomAllocationWaitingTimeRP {
                 ? -1
                 : Math.round((double) totalAllocatedWait / allocatedWithWait);
 
-        printSection("KEY ALLOCATION INDICATORS", divider);
+        printSection("KEY ALLOCATION INDICATORS");
         printWrappedKeyValue("Matching VIP Requests", String.valueOf(entries.length), 29, reportWidth);
         printWrappedKeyValue("Successfully Allocated", String.valueOf(allocated), 29, reportWidth);
         printWrappedKeyValue("Currently VIP Waiting", String.valueOf(waiting), 29, reportWidth);
@@ -176,8 +179,9 @@ public class VipRoomAllocationWaitingTimeRP {
                 + " / " + longestEntry.registration.getGuest().getName(), 29, reportWidth);
         printWrappedKeyValue("Highest Demand VIP Tier", highestDemandTier == null ? "-" : highestDemandTier.toString(), 29, reportWidth);
         printWrappedKeyValue("Highest Demand Room Type", highestDemandRoom == null ? "-" : formatRoomType(highestDemandRoom.name()), 29, reportWidth);
+        System.out.println();
 
-        printSection("VIP REQUEST DETAIL", divider);
+        printSection("VIP REQUEST DETAIL");
         int guestNameWidth = getGuestNameWidth(entries);
         int roomWidth = getRoomWidth(entries);
         int statusWidth = getStatusWidth(entries);
@@ -187,7 +191,8 @@ public class VipRoomAllocationWaitingTimeRP {
 
         System.out.printf(detailFormat,
                 "No.", "Reg ID", "Guest ID", "Guest Name", "Tier", "Room Request", "Status", "Request Time", "Waiting Time");
-        System.out.println(divider);
+        int detailTableWidth = 3 + 7 + 8 + guestNameWidth + 10 + roomWidth + statusWidth + 16 + waitWidth + (8 * 2);
+        System.out.println("-".repeat(detailTableWidth));
 
         for (int i = 0; i < entries.length; i++) {
             AllocationEntry entry = entries[i];
@@ -203,11 +208,12 @@ public class VipRoomAllocationWaitingTimeRP {
                     registration.getRegistrationTime().format(DATE_TIME_FORMAT),
                     entry.waitMinutes < 0 ? "-" : formatWaitingTime(entry.waitMinutes));
         }
+        System.out.println();
 
-        printSection("TIER PERFORMANCE", divider);
+        printSection("TIER PERFORMANCE");
         System.out.printf("%-14s  %10s  %11s  %13s  %-20s%n",
                 "Tier", "Requests", "Allocated", "Not Allocated", "Average Wait");
-        System.out.println(divider);
+        System.out.println("-".repeat(76));
         for (LoyaltyTier tier : new LoyaltyTier[]{LoyaltyTier.DIAMOND, LoyaltyTier.PLATINUM, LoyaltyTier.ELITE}) {
             int index = tier.ordinal();
             if (tierRequests[index] == 0) {
@@ -223,11 +229,12 @@ public class VipRoomAllocationWaitingTimeRP {
                     tierRequests[index] - tierAllocated[index],
                     average);
         }
+        System.out.println();
 
-        printSection("ROOM TYPE PERFORMANCE", divider);
+        printSection("ROOM TYPE PERFORMANCE");
         System.out.printf("%-24s  %10s  %11s  %17s%n",
                 "Requested Room Type", "Requests", "Allocated", "Allocation Rate");
-        System.out.println(divider);
+        System.out.println("-".repeat(68));
         for (RoomType roomType : RoomType.values()) {
             int index = roomType.ordinal();
             if (roomRequests[index] == 0) {
@@ -240,8 +247,9 @@ public class VipRoomAllocationWaitingTimeRP {
                     roomAllocated[index],
                     rate);
         }
+        System.out.println();
 
-        printSection("MANAGEMENT INTERPRETATION", divider);
+        printSection("MANAGEMENT INTERPRETATION");
         if (averageWait >= 60) {
             printWrappedText("Average VIP allocation waiting time is above 1 hour, indicating a significant room-readiness delay.", 2, reportWidth);
         } else if (waiting > 0) {
@@ -249,8 +257,9 @@ public class VipRoomAllocationWaitingTimeRP {
         } else {
             printWrappedText("No VIP guest is currently waiting and the observed allocation waiting time is under control.", 2, reportWidth);
         }
+        System.out.println();
 
-        printSection("RECOMMENDED ACTION", divider);
+        printSection("RECOMMENDED ACTION");
         if (averageWait >= 60) {
             printWrappedText("Coordinate earlier room preparation with Housekeeping and prioritise ready rooms for high-priority VIP requests.", 2, reportWidth);
         } else if (waiting > 0) {
@@ -259,6 +268,7 @@ public class VipRoomAllocationWaitingTimeRP {
             printWrappedText("Maintain the current priority-allocation process and continue monitoring room readiness and VIP waiting time.", 2, reportWidth);
         }
 
+        System.out.println();
         System.out.println(border);
     }
 
@@ -312,11 +322,10 @@ public class VipRoomAllocationWaitingTimeRP {
         return Math.max(width, 16);
     }
 
-    private void printSection(String title, String divider) {
+    private void printSection(String title) {
         System.out.println();
-        System.out.println(divider);
-        System.out.println(" " + title);
-        System.out.println(divider);
+        System.out.println("[ " + title + " ]");
+        System.out.println();
     }
 
     private void printCentered(String text, int width) {
