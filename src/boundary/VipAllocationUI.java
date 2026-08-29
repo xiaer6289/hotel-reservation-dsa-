@@ -219,8 +219,7 @@ public class VipAllocationUI {
     }
 
     private void displayPriorityQueue() {
-        displayScreenHeader("VIP WAITING LIST - PRIORITY ORDER", "Shows VIP guests still waiting for a room, starting with the guest who should be served first."
-        );
+        displayScreenHeader("VIP WAITING LIST - PRIORITY ORDER", "Shows VIP guests still waiting for a room, starting with the guest who should be served first.");
 
         String[][] registrations = controller.getVipPriorityQueueDisplayData();
 
@@ -645,9 +644,7 @@ public class VipAllocationUI {
         while (step >= 1 && step <= 7) {
             switch (step) {
                 case 1:
-                    showReportFilterStep(
-                            "VIP ROOM ALLOCATION & WAITING TIME REPORT",
-                            1, 7, "SEARCH RECORDS");
+                    showReportFilterStep("VIP ROOM ALLOCATION & WAITING TIME REPORT", 1, 7, "SEARCH RECORDS");
                     System.out.println(" Search by Registration ID, Guest ID, Guest Name or Phone Number.");
                     System.out.println(" Example: R0001 / G0012 / Ali / 76996648");
                     System.out.println(" Press Enter for ALL records, or enter B to return to the VIP menu.");
@@ -660,9 +657,7 @@ public class VipAllocationUI {
                     break;
 
                 case 2:
-                    showReportFilterStep(
-                            "VIP ROOM ALLOCATION & WAITING TIME REPORT",
-                            2, 7, "LOYALTY TIER");
+                    showReportFilterStep("VIP ROOM ALLOCATION & WAITING TIME REPORT", 2, 7, "LOYALTY TIER");
                     System.out.println(" Select the VIP loyalty tier to include in this report.");
                     tierFilter = readTierFilterWithBack();
                     if (isBackSelection(tierFilter)) {
@@ -673,9 +668,7 @@ public class VipAllocationUI {
                     break;
 
                 case 3:
-                    showReportFilterStep(
-                            "VIP ROOM ALLOCATION & WAITING TIME REPORT",
-                            3, 7, "REQUESTED ROOM TYPE");
+                    showReportFilterStep("VIP ROOM ALLOCATION & WAITING TIME REPORT", 3, 7, "REQUESTED ROOM TYPE");
                     System.out.println(" Select the requested room type to include in this report.");
                     roomTypeFilter = readRoomTypeFilterWithBack();
                     if (isBackSelection(roomTypeFilter)) {
@@ -686,9 +679,7 @@ public class VipAllocationUI {
                     break;
 
                 case 4:
-                    showReportFilterStep(
-                            "VIP ROOM ALLOCATION & WAITING TIME REPORT",
-                            4, 7, "REGISTRATION STATUS");
+                    showReportFilterStep("VIP ROOM ALLOCATION & WAITING TIME REPORT", 4, 7, "REGISTRATION STATUS");
                     System.out.println(" Select the registration status to include in this report.");
                     statusFilter = readVipRegistrationStatusFilterWithBack();
                     if (isBackSelection(statusFilter)) {
@@ -699,9 +690,7 @@ public class VipAllocationUI {
                     break;
 
                 case 5:
-                    showReportFilterStep(
-                            "VIP ROOM ALLOCATION & WAITING TIME REPORT",
-                            5, 7, "REGISTRATION DATE RANGE");
+                    showReportFilterStep("VIP ROOM ALLOCATION & WAITING TIME REPORT", 5, 7, "REGISTRATION DATE RANGE");
                     System.out.println(" Set an optional registration date range.");
                     System.out.println(" Use YYYY-MM-DD (e.g. 2026-08-15). Press Enter for no limit.");
                     System.out.println(" Enter B to return to the previous filter.");
@@ -737,9 +726,7 @@ public class VipAllocationUI {
                     break;
 
                 case 6:
-                    showReportFilterStep(
-                            "VIP ROOM ALLOCATION & WAITING TIME REPORT",
-                            6, 7, "MINIMUM PARTY SIZE");
+                    showReportFilterStep("VIP ROOM ALLOCATION & WAITING TIME REPORT", 6, 7, "MINIMUM PARTY SIZE");
                     System.out.println(" Enter the minimum party size to include in this report.");
                     System.out.println(" Enter 0 for ALL party sizes, or B to return to the previous filter.");
                     minimumGuests = readNonNegativeFilterInteger("\nMinimum party size: ");
@@ -751,9 +738,7 @@ public class VipAllocationUI {
                     break;
 
                 case 7:
-                    showReportFilterStep(
-                            "VIP ROOM ALLOCATION & WAITING TIME REPORT",
-                            7, 7, "SORT REPORT");
+                    showReportFilterStep("VIP ROOM ALLOCATION & WAITING TIME REPORT", 7, 7, "SORT REPORT");
                     System.out.println(" Select how the matching records should be sorted.");
                     System.out.println();
                     System.out.println("  [1] VIP Tier Priority, then Earliest Registration");
@@ -775,9 +760,7 @@ public class VipAllocationUI {
         }
 
         Utility.clearScreen();
-        controller.generateRoomAllocationWaitingTimeReport(
-                keyword, tierFilter, roomTypeFilter, statusFilter,
-                startDate, endDate, minimumGuests, sortOption);
+        controller.generateRoomAllocationWaitingTimeReport(keyword, tierFilter, roomTypeFilter, statusFilter, startDate, endDate, minimumGuests, sortOption);
     }
 
     private void generateLoyaltyEngagementReport() {
@@ -794,9 +777,7 @@ public class VipAllocationUI {
         while (step >= 1 && step <= 7) {
             switch (step) {
                 case 1:
-                    showReportFilterStep(
-                            "VIP LOYALTY ENGAGEMENT REPORT",
-                            1, 7, "SEARCH VIP GUESTS");
+                    showReportFilterStep("VIP LOYALTY ENGAGEMENT REPORT", 1, 7, "SEARCH VIP GUESTS");
                     System.out.println(" Search by Guest ID, Guest Name or Phone Number.");
                     System.out.println(" Example: G0012 / Ali / 76996648");
                     System.out.println(" Press Enter for ALL VIP guests, or enter B to return to the VIP menu.");
@@ -809,9 +790,7 @@ public class VipAllocationUI {
                     break;
 
                 case 2:
-                    showReportFilterStep(
-                            "VIP LOYALTY ENGAGEMENT REPORT",
-                            2, 7, "LOYALTY TIER");
+                    showReportFilterStep("VIP LOYALTY ENGAGEMENT REPORT", 2, 7, "LOYALTY TIER");
                     System.out.println(" Select the VIP loyalty tier to include in this report.");
                     tierFilter = readTierFilterWithBack();
                     if (isBackSelection(tierFilter)) {
@@ -822,9 +801,7 @@ public class VipAllocationUI {
                     break;
 
                 case 3:
-                    showReportFilterStep(
-                            "VIP LOYALTY ENGAGEMENT REPORT",
-                            3, 7, "CURRENT VIP ACTIVITY");
+                    showReportFilterStep("VIP LOYALTY ENGAGEMENT REPORT", 3, 7, "CURRENT VIP ACTIVITY");
                     System.out.println(" Select the VIP guest's current activity.");
                     activityFilter = readVipActivityFilterWithBack();
                     if (isBackSelection(activityFilter)) {
@@ -835,9 +812,7 @@ public class VipAllocationUI {
                     break;
 
                 case 4:
-                    showReportFilterStep(
-                            "VIP LOYALTY ENGAGEMENT REPORT",
-                            4, 7, "MINIMUM COMPLETED STAYS");
+                    showReportFilterStep("VIP LOYALTY ENGAGEMENT REPORT", 4, 7, "MINIMUM COMPLETED STAYS");
                     System.out.println(" Enter the minimum number of completed VIP stays to include.");
                     System.out.println(" Enter 0 for ALL VIP guests, or B to return to the previous filter.");
                     minimumCompletedStays = readNonNegativeFilterInteger("\nMinimum completed stays: ");
@@ -849,9 +824,7 @@ public class VipAllocationUI {
                     break;
 
                 case 5:
-                    showReportFilterStep(
-                            "VIP LOYALTY ENGAGEMENT REPORT",
-                            5, 7, "STAY ROOM TYPE");
+                    showReportFilterStep("VIP LOYALTY ENGAGEMENT REPORT", 5, 7, "STAY ROOM TYPE");
                     System.out.println(" Select the room type from the VIP guest's stay history.");
                     roomTypeFilter = readRoomTypeFilterWithBack();
                     if (isBackSelection(roomTypeFilter)) {
@@ -862,9 +835,7 @@ public class VipAllocationUI {
                     break;
 
                 case 6:
-                    showReportFilterStep(
-                            "VIP LOYALTY ENGAGEMENT REPORT",
-                            6, 7, "CHECK-IN DATE RANGE");
+                    showReportFilterStep("VIP LOYALTY ENGAGEMENT REPORT", 6, 7, "CHECK-IN DATE RANGE");
                     System.out.println(" Set an optional check-in date range for VIP stay history.");
                     System.out.println(" Use YYYY-MM-DD (e.g. 2026-08-15). Press Enter for no limit.");
                     System.out.println(" Enter B to return to the previous filter.");
@@ -900,9 +871,7 @@ public class VipAllocationUI {
                     break;
 
                 case 7:
-                    showReportFilterStep(
-                            "VIP LOYALTY ENGAGEMENT REPORT",
-                            7, 7, "SORT REPORT");
+                    showReportFilterStep("VIP LOYALTY ENGAGEMENT REPORT", 7, 7, "SORT REPORT");
                     System.out.println(" Select how the matching VIP guests should be sorted.");
                     System.out.println();
                     System.out.println("  [1] Loyalty Tier Priority - DIAMOND > PLATINUM > ELITE");
@@ -925,9 +894,7 @@ public class VipAllocationUI {
         }
 
         Utility.clearScreen();
-        controller.generateLoyaltyEngagementReport(
-                keyword, tierFilter, activityFilter, minimumCompletedStays,
-                roomTypeFilter, startDate, endDate, sortOption);
+        controller.generateLoyaltyEngagementReport(keyword, tierFilter, activityFilter, minimumCompletedStays, roomTypeFilter, startDate, endDate, sortOption);
     }
 
     private void displayVipRegistrationDetails(String registrationId) {
@@ -998,8 +965,7 @@ public class VipAllocationUI {
         int inHouse = controller.getCurrentVipRoomDisplayData().length;
         int readyRooms = controller.getVacantRoomCount();
         String nextRegistrationId = controller.getNextVipRegistrationId();
-        String[] next = nextRegistrationId == null
-                ? null : controller.getWaitingVipRegistrationDisplayData(nextRegistrationId);
+        String[] next = nextRegistrationId == null ? null : controller.getWaitingVipRegistrationDisplayData(nextRegistrationId);
 
         System.out.println("STATUS        : " + vipProfiles + " VIP Profiles" + " | " + waiting + " Waiting" + " | " + inHouse + " In House" + " | " + readyRooms + " Ready Rooms");
         System.out.println("NEXT PRIORITY : " + (next == null ? "NONE" : next[4] + " / " + next[0] + " / " + next[3]));
@@ -1170,11 +1136,7 @@ public class VipAllocationUI {
         }
     }
 
-    private void showReportFilterStep(
-            String reportTitle,
-            int currentStep,
-            int totalSteps,
-            String title) {
+    private void showReportFilterStep(String reportTitle, int currentStep, int totalSteps, String title) {
         Utility.clearScreen();
         System.out.println("=".repeat(104));
         System.out.println(" " + reportTitle);

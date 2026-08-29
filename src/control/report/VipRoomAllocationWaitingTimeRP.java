@@ -162,9 +162,7 @@ public class VipRoomAllocationWaitingTimeRP {
         LoyaltyTier highestDemandTier = findHighestDemandTier(tierRequests);
         RoomType highestDemandRoom = findHighestDemandRoom(roomRequests);
         double successRate = (double) allocated * 100.0 / entries.length;
-        long averageWait = allocatedWithWait == 0
-                ? -1
-                : Math.round((double) totalAllocatedWait / allocatedWithWait);
+        long averageWait = allocatedWithWait == 0 ? -1 : Math.round((double) totalAllocatedWait / allocatedWithWait);
 
         printSection("KEY ALLOCATION INDICATORS");
         printWrappedKeyValue("Matching VIP Requests", String.valueOf(entries.length), 29, reportWidth);
@@ -173,10 +171,7 @@ public class VipRoomAllocationWaitingTimeRP {
         printWrappedKeyValue("Cancelled Requests", String.valueOf(cancelled), 29, reportWidth);
         printWrappedKeyValue("Allocation Success Rate", String.format("%.1f%%", successRate), 29, reportWidth);
         printWrappedKeyValue("Average Allocation Wait", averageWait < 0 ? "-" : formatWaitingTime(averageWait), 29, reportWidth);
-        printWrappedKeyValue("Longest Allocation Wait", longestEntry == null
-                ? "-"
-                : formatWaitingTime(longestWait) + " - " + longestEntry.registration.getRegistrationId()
-                + " / " + longestEntry.registration.getGuest().getName(), 29, reportWidth);
+        printWrappedKeyValue("Longest Allocation Wait", longestEntry == null ? "-" : formatWaitingTime(longestWait) + " - " + longestEntry.registration.getRegistrationId() + " / " + longestEntry.registration.getGuest().getName(), 29, reportWidth);
         printWrappedKeyValue("Highest Demand VIP Tier", highestDemandTier == null ? "-" : highestDemandTier.toString(), 29, reportWidth);
         printWrappedKeyValue("Highest Demand Room Type", highestDemandRoom == null ? "-" : formatRoomType(highestDemandRoom.name()), 29, reportWidth);
         System.out.println();
@@ -186,11 +181,8 @@ public class VipRoomAllocationWaitingTimeRP {
         int roomWidth = getRoomWidth(entries);
         int statusWidth = getStatusWidth(entries);
         int waitWidth = getWaitWidth(entries);
-        String detailFormat = "%-3s  %-7s  %-8s  %-" + guestNameWidth + "s  %-10s  %-" + roomWidth
-                + "s  %-" + statusWidth + "s  %-16s  %-" + waitWidth + "s%n";
-
-        System.out.printf(detailFormat,
-                "No.", "Reg ID", "Guest ID", "Guest Name", "Tier", "Room Request", "Status", "Request Time", "Waiting Time");
+        String detailFormat = "%-3s  %-7s  %-8s  %-" + guestNameWidth + "s  %-10s  %-" + roomWidth + "s  %-" + statusWidth + "s  %-16s  %-" + waitWidth + "s%n";
+        System.out.printf(detailFormat, "No.", "Reg ID", "Guest ID", "Guest Name", "Tier", "Room Request", "Status", "Request Time", "Waiting Time");
         int detailTableWidth = 3 + 7 + 8 + guestNameWidth + 10 + roomWidth + statusWidth + 16 + waitWidth + (8 * 2);
         System.out.println("-".repeat(detailTableWidth));
 
@@ -211,17 +203,14 @@ public class VipRoomAllocationWaitingTimeRP {
         System.out.println();
 
         printSection("TIER PERFORMANCE");
-        System.out.printf("%-14s  %10s  %11s  %13s  %-20s%n",
-                "Tier", "Requests", "Allocated", "Not Allocated", "Average Wait");
+        System.out.printf("%-14s  %10s  %11s  %13s  %-20s%n", "Tier", "Requests", "Allocated", "Not Allocated", "Average Wait");
         System.out.println("-".repeat(76));
         for (LoyaltyTier tier : new LoyaltyTier[]{LoyaltyTier.DIAMOND, LoyaltyTier.PLATINUM, LoyaltyTier.ELITE}) {
             int index = tier.ordinal();
             if (tierRequests[index] == 0) {
                 continue;
             }
-            String average = tierWaitCount[index] == 0
-                    ? "-"
-                    : formatWaitingTime(Math.round((double) tierWaitTotal[index] / tierWaitCount[index]));
+            String average = tierWaitCount[index] == 0 ? "-" : formatWaitingTime(Math.round((double) tierWaitTotal[index] / tierWaitCount[index]));
             System.out.printf("%-14s  %10d  %11d  %13d  %-20s%n",
                     tier,
                     tierRequests[index],
@@ -232,8 +221,7 @@ public class VipRoomAllocationWaitingTimeRP {
         System.out.println();
 
         printSection("ROOM TYPE PERFORMANCE");
-        System.out.printf("%-24s  %10s  %11s  %17s%n",
-                "Requested Room Type", "Requests", "Allocated", "Allocation Rate");
+        System.out.printf("%-24s  %10s  %11s  %17s%n", "Requested Room Type", "Requests", "Allocated", "Allocation Rate");
         System.out.println("-".repeat(68));
         for (RoomType roomType : RoomType.values()) {
             int index = roomType.ordinal();
@@ -397,37 +385,18 @@ public class VipRoomAllocationWaitingTimeRP {
         return null;
     }
 
-    private Booking findBookingForRegistration(
-            WalkInRegistration registration,
-            Booking[] bookings) {
-
-        if (registration == null
-                || registration.getGuest() == null
-                || registration.getCheckInDateTime() == null) {
+    private Booking findBookingForRegistration(WalkInRegistration registration, Booking[] bookings) {
+        if (registration == null || registration.getGuest() == null || registration.getCheckInDateTime() == null) {
             return null;
         }
 
         for (Booking booking : bookings) {
-
-            if (booking == null
-                    || booking.getGuest() == null
-                    || booking.getGuest().getGuestId() == null
-                    || booking.getPayment() == null
-                    || booking.getPayment().getDateTime() == null) {
+            if (booking == null || booking.getGuest() == null || booking.getGuest().getGuestId() == null || booking.getPayment() == null || booking.getPayment().getDateTime() == null) {
                 continue;
             }
 
-            boolean sameGuest
-                    = booking.getGuest()
-                            .getGuestId()
-                            .equalsIgnoreCase(
-                                    registration.getGuest().getGuestId());
-
-            boolean sameCheckIn
-                    = booking.getPayment()
-                            .getDateTime()
-                            .equals(
-                                    registration.getCheckInDateTime());
+            boolean sameGuest = booking.getGuest().getGuestId().equalsIgnoreCase(registration.getGuest().getGuestId());
+            boolean sameCheckIn = booking.getPayment().getDateTime().equals(registration.getCheckInDateTime());
 
             if (sameGuest && sameCheckIn) {
                 return booking;
@@ -498,14 +467,17 @@ public class VipRoomAllocationWaitingTimeRP {
                     return first.waitMinutes > second.waitMinutes;
                 }
                 break;
+
             case 3:
                 return first.registration.getRegistrationTime().isAfter(second.registration.getRegistrationTime());
+
             case 4:
                 int roomCompare = first.registration.getRequestedRoomType().compareToIgnoreCase(second.registration.getRequestedRoomType());
                 if (roomCompare != 0) {
                     return roomCompare < 0;
                 }
                 break;
+
             case 1:
             default:
                 int firstPriority = first.profile.getTier().getPriority();
@@ -515,6 +487,7 @@ public class VipRoomAllocationWaitingTimeRP {
                 }
                 return first.registration.getRegistrationTime().isBefore(second.registration.getRegistrationTime());
         }
+        
         return first.registration.getRegistrationTime().isBefore(second.registration.getRegistrationTime());
     }
 

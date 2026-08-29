@@ -503,25 +503,12 @@ public class VipPriorityController {
         Payment payment = new Payment(generateNextPaymentId(), amount, actualCheckInTime, 'C');
         Booking booking = new Booking(confirmationNo, registration.getGuest(), suitableRoom,payment);
         bookings = appendBooking(bookings, booking);
-
         PaymentDao paymentDao = new PaymentDao();
-
         Payment[] savedPayments = paymentDao.loadOrSeed();
-
-        Payment[] updatedPayments =
-                new Payment[savedPayments.length + 1];
-
-        System.arraycopy(
-                savedPayments,
-                0,
-                updatedPayments,
-                0,
-                savedPayments.length);
-
+        Payment[] updatedPayments = new Payment[savedPayments.length + 1];
+        System.arraycopy(savedPayments, 0, updatedPayments, 0, savedPayments.length);
         updatedPayments[savedPayments.length] = payment;
-
         paymentDao.saveToFile(updatedPayments);
-
         roomDao.saveToFile(rooms);
         bookingDao.saveToFile(bookings);
         registrationDao.upsert(registration);
@@ -706,31 +693,20 @@ public class VipPriorityController {
     }
 
     private boolean isCurrentVipRoomBooking(Booking booking) {
-        if (booking == null
-                || booking.getGuest() == null
-                || booking.getGuest().getGuestId() == null
-                || booking.getRoom() == null
-                || booking.getRoom().getRoomNumber() == null) {
+        if (booking == null || booking.getGuest() == null || booking.getGuest().getGuestId() == null || booking.getRoom() == null || booking.getRoom().getRoomNumber() == null) {
 
             return false;
         }
 
-        LoyaltyProfile profile
-                = searchLoyaltyProfileByGuestId(
-                        booking.getGuest().getGuestId());
+        LoyaltyProfile profile = searchLoyaltyProfileByGuestId(booking.getGuest().getGuestId());
 
         if (profile == null || profile.getTier() == null) {
             return false;
         }
 
-        Room currentRoom
-                = findRoomByNumber(
-                        booking.getRoom().getRoomNumber());
+        Room currentRoom = findRoomByNumber(booking.getRoom().getRoomNumber());
 
-        if (currentRoom == null
-                || currentRoom.getRoomStatus()
-                != RoomStatus.OCCUPIED) {
-
+        if (currentRoom == null || currentRoom.getRoomStatus() != RoomStatus.OCCUPIED) {
             return false;
         }
 
@@ -738,17 +714,10 @@ public class VipPriorityController {
         * Payment date/time represents the actual check-in time of
         * this specific booking.
         */
-        LocalDateTime bookingCheckIn
-                = booking.getPayment() == null
-                ? null
-                : booking.getPayment().getDateTime();
+        LocalDateTime bookingCheckIn = booking.getPayment() == null ? null : booking.getPayment().getDateTime();
+        LocalDateTime currentCheckIn = currentRoom.getCheckInDateTime();
 
-        LocalDateTime currentCheckIn
-                = currentRoom.getCheckInDateTime();
-
-        return bookingCheckIn != null
-                && currentCheckIn != null
-                && bookingCheckIn.equals(currentCheckIn);
+        return bookingCheckIn != null && currentCheckIn != null && bookingCheckIn.equals(currentCheckIn);
     }
 
     public Room getCurrentRoomForBooking(Booking booking) {
@@ -996,9 +965,11 @@ public class VipPriorityController {
     public String[] getRoomTypeNames() {
         RoomType[] roomTypes = RoomType.values();
         String[] names = new String[roomTypes.length];
+
         for (int i = 0; i < roomTypes.length; i++) {
             names[i] = roomTypes[i].name();
         }
+
         return names;
     }
 
@@ -1094,6 +1065,7 @@ public class VipPriorityController {
         if (roomTypeName == null) {
             return 0.0;
         }
+
         try {
             return RoomType.valueOf(roomTypeName.trim().toUpperCase()).getPricePerDay();
         } catch (IllegalArgumentException ex) {
@@ -1116,9 +1088,11 @@ public class VipPriorityController {
 
         for (LoyaltyProfile profile : profiles) {
             Guest guest = findGuestById(profile.getGuestId());
+
             if (guest == null) {
                 continue;
             }
+
             temp[count][0] = guest.getGuestId();
             temp[count][1] = guest.getName();
             temp[count][2] = String.valueOf(guest.getPhoneNo());
@@ -1149,10 +1123,13 @@ public class VipPriorityController {
 
     public String[] getWaitingVipRegistrationDisplayData(String registrationId) {
         WalkInRegistration registration = findWaitingVipRegistrationById(registrationId);
+
         if (registration == null) {
             return null;
         }
+
         LoyaltyTier tier = getLoyaltyTier(registration);
+
         return new String[] {
             registration.getGuest().getGuestId(),
             registration.getGuest().getName(),
@@ -1171,11 +1148,9 @@ public class VipPriorityController {
 
     public String[][] getVipPriorityQueueDisplayData() {
         WalkInRegistration[] registrations = getVipRegistrationsByPriority();
-
         String[][] rows = new String[registrations.length][9];
 
         for (int i = 0; i < registrations.length; i++) {
-
             WalkInRegistration registration = registrations[i];
 
             rows[i][0] = registration.getRegistrationId();
@@ -1199,13 +1174,17 @@ public class VipPriorityController {
 
     public String[] getSuggestedReadyRoomDisplayData(String registrationId) {
         WalkInRegistration registration = findWaitingVipRegistrationById(registrationId);
+
         if (registration == null) {
             return null;
         }
+
         Room room = findReadyRoomForRegistration(registration);
+
         if (room == null) {
             return null;
         }
+
         return new String[] {
             room.getRoomNumber(),
             room.getRoomType(),
@@ -1217,9 +1196,11 @@ public class VipPriorityController {
 
     public String getLoyaltyTierNameByRegistrationId(String registrationId) {
         WalkInRegistration registration = findWaitingVipRegistrationById(registrationId);
+
         if (registration == null) {
             // Historical/cancelled records are not in the heap; search saved records.
             WalkInRegistration[] records = registrationDao.loadExisting();
+
             for (WalkInRegistration record : records) {
                 if (record != null && record.getRegistrationId() != null && record.getRegistrationId().equalsIgnoreCase(registrationId)) {
                     registration = record;
@@ -1227,6 +1208,7 @@ public class VipPriorityController {
                 }
             }
         }
+
         LoyaltyTier tier = getLoyaltyTier(registration);
         return tier == null ? null : tier.name();
     }
@@ -1253,10 +1235,13 @@ public class VipPriorityController {
 
     public String[] cancelVipRegistrationDisplayData(String registrationId) {
         WalkInRegistration cancelled = cancelVipRegistrationById(registrationId);
+
         if (cancelled == null) {
             return null;
         }
+
         LoyaltyTier tier = getLoyaltyTier(cancelled);
+
         return new String[] {
             cancelled.getRegistrationId(),
             cancelled.getGuest().getGuestId(),
@@ -1270,6 +1255,7 @@ public class VipPriorityController {
     public String[][] getCurrentVipRoomDisplayData() {
         Booking[] currentBookings = getCurrentVipRoomBookings();
         String[][] rows = new String[currentBookings.length][8];
+
         for (int i = 0; i < currentBookings.length; i++) {
             Booking booking = currentBookings[i];
             Guest guest = booking.getGuest();
@@ -1284,27 +1270,35 @@ public class VipPriorityController {
             rows[i][6] = room == null ? "-" : formatBoundaryDateTimeDash(room.getCheckInDateTime());
             rows[i][7] = room == null ? "-" : formatBoundaryDateTimeDash(room.getCheckOutDateTime());
         }
+
         return rows;
     }
 
     public String[] allocateNextVipBookingDisplayData() {
         String registrationId = getNextAllocatableVipRegistrationId();
+
         if (registrationId == null) {
             return null;
         }
+
         WalkInRegistration registration = findWaitingVipRegistrationById(registrationId);
+
         if (registration == null) {
             return null;
         }
+
         String guestId = registration.getGuest().getGuestId();
         String guestName = registration.getGuest().getName();
         String tier = String.valueOf(getLoyaltyTier(registration));
 
         Booking booking = allocateNextVipBooking();
+
         if (booking == null || booking.getRoom() == null) {
             return null;
         }
+
         Room room = booking.getRoom();
+
         return new String[] {
             booking.getConfirmationNo(),
             registrationId,
@@ -1336,6 +1330,7 @@ public class VipPriorityController {
         if (tierName == null || tierName.isBlank()) {
             return null;
         }
+
         try {
             return LoyaltyTier.valueOf(tierName.trim().toUpperCase());
         } catch (IllegalArgumentException ex) {
@@ -1347,14 +1342,18 @@ public class VipPriorityController {
         if (registration == null) {
             return 0;
         }
+
         int count = 0;
         Room[] readyRooms = getVacantRooms();
+
         for (Room room : readyRooms) {
             if (room == null || !room.isAssignable()) {
                 continue;
             }
+
             boolean sameType = room.getRoomType() != null && registration.getRequestedRoomType() != null && room.getRoomType().equalsIgnoreCase(registration.getRequestedRoomType());
             boolean enoughCapacity = room.getNoOfGuest() >= registration.getNumberOfGuests();
+
             if (sameType && enoughCapacity) {
                 count++;
             }
@@ -1364,6 +1363,7 @@ public class VipPriorityController {
 
     private String getVipActivityStatusForBoundary(String guestId) {
         WalkInRegistration[] waiting = getVipRegistrationsByPriority();
+
         for (WalkInRegistration registration : waiting) {
             if (registration != null && registration.getGuest() != null && registration.getGuest().getGuestId().equalsIgnoreCase(guestId)) {
                 return "WAITING";
@@ -1371,6 +1371,7 @@ public class VipPriorityController {
         }
 
         Booking[] currentBookings = getCurrentVipRoomBookings();
+
         for (Booking booking : currentBookings) {
             if (booking != null && booking.getGuest() != null && booking.getGuest().getGuestId().equalsIgnoreCase(guestId)) {
                 return "IN HOUSE";
@@ -1380,40 +1381,22 @@ public class VipPriorityController {
     }
 
     private String formatWaitingTime(LocalDateTime requestTime) {
-
         if (requestTime == null) {
             return "-";
         }
 
-        long totalMinutes = Math.max(
-                0,
-                Duration.between(
-                        requestTime,
-                        LocalDateTime.now())
-                        .toMinutes()
-        );
+        long totalMinutes = Math.max(0, Duration.between(requestTime, LocalDateTime.now()).toMinutes());
 
         if (totalMinutes < 60) {
-            return totalMinutes
-                    + (totalMinutes == 1
-                    ? " minute"
-                    : " minutes");
+            return totalMinutes + (totalMinutes == 1 ? " minute" : " minutes");
         }
 
         long hours = totalMinutes / 60;
         long minutes = totalMinutes % 60;
-
-        String result = hours
-                + (hours == 1
-                ? " hour"
-                : " hours");
+        String result = hours + (hours == 1 ? " hour" : " hours");
 
         if (minutes > 0) {
-            result += " "
-                    + minutes
-                    + (minutes == 1
-                    ? " minute"
-                    : " minutes");
+            result += " " + minutes + (minutes == 1 ? " minute" : " minutes");
         }
 
         return result;
