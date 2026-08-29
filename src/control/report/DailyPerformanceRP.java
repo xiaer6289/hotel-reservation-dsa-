@@ -224,6 +224,11 @@ public class DailyPerformanceRP {
 
                 System.out.println("Generated On       : " + LocalDateTime.now().format(GENERATED_FORMAT));
 
+                System.out.println("Purpose            : Track daily housekeeping task volume and completion speed.");
+
+                System.out.println("Hotel Value        : Identifies slow tasks and staff workload imbalances,");
+                System.out.println("                     enabling supervisors to act before check-in windows close.");
+
                 System.out.println("Report Date        : " + reportDate);
 
                 System.out.println("Staff              : " + staffFilter);
@@ -303,6 +308,30 @@ public class DailyPerformanceRP {
 
                 System.out.printf("Average Task Time    : %.2f minute(s)%n",averageTaskTime);
 
+                System.out.println("================================================================================================");
+                System.out.println("MANAGEMENT INTERPRETATION");
+                if (completionRate < 50) {
+                        System.out.println("  * CONCERN: Completion rate is low (" + String.format("%.1f", completionRate) + "%).");
+                        System.out.println("    Many tasks remain unfinished - housekeeping throughput needs attention.");
+                } else if (completionRate < 80) {
+                        System.out.println("  * MODERATE: Completion rate is (" + String.format("%.1f", completionRate) + "%).");
+                        System.out.println("    Progress is acceptable; some tasks may still delay check-in.");
+                } else {
+                        System.out.println("  * GOOD: Completion rate is HIGH (" + String.format("%.1f", completionRate) + "%).");
+                        System.out.println("    Housekeeping team is performing strongly today.");
+                }
+                if (averageTaskTime > 30) {
+                        System.out.println("  * Average task time (" + String.format("%.1f", averageTaskTime) + " min) exceeds the 30-min target.");
+                } else {
+                        System.out.println("  * Average task time (" + String.format("%.1f", averageTaskTime) + " min) is within the 30-min target.");
+                }
+                System.out.println("RECOMMENDED ACTION");
+                if (completionRate < 50 || averageTaskTime > 30) {
+                        System.out.println("  -> Review staff allocation for the day; consider redistributing tasks.");
+                        System.out.println("  -> Escalate long-running tasks (>30 min) to supervisor immediately.");
+                } else {
+                        System.out.println("  -> Maintain current staffing approach; monitor completion into the evening.");
+                }
                 System.out.println("================================================================================================");
         }
 

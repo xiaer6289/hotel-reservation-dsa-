@@ -116,7 +116,7 @@ public class HousekeepingKpiRP {
         }
 
         // ── Sort stat list by roomsCleaned ascending (Selection Sort) ───────
-        // So the KPI-failure section is ordered worst → best
+        // So the KPI-failure section is ordered worst -> best
         selectionSortByRoomsCleaned(statList);
 
         // ── Print report ───────────────────────────────────────────────────
@@ -169,9 +169,13 @@ public class HousekeepingKpiRP {
         System.out.println("                  HOUSEKEEPING KPI REPORT");
         System.out.println("================================================================================");
         System.out.println("Generated On  : " + LocalDateTime.now().format(GENERATED_FORMAT));
+        System.out.println("Purpose       : Measure whether each staff member meets the daily room-");
+        System.out.println("                cleaning target and tracks on-time performance.");
+        System.out.println("Hotel Value   : Provides accountability metrics for staff appraisals and");
+        System.out.println("                highlights systematic bottlenecks in cleaning throughput.");
         System.out.println("Report Date   : " + date);
-        System.out.println("KPI Target    : ≥ " + KPI_MIN_ROOMS + " rooms cleaned per staff per day");
-        System.out.println("Time Target   : ≤ " + TaskLogEntry.CLEANING_TARGET_MINUTES + " minutes per room");
+        System.out.println("KPI Target    : \u2265 " + KPI_MIN_ROOMS + " rooms cleaned per staff per day");
+        System.out.println("Time Target   : \u2264 " + TaskLogEntry.CLEANING_TARGET_MINUTES + " minutes per room");
         System.out.println("Sort Technique: Selection Sort (rooms cleaned ascending)");
         System.out.println("--------------------------------------------------------------------------------");
     }
@@ -228,6 +232,35 @@ public class HousekeepingKpiRP {
         System.out.println("Total Rooms Cleaned (Ready) : " + totalCompleted);
         System.out.println("On-Time Completions         : " + totalOnTime + " / " + totalCompleted
                 + String.format(" (%.1f%%)", overallOnTimeRate));
+        System.out.println("================================================================================");
+        System.out.println("MANAGEMENT INTERPRETATION");
+        if (totalCompleted == 0) {
+            System.out.println("  * No rooms were cleaned to Ready status on this date.");
+            System.out.println("    Either no checkout tasks were raised or the date has no data.");
+        } else if (overallOnTimeRate >= 80) {
+            System.out.println("  * On-time rate is STRONG (" + String.format("%.1f", overallOnTimeRate) + "%).");
+            System.out.println("    The team is consistently meeting the 30-minute cleaning target.");
+        } else if (overallOnTimeRate >= 50) {
+            System.out.println("  * On-time rate is MODERATE (" + String.format("%.1f", overallOnTimeRate) + "%).");
+            System.out.println("    A meaningful share of cleanings overran the target time.");
+        } else {
+            System.out.println("  * On-time rate is LOW (" + String.format("%.1f", overallOnTimeRate) + "%).");
+            System.out.println("    Most cleanings exceeded the 30-minute KPI - root-cause investigation needed.");
+        }
+        System.out.println("RECOMMENDED ACTION");
+        if (totalCompleted == 0) {
+            System.out.println("  -> Verify that the selected date had active housekeeping tasks.");
+        } else if (overallOnTimeRate >= 80) {
+            System.out.println("  -> Acknowledge staff performance in daily briefing.");
+            System.out.println("  -> Use this as the benchmark for future KPI comparisons.");
+        } else if (overallOnTimeRate >= 50) {
+            System.out.println("  -> Review task assignments for staff with below-average on-time rates.");
+            System.out.println("  -> Investigate whether supply/linen availability caused delays.");
+        } else {
+            System.out.println("  -> Conduct immediate debrief with housekeeping team.");
+            System.out.println("  -> Consider additional training on efficient cleaning procedures.");
+            System.out.println("  -> Review room scheduling to reduce simultaneous task load.");
+        }
         System.out.println("================================================================================");
     }
 }

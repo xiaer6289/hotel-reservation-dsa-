@@ -203,6 +203,57 @@ public class HousekeepingController {
 
     private void refreshRooms() {
         rooms = roomDao.loadOrSeed();
+        autoCompleteOverdueTasks();
+    }
+
+    /**
+     * Automatically completes any "Cleaning In Progress" task whose
+     * 30-minute countdown has expired.
+     *
+     * <p>Called transparently on every {@link #refreshRooms()} invocation so
+     * that overdue tasks are resolved whenever the UI re-renders, without
+     * requiring background threads.</p>
+     */
+    private void autoCompleteOverdueTasks() {
+        boolean anyCompleted = false;
+        for (int i = 0; i < taskLog.size(); i++) {
+            TaskLogEntry task = taskLog.get(i);
+            if (task == null) continue;
+            if (!"Cleaning In Progress".equals(task.getStatus())) continue;
+            if (!task.isCleaningCountdownActive()) continue;
+
+            // Countdown has expired when remaining minutes == 0
+            if (task.getRemainingCleaningMinutes() == 0) {
+                String roomNumber = task.getRoomNumber();
+                String staffId   = task.getStaffId();
+
+                // Advance Cleaning In Progress -> Inspected -> Ready
+                task.setStatus("Inspected");
+                task.setStatus("Ready");   // also sets completedWithinTarget = false (overdue)
+                task.setRemarks("Auto-completed (Timeout)");
+
+
+                // Free the assigned staff member
+                if (staffId != null && !staffId.isBlank()) {
+                    HousekeepingStaff staff = findStaffById(staffId);
+                    if (staff != null && staff.isBusy()) {
+                        staff.markFree();
+                    }
+                }
+
+                syncRoomState(task);
+                anyCompleted = true;
+
+                System.out.println("⚠️  Room " + roomNumber
+                        + " auto-completed after 30-min timeout (Task " + task.getTaskId() + ").");
+            }
+        }
+
+        if (anyCompleted) {
+            persistTaskLog();
+            // Dispatch any queued rooms now that staff may be free
+            dispatchQueue();
+        }
     }
 
     // ── Task helpers ───────────────────────────────────────────────────────
@@ -343,7 +394,7 @@ public class HousekeepingController {
      * Marks a room as dirty and triggers automatic staff assignment.
      *
      * <p>If a free staff member is available the room is assigned immediately
-     * (status → "Cleaning In Progress"). Otherwise the room is enqueued in
+     * (status -> "Cleaning In Progress"). Otherwise the room is enqueued in
      * the FIFO dirty-room queue to wait its turn.</p>
      *
      * @param roomNumber the room that needs cleaning
@@ -472,7 +523,7 @@ public class HousekeepingController {
         long remaining = task.getRemainingCleaningMinutes();
         String roomNumber = task.getRoomNumber();
 
-        // Advance through Inspected → Ready in one go (early finish)
+        // Advance through Inspected -> Ready in one go (early finish)
         task.setStatus("Inspected");
         task.setStatus("Ready");    // also computes completedWithinTarget
 
@@ -510,7 +561,7 @@ public class HousekeepingController {
             return false;
         }
         if (!isValidTransition(task.getStatus(), newStatus)) {
-            System.out.println("❌ Invalid status transition: " + task.getStatus() + " → " + newStatus);
+            System.out.println("❌ Invalid status transition: " + task.getStatus() + " -> " + newStatus);
             return false;
         }
 
@@ -529,7 +580,7 @@ public class HousekeepingController {
 
         syncRoomState(task);
         persistTaskLog();
-        System.out.println("✅ Task " + taskId + " updated: " + oldStatus + " → " + newStatus);
+        System.out.println("✅ Task " + taskId + " updated: " + oldStatus + " -> " + newStatus);
         return true;
     }
 
@@ -573,7 +624,7 @@ public class HousekeepingController {
             return false;
         }
 
-        // If rolling back from Cleaning In Progress → Dirty, free the staff
+        // If rolling back from Cleaning In Progress -> Dirty, free the staff
         if ("Cleaning In Progress".equals(current) && task.getStaffId() != null) {
             HousekeepingStaff staff = findStaffById(task.getStaffId());
             if (staff != null) staff.markFree();
@@ -585,7 +636,7 @@ public class HousekeepingController {
         task.setStatus(previous);
         syncRoomState(task);
         persistTaskLog();
-        System.out.println("🔄 Task " + taskId + " rolled back: " + current + " → " + previous);
+        System.out.println("🔄 Task " + taskId + " rolled back: " + current + " -> " + previous);
         return true;
     }
 

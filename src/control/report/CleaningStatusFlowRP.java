@@ -337,6 +337,14 @@ public class CleaningStatusFlowRP {
                                                                                 GENERATED_FORMAT));
 
                 System.out.println(
+                                "Purpose            : Real-time snapshot of every housekeeping task.");
+
+                System.out.println(
+                                "Hotel Value        : Enables supervisors to spot blocked rooms and");
+                System.out.println(
+                                "                     dispatch staff before guests are impacted.");
+
+                System.out.println(
                                 "Status             : "
                                                 + statusFilter);
 
@@ -470,6 +478,38 @@ public class CleaningStatusFlowRP {
                                 "Pending Tasks           : "
                                                 + (count - readyCount));
 
+                System.out.println(
+                                "============================================================================================");
+                System.out.println(
+                                "MANAGEMENT INTERPRETATION");
+                int pendingCount = count - readyCount;
+                double pendingRate = count == 0 ? 0 : (double) pendingCount * 100.0 / count;
+                if (pendingRate > 50) {
+                        System.out.println(
+                                        "  * ALERT: More than half of matched tasks are still pending (" + pendingCount + "/" + count + ").");
+                        System.out.println(
+                                        "    Room pipeline is congested - guest check-in may be delayed.");
+                } else if (pendingRate > 0) {
+                        System.out.println(
+                                        "  * Some rooms remain pending (" + pendingCount + "/" + count + "). Cleaning is progressing.");
+                } else {
+                        System.out.println(
+                                        "  * All matched rooms are READY. No pending cleaning tasks remain.");
+                }
+                System.out.println(
+                                "RECOMMENDED ACTION");
+                if (pendingRate > 50) {
+                        System.out.println(
+                                        "  -> Dispatch additional staff immediately to clear Dirty/In-Progress rooms.");
+                        System.out.println(
+                                        "  -> Escalate overdue tasks to housekeeping supervisor.");
+                } else if (pendingRate > 0) {
+                        System.out.println(
+                                        "  -> Monitor cleaning progress; flag any task exceeding 30 minutes.");
+                } else {
+                        System.out.println(
+                                        "  -> All rooms ready - no action required. Continue monitoring.");
+                }
                 System.out.println(
                                 "============================================================================================");
         }
