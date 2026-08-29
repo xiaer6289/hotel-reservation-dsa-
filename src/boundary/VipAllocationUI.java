@@ -410,8 +410,8 @@ public class VipAllocationUI {
         if (updatedRegistration != null) {
             System.out.println("\nUPDATED REQUEST");
             System.out.println("-".repeat(104));
-            displayVipRegistrationDetails(registrationId);
-            System.out.println("\nSuitable READY Rooms Now : " + controller.getMatchingReadyRoomCount(registrationId));
+            displayVipRegistrationDetails(registrationId, false);
+            displayCurrentRoomAvailability(registrationId);
         }
 
         System.out.println("\nSystem note: Loyalty tier is not changed manually; the waiting order continues to follow the VIP priority rules.");
@@ -491,7 +491,7 @@ public class VipAllocationUI {
         System.out.printf(
                 "%-3s %-9s %-8s %-13s %-9s %-5s %-12s %-17s  %-17s%n",
                 "No", "Confirm No", "Guest ID", "Guest Name", "Tier", "Room", "Room Type", "Check-In", "Exp. Check-Out");
-        System.out.println("-".repeat(104));
+        System.out.println("-".repeat(116));
 
         for (int i = 0; i < currentVipBookings.length; i++) {
             String[] booking = currentVipBookings[i];
@@ -508,7 +508,7 @@ public class VipAllocationUI {
                     booking[7]);
         }
 
-        System.out.println("-".repeat(104));
+        System.out.println("-".repeat(116));
         System.out.println("IN-HOUSE SUMMARY");
         System.out.println("  Current VIP Rooms Occupied : " + currentVipBookings.length);
         System.out.println("\nNext action: Use the Confirmation No. in Front Desk to process check-out.");
@@ -923,14 +923,47 @@ public class VipAllocationUI {
         System.out.println("  Expected Check-Out    : " + registration[9]);
         System.out.println("  Standard Check-Out    : 12:00 PM");
         if (showSuitableRooms) {
-            System.out.println("  Suitable Rooms Now    : " + formatRoomAvailability(Integer.parseInt(registration[10])));
+            System.out.println("  Matching READY Rooms  : " + formatRoomAvailability(Integer.parseInt(registration[10])));
+        }
+    }
+
+    private void displayCurrentRoomAvailability(String registrationId) {
+        String[] availability = controller.getVipRoomAvailabilityDisplayData(registrationId);
+        if (availability == null) {
+            return;
+        }
+
+        String roomType = formatRoomType(availability[0]);
+        int guestCount = Integer.parseInt(availability[1]);
+        int capacitySuitableRooms = Integer.parseInt(availability[2]);
+        int matchingReadyRooms = Integer.parseInt(availability[3]);
+        String guestLabel = guestCount == 1 ? "guest" : "guests";
+
+        System.out.println("\nCURRENT ROOM AVAILABILITY");
+        System.out.println("-".repeat(104));
+        System.out.println("  Matching READY Rooms  : " + formatSuitableRoomCount(matchingReadyRooms));
+
+        if (matchingReadyRooms > 0) {
+            String[] suggestedRoom = controller.getSuggestedReadyRoomDisplayData(registrationId);
+            System.out.println("  Availability Status   : " + matchingReadyRooms + " READY " + roomType + " room" + (matchingReadyRooms == 1 ? "" : "s") + " can accommodate " + guestCount + " " + guestLabel + ".");
+            if (suggestedRoom != null) {
+                System.out.println("  Suggested Room        : " + suggestedRoom[0] + " (Capacity " + suggestedRoom[2] + ")");
+            }
+            System.out.println("  Next Step             : Use Menu 8 - Assign Ready Room & Check In VIP.");
+        } else if (capacitySuitableRooms > 0) {
+            System.out.println("  Availability Status   : No READY " + roomType + " room can currently accommodate " + guestCount + " " + guestLabel + ".");
+            System.out.println("  Capacity Match        : " + capacitySuitableRooms + " " + roomType + " room" + (capacitySuitableRooms == 1 ? "" : "s") + " can fit this party, but none is READY now.");
+            System.out.println("  Next Step             : Keep this request waiting until a suitable room becomes READY.");
+        } else {
+            System.out.println("  Availability Status   : No " + roomType + " room in the current inventory can accommodate " + guestCount + " " + guestLabel + ".");
+            System.out.println("  Next Step             : Update the requested room type or number of guests.");
         }
     }
 
 
     private String formatRoomAvailability(int roomCount) {
         if (roomCount <= 0) {
-            return "No suitable room available";
+            return "No matching READY room currently available";
         }
         if (roomCount == 1) {
             return "1 room available";

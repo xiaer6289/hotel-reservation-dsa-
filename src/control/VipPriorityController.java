@@ -1172,6 +1172,46 @@ public class VipPriorityController {
         return countMatchingReadyRoomsForBoundary(registration);
     }
 
+    /**
+     * Returns compact room-availability information for boundary display.
+     * Index 0 = requested room type, 1 = guest count,
+     * 2 = rooms of that type with enough capacity, 3 = matching READY rooms.
+     */
+    public String[] getVipRoomAvailabilityDisplayData(String registrationId) {
+        WalkInRegistration registration = findWaitingVipRegistrationById(registrationId);
+
+        if (registration == null) {
+            return null;
+        }
+
+        rooms = roomDao.loadOrSeed();
+        int capacitySuitableRooms = 0;
+        int matchingReadyRooms = 0;
+
+        for (Room room : rooms) {
+            if (room == null || room.getRoomType() == null || registration.getRequestedRoomType() == null) {
+                continue;
+            }
+
+            boolean sameType = room.getRoomType().equalsIgnoreCase(registration.getRequestedRoomType());
+            boolean enoughCapacity = room.getNoOfGuest() >= registration.getNumberOfGuests();
+
+            if (sameType && enoughCapacity) {
+                capacitySuitableRooms++;
+                if (room.isAssignable()) {
+                    matchingReadyRooms++;
+                }
+            }
+        }
+
+        return new String[] {
+            registration.getRequestedRoomType(),
+            String.valueOf(registration.getNumberOfGuests()),
+            String.valueOf(capacitySuitableRooms),
+            String.valueOf(matchingReadyRooms)
+        };
+    }
+
     public String[] getSuggestedReadyRoomDisplayData(String registrationId) {
         WalkInRegistration registration = findWaitingVipRegistrationById(registrationId);
 
