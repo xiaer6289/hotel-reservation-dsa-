@@ -14,7 +14,7 @@ public class TaskLogEntry implements Serializable {
     // throwing a cryptic InvalidClassException at runtime.
     private static final long serialVersionUID = 2L;
 
-    // ── Core fields ────────────────────────────────────────────────────────
+    // -- Core fields --------------------------------------------------------
     private String taskId;
     private String roomNumber;
     private String status;          // Dirty, Cleaning In Progress, Inspected, Ready
@@ -24,7 +24,7 @@ public class TaskLogEntry implements Serializable {
     private LocalDateTime lastUpdatedTime;
     private int estimatedMinutes;   // remaining estimated time (legacy display)
 
-    // ── Countdown / KPI fields ─────────────────────────────────────────────
+    // -- Countdown / KPI fields ---------------------------------------------
     /**
      * Set when staff is auto-assigned and the task moves to
      * "Cleaning In Progress". Used to drive the 30-minute countdown.
@@ -41,7 +41,7 @@ public class TaskLogEntry implements Serializable {
     /** Target cleaning duration in minutes (used for KPI). */
     public static final int CLEANING_TARGET_MINUTES = 30;
 
-    // ── Constructors ───────────────────────────────────────────────────────
+    // -- Constructors -------------------------------------------------------
 
     public TaskLogEntry(String taskId, String roomNumber, String status, String staffId) {
         this(taskId, roomNumber, status, staffId, null);
@@ -79,7 +79,7 @@ public class TaskLogEntry implements Serializable {
         this.estimatedMinutes      = calculateEstimatedMinutes(status);
     }
 
-    // ── Private helpers ────────────────────────────────────────────────────
+    // -- Private helpers ----------------------------------------------------
 
     private int calculateEstimatedMinutes(String status) {
         switch (status) {
@@ -91,7 +91,7 @@ public class TaskLogEntry implements Serializable {
         }
     }
 
-    // ── Getters ────────────────────────────────────────────────────────────
+    // -- Getters ------------------------------------------------------------
 
     public String        getTaskId()            { return taskId; }
     public String        getRoomNumber()        { return roomNumber; }
@@ -104,7 +104,7 @@ public class TaskLogEntry implements Serializable {
     public LocalDateTime getCleaningStartTime() { return cleaningStartTime; }
     public boolean       isCompletedWithinTarget() { return completedWithinTarget; }
 
-    // ── Setters ────────────────────────────────────────────────────────────
+    // -- Setters ------------------------------------------------------------
 
     public void setStatus(String status) {
         String old = this.status;
@@ -132,7 +132,7 @@ public class TaskLogEntry implements Serializable {
         this.remarks = remarks;
     }
 
-    // ── Countdown helpers ──────────────────────────────────────────────────
+    // -- Countdown helpers --------------------------------------------------
 
     /**
      * Returns {@code true} if this task is currently being cleaned
@@ -155,7 +155,7 @@ public class TaskLogEntry implements Serializable {
     }
 
     /**
-     * Returns the actual cleaning duration in minutes (start → ready/now).
+     * Returns the actual cleaning duration in minutes (start -> ready/now).
      * Returns 0 if cleaning never started.
      */
     public long getCleaningDurationMinutes() {
@@ -164,7 +164,7 @@ public class TaskLogEntry implements Serializable {
         return Math.max(0, Duration.between(cleaningStartTime, end).toMinutes());
     }
 
-    // ── Legacy time-spent helper (from creation) ───────────────────────────
+    // -- Legacy time-spent helper (from creation) ---------------------------
 
     /**
      * Returns total minutes from task creation to completion (for Ready tasks)
@@ -175,9 +175,9 @@ public class TaskLogEntry implements Serializable {
     public long getMinutesSpent() {
         LocalDateTime endTime;
         if ("Ready".equals(status) && lastUpdatedTime != null) {
-            endTime = lastUpdatedTime;   // historical task – use actual finish time
+            endTime = lastUpdatedTime;   // historical task - use actual finish time
         } else {
-            endTime = LocalDateTime.now(); // active task – show live elapsed time
+            endTime = LocalDateTime.now(); // active task - show live elapsed time
         }
         return Math.max(0, Duration.between(createdTime, endTime).toMinutes());
     }
@@ -190,7 +190,7 @@ public class TaskLogEntry implements Serializable {
         return hours + " hr " + minutes + " min";
     }
 
-    // ── toString ───────────────────────────────────────────────────────────
+    // -- toString -----------------------------------------------------------
 
     @Override
     public String toString() {
@@ -201,7 +201,7 @@ public class TaskLogEntry implements Serializable {
                 getTimeSpentLabel()));
 
         if (isCleaningCountdownActive()) {
-            sb.append(String.format(" | ⏱ %d min left", getRemainingCleaningMinutes()));
+            sb.append(String.format(" |  %d min left", getRemainingCleaningMinutes()));
         }
         if (remarks != null && !remarks.isBlank()) {
             sb.append(" | Note: ").append(remarks);

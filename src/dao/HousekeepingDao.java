@@ -24,7 +24,7 @@ public class HousekeepingDao {
 
   private final String fileName = "tasklog.dat";
 
-  // ── Persistence ────────────────────────────────────────────────────────
+  // -- Persistence --------------------------------------------------------
 
   public void saveToFile(TaskLogEntry[] taskLogEntries) {
     try (PrintWriter writer = new PrintWriter(new FileWriter(fileName))) {
@@ -111,7 +111,7 @@ public class HousekeepingDao {
     return seeded;
   }
 
-  // ── Text File Helpers ─────────────────────────────────────────────────
+  // -- Text File Helpers -------------------------------------------------
 
   private String safe(String value) {
     if (value == null) {
@@ -136,16 +136,16 @@ public class HousekeepingDao {
         : LocalDateTime.parse(value);
   }
 
-  // ── Demo Data Seeder ───────────────────────────────────────────────────
+  // -- Demo Data Seeder ---------------------------------------------------
 
   /**
-   * Generates ~30 backdated task entries spread across June – August 2026,
+   * Generates ~30 backdated task entries spread across June - August 2026,
    * covering all three staff members with a variety of completion times and
    * outcomes (on-time, late, still in progress, waiting in queue).
    *
    * <p>
-   * This ensures that every report – Cleaning Status, Daily Performance,
-   * and KPI – displays meaningful data on the very first run.
+   * This ensures that every report - Cleaning Status, Daily Performance,
+   * and KPI - displays meaningful data on the very first run.
    * </p>
    */
   private TaskLogEntry[] seedDemoData() {
@@ -155,9 +155,9 @@ public class HousekeepingDao {
     // completedWithinTarget
     Object[][] raw = {
 
-        // ── JUNE 2026 ─────────────────────────────────────────────────
+        // -- JUNE 2026 -------------------------------------------------
 
-        // June 10 – S001 cleans 5 rooms (meets KPI), some on-time
+        // June 10 - S001 cleans 5 rooms (meets KPI), some on-time
         { "T001", "101", "Ready", "S001", null,
             ldt(2026, 6, 10, 8, 0), ldt(2026, 6, 10, 8, 25), ldt(2026, 6, 10, 8, 5), true },
         { "T002", "102", "Ready", "S001", null,
@@ -169,7 +169,7 @@ public class HousekeepingDao {
         { "T005", "105", "Ready", "S001", null,
             ldt(2026, 6, 10, 10, 10), ldt(2026, 6, 10, 10, 42), ldt(2026, 6, 10, 10, 12), false },
 
-        // June 10 – S002 cleans 4 rooms (MISSES KPI)
+        // June 10 - S002 cleans 4 rooms (MISSES KPI)
         { "T006", "106", "Ready", "S002", null,
             ldt(2026, 6, 10, 8, 0), ldt(2026, 6, 10, 8, 28), ldt(2026, 6, 10, 8, 5), true },
         { "T007", "107", "Ready", "S002", null,
@@ -179,7 +179,7 @@ public class HousekeepingDao {
         { "T009", "109", "Ready", "S002", null,
             ldt(2026, 6, 10, 9, 50), ldt(2026, 6, 10, 10, 18), ldt(2026, 6, 10, 9, 52), true },
 
-        // June 10 – S003 cleans 3 rooms (MISSES KPI)
+        // June 10 - S003 cleans 3 rooms (MISSES KPI)
         { "T010", "110", "Ready", "S003", null,
             ldt(2026, 6, 10, 8, 0), ldt(2026, 6, 10, 8, 20), ldt(2026, 6, 10, 8, 5), true },
         { "T011", "101", "Ready", "S003", null,
@@ -187,9 +187,9 @@ public class HousekeepingDao {
         { "T012", "102", "Ready", "S003", null,
             ldt(2026, 6, 10, 9, 5), ldt(2026, 6, 10, 9, 33), ldt(2026, 6, 10, 9, 10), true },
 
-        // ── JULY 2026 ─────────────────────────────────────────────────
+        // -- JULY 2026 -------------------------------------------------
 
-        // July 15 – all three staff meet KPI
+        // July 15 - all three staff meet KPI
         { "T013", "103", "Ready", "S001", null,
             ldt(2026, 7, 15, 8, 0), ldt(2026, 7, 15, 8, 22), ldt(2026, 7, 15, 8, 5), true },
         { "T014", "104", "Ready", "S001", null,
@@ -221,7 +221,7 @@ public class HousekeepingDao {
         { "T027", "107", "Ready", "S003", null,
             ldt(2026, 7, 15, 10, 28), ldt(2026, 7, 15, 10, 55), ldt(2026, 7, 15, 10, 30), true },
 
-        // July 20 – partial day (S001 misses KPI, S002 meets, S003 meets)
+        // July 20 - partial day (S001 misses KPI, S002 meets, S003 meets)
         { "T028", "108", "Ready", "S001", null,
             ldt(2026, 7, 20, 8, 0), ldt(2026, 7, 20, 8, 28), ldt(2026, 7, 20, 8, 5), true },
         { "T029", "109", "Ready", "S001", null,
@@ -249,9 +249,9 @@ public class HousekeepingDao {
         { "T040", "110", "Ready", "S003", null,
             ldt(2026, 7, 20, 10, 18), ldt(2026, 7, 20, 10, 46), ldt(2026, 7, 20, 10, 22), true },
 
-        // ── AUGUST 2026 ───────────────────────────────────────────────
+        // -- AUGUST 2026 -----------------------------------------------
 
-        // Aug 5 – a busy day: all staff clean 6 rooms each (above KPI)
+        // Aug 5 - a busy day: all staff clean 6 rooms each (above KPI)
         { "T041", "101", "Ready", "S001", null,
             ldt(2026, 8, 5, 7, 50), ldt(2026, 8, 5, 8, 18), ldt(2026, 8, 5, 7, 55), true },
         { "T042", "102", "Ready", "S001", null,
@@ -289,7 +289,7 @@ public class HousekeepingDao {
         { "T058", "108", "Ready", "S003", null,
             ldt(2026, 8, 5, 10, 38), ldt(2026, 8, 5, 11, 2), ldt(2026, 8, 5, 10, 41), true },
 
-        // ── TODAY (current run) – dynamic offsets from LocalDateTime.now() ──
+        // -- TODAY (current run) - dynamic offsets from LocalDateTime.now() --
         // These use ago() so countdowns are always live and realistic no
         // matter when the application is started.
 
@@ -300,14 +300,14 @@ public class HousekeepingDao {
             ago(62), ago(38), ago(59), true },
 
         // S002 completed 1 room, currently cleaning Room 202
-        // (started 20 min ago → 10 min left on countdown)
+        // (started 20 min ago -> 10 min left on countdown)
         { "T061", "101", "Ready", "S002", null,
             ago(90), ago(62), ago(87), true },
         { "T062", "102", "Cleaning In Progress", "S002", "Auto-assigned",
             ago(22), null, ago(20), false },
 
         // S003 currently cleaning Room 302
-        // (started 5 min ago → 25 min left on countdown)
+        // (started 5 min ago -> 25 min left on countdown)
         { "T063", "103", "Cleaning In Progress", "S003", "Auto-assigned",
             ago(7), null, ago(5), false },
 
@@ -334,7 +334,7 @@ public class HousekeepingDao {
     return entries;
   }
 
-  // ── Time helpers ───────────────────────────────────────────────────────
+  // -- Time helpers -------------------------------------------------------
 
   /** Returns a LocalDateTime that is {@code minutesAgo} minutes before now. */
   private static LocalDateTime ago(long minutesAgo) {

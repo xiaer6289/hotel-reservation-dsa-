@@ -15,19 +15,19 @@ import java.time.LocalDate;
  *
  * <p>Key design decisions in this revision:</p>
  * <ul>
- *   <li><b>FIFO Dirty-Room Queue</b> – when a room goes dirty and all staff
+ *   <li><b>FIFO Dirty-Room Queue</b> - when a room goes dirty and all staff
  *       are busy, the room number is enqueued in {@link #dirtyRoomQueue}
  *       ({@link LinkedQueue} backed by {@link DoublyLinkedList}).  A staff
  *       member is auto-assigned the moment one becomes free (see
  *       {@link #dispatchQueue()}).</li>
- *   <li><b>No manual assignment</b> – staff selection has been removed from
+ *   <li><b>No manual assignment</b> - staff selection has been removed from
  *       the public API.  The caller only marks a room dirty; the controller
  *       picks the next free staff member automatically.</li>
- *   <li><b>30-minute countdown</b> – {@code cleaningStartTime} is recorded
+ *   <li><b>30-minute countdown</b> - {@code cleaningStartTime} is recorded
  *       inside {@link TaskLogEntry} when cleaning begins.  The UI reads
  *       {@link TaskLogEntry#getRemainingCleaningMinutes()} to display the
  *       live countdown without any background threads.</li>
- *   <li><b>Early-finish override</b> – {@link #markStaffReady(String)} lets a
+ *   <li><b>Early-finish override</b> - {@link #markStaffReady(String)} lets a
  *       staff member declare themselves finished before the 30 minutes elapse;
  *       the controller marks the task Ready, frees the staff, and immediately
  *       dispatches the next queued room.</li>
@@ -37,7 +37,7 @@ import java.time.LocalDate;
  */
 public class HousekeepingController {
 
-    // ── ADTs ───────────────────────────────────────────────────────────────
+    // -- ADTs ---------------------------------------------------------------
 
     /** Historical + active task records (Doubly Linked List). */
     private LinearADT<TaskLogEntry> taskLog;
@@ -54,13 +54,13 @@ public class HousekeepingController {
      */
     private LinearADT<HousekeepingStaff> staffPool;
 
-    // ── DAOs ───────────────────────────────────────────────────────────────
+    // -- DAOs ---------------------------------------------------------------
 
     private final HousekeepingDao housekeepingDao;
     private final RoomDao roomDao;
     private Room[] rooms;
 
-    // ── Constructor ────────────────────────────────────────────────────────
+    // -- Constructor --------------------------------------------------------
 
     public HousekeepingController() {
         this.housekeepingDao  = new HousekeepingDao();
@@ -75,7 +75,7 @@ public class HousekeepingController {
         rebuildStaffBusyState(); // reconcile staff state from persisted tasks
     }
 
-    // ── Initialisation ─────────────────────────────────────────────────────
+    // -- Initialisation -----------------------------------------------------
 
     /** Populates the staff pool with the three known housekeeping staff. */
     private void initStaffPool() {
@@ -141,7 +141,7 @@ public class HousekeepingController {
         dispatchQueue();
     }
 
-    // ── Persistence ────────────────────────────────────────────────────────
+    // -- Persistence --------------------------------------------------------
 
     private void persistTaskLog() {
         TaskLogEntry[] entries = new TaskLogEntry[taskLog.size()];
@@ -154,7 +154,7 @@ public class HousekeepingController {
         roomDao.saveToFile(rooms);
     }
 
-    // ── Room helpers ───────────────────────────────────────────────────────
+    // -- Room helpers -------------------------------------------------------
 
     /**
      * Maps a housekeeping task status directly to a Room's entity status.
@@ -244,7 +244,7 @@ public class HousekeepingController {
                 syncRoomState(task);
                 anyCompleted = true;
 
-                System.out.println("⚠️  Room " + roomNumber
+                System.out.println("[!]  Room " + roomNumber
                         + " auto-completed after 30-min timeout (Task " + task.getTaskId() + ").");
             }
         }
@@ -256,7 +256,7 @@ public class HousekeepingController {
         }
     }
 
-    // ── Task helpers ───────────────────────────────────────────────────────
+    // -- Task helpers -------------------------------------------------------
 
     private String nextTaskId() {
         int maxId = 0;
@@ -312,7 +312,7 @@ public class HousekeepingController {
         return false;
     }
 
-    // ── Staff helpers ──────────────────────────────────────────────────────
+    // -- Staff helpers ------------------------------------------------------
 
     private HousekeepingStaff findStaffById(String staffId) {
         for (int i = 0; i < staffPool.size(); i++) {
@@ -339,7 +339,7 @@ public class HousekeepingController {
         return dirtyRoomQueue.contains(roomNumber);
     }
 
-    // ── FIFO Dispatch ──────────────────────────────────────────────────────
+    // -- FIFO Dispatch ------------------------------------------------------
 
     /**
      * Core auto-dispatch loop.
@@ -356,7 +356,7 @@ public class HousekeepingController {
         while (!dirtyRoomQueue.isEmpty()) {
             HousekeepingStaff freeStaff = findFreeStaff();
             if (freeStaff == null) {
-                // All staff busy – rooms remain in queue
+                // All staff busy - rooms remain in queue
                 break;
             }
 
@@ -365,7 +365,7 @@ public class HousekeepingController {
             // Find the existing Dirty task for this room and assign it
             TaskLogEntry task = findLatestTaskForRoom(roomNumber);
             if (task == null || !"Dirty".equals(task.getStatus())) {
-                // Room may have been cancelled or already handled – skip
+                // Room may have been cancelled or already handled - skip
                 continue;
             }
 
@@ -377,18 +377,18 @@ public class HousekeepingController {
             syncRoomState(task);
             persistTaskLog();
 
-            System.out.println("🧹 Auto-assigned Room " + roomNumber
+            System.out.println("[CLEAN] Auto-assigned Room " + roomNumber
                     + " to " + freeStaff.getName() + " (" + freeStaff.getStaffId() + ")."
                     + " Countdown: " + TaskLogEntry.CLEANING_TARGET_MINUTES + " min.");
         }
 
         int queued = dirtyRoomQueue.size();
         if (queued > 0) {
-            System.out.println("⏳ " + queued + " room(s) waiting in queue (all staff busy).");
+            System.out.println("[WAIT] " + queued + " room(s) waiting in queue (all staff busy).");
         }
     }
 
-    // ── Public API ─────────────────────────────────────────────────────────
+    // -- Public API ---------------------------------------------------------
 
     /**
      * Marks a room as dirty and triggers automatic staff assignment.
@@ -407,15 +407,15 @@ public class HousekeepingController {
     public boolean markRoomDirty(String roomNumber, String remarks) {
         Room room = findRoomByNumber(roomNumber);
         if (room == null) {
-            System.out.println("❌ Room not found: " + roomNumber);
+            System.out.println("[X] Room not found: " + roomNumber);
             return false;
         }
         if (hasActiveTaskForRoom(roomNumber)) {
-            System.out.println("❌ Room " + roomNumber + " already has an active housekeeping task.");
+            System.out.println("[X] Room " + roomNumber + " already has an active housekeeping task.");
             return false;
         }
         if (isAlreadyInQueue(roomNumber)) {
-            System.out.println("❌ Room " + roomNumber + " is already in the cleaning queue.");
+            System.out.println("[X] Room " + roomNumber + " is already in the cleaning queue.");
             return false;
         }
 
@@ -425,7 +425,7 @@ public class HousekeepingController {
         syncRoomState(task);
         persistTaskLog();
 
-        System.out.println("🛏  Room " + roomNumber + " marked DIRTY. Task " + task.getTaskId() + " created.");
+        System.out.println("  Room " + roomNumber + " marked DIRTY. Task " + task.getTaskId() + " created.");
 
         // Add to queue then try to dispatch immediately
         dirtyRoomQueue.addLast(roomNumber);
@@ -460,11 +460,11 @@ public class HousekeepingController {
     public TaskLogEntry createCheckoutTask(String roomNumber, String staffId, String remarks) {
         Room room = findRoomByNumber(roomNumber);
         if (room == null) {
-            System.out.println("❌ Room not found: " + roomNumber);
+            System.out.println("[X] Room not found: " + roomNumber);
             return null;
         }
         if (hasActiveTaskForRoom(roomNumber)) {
-            System.out.println("❌ Room " + roomNumber + " already has an active housekeeping task.");
+            System.out.println("[X] Room " + roomNumber + " already has an active housekeeping task.");
             return null;
         }
 
@@ -473,7 +473,7 @@ public class HousekeepingController {
         syncRoomState(task);
         persistTaskLog();
 
-        System.out.println("✅ Check-out processed for Room " + roomNumber
+        System.out.println("[OK] Check-out processed for Room " + roomNumber
                 + ". Housekeeping task created: " + task.getTaskId());
 
         dirtyRoomQueue.addLast(roomNumber);
@@ -496,11 +496,11 @@ public class HousekeepingController {
     public boolean markStaffReady(String staffId) {
         HousekeepingStaff staff = findStaffById(staffId);
         if (staff == null) {
-            System.out.println("❌ Staff not found: " + staffId);
+            System.out.println("[X] Staff not found: " + staffId);
             return false;
         }
         if (!staff.isBusy()) {
-            System.out.println("❌ " + staff.getName() + " (" + staffId + ") is not currently cleaning any room.");
+            System.out.println("[X] " + staff.getName() + " (" + staffId + ") is not currently cleaning any room.");
             return false;
         }
 
@@ -516,7 +516,7 @@ public class HousekeepingController {
         }
 
         if (task == null) {
-            System.out.println("❌ No active cleaning task found for " + staffId + ".");
+            System.out.println("[X] No active cleaning task found for " + staffId + ".");
             return false;
         }
 
@@ -533,10 +533,10 @@ public class HousekeepingController {
         persistTaskLog();
 
         if (remaining > 0) {
-            System.out.println("✅ " + staff.getName() + " finished Room " + roomNumber
+            System.out.println("[OK] " + staff.getName() + " finished Room " + roomNumber
                     + " early (" + remaining + " min remaining on countdown).");
         } else {
-            System.out.println("✅ " + staff.getName() + " finished cleaning Room " + roomNumber + ".");
+            System.out.println("[OK] " + staff.getName() + " finished cleaning Room " + roomNumber + ".");
         }
 
         // Dispatch next room from queue now that a staff member is free
@@ -557,11 +557,11 @@ public class HousekeepingController {
     public boolean updateTaskStatus(String taskId, String newStatus) {
         TaskLogEntry task = findTaskById(taskId);
         if (task == null) {
-            System.out.println("❌ Task not found: " + taskId);
+            System.out.println("[X] Task not found: " + taskId);
             return false;
         }
         if (!isValidTransition(task.getStatus(), newStatus)) {
-            System.out.println("❌ Invalid status transition: " + task.getStatus() + " -> " + newStatus);
+            System.out.println("[X] Invalid status transition: " + task.getStatus() + " -> " + newStatus);
             return false;
         }
 
@@ -580,7 +580,7 @@ public class HousekeepingController {
 
         syncRoomState(task);
         persistTaskLog();
-        System.out.println("✅ Task " + taskId + " updated: " + oldStatus + " -> " + newStatus);
+        System.out.println("[OK] Task " + taskId + " updated: " + oldStatus + " -> " + newStatus);
         return true;
     }
 
@@ -597,20 +597,20 @@ public class HousekeepingController {
 
         TaskLogEntry latestTask = findLatestTaskForRoom(task.getRoomNumber());
         if (latestTask == null || !task.getTaskId().equals(latestTask.getTaskId())) {
-            System.out.println("❌ Cannot rollback historical task " + taskId
+            System.out.println("[X] Cannot rollback historical task " + taskId
                     + ". Only the latest task for Room " + task.getRoomNumber() + " can be rolled back.");
             return false;
         }
 
         Room room = findRoomByNumber(task.getRoomNumber());
         if (room == null) {
-            System.out.println("❌ Room not found: " + task.getRoomNumber());
+            System.out.println("[X] Room not found: " + task.getRoomNumber());
             return false;
         }
 
         String currentRoomTaskStatus = mapRoomStatusToTaskStatus(room.getRoomStatus());
         if (currentRoomTaskStatus == null || !task.getStatus().equals(currentRoomTaskStatus)) {
-            System.out.println("❌ Cannot rollback task " + taskId + " because Room "
+            System.out.println("[X] Cannot rollback task " + taskId + " because Room "
                     + task.getRoomNumber() + " is currently "
                     + describeRoomStatus(room.getRoomStatus())
                     + ". The task is no longer the room's active housekeeping state.");
@@ -620,7 +620,7 @@ public class HousekeepingController {
         String current  = task.getStatus();
         String previous = getPreviousStatus(current);
         if (previous == null) {
-            System.out.println("❌ Cannot rollback task from initial status (Dirty).");
+            System.out.println("[X] Cannot rollback task from initial status (Dirty).");
             return false;
         }
 
@@ -636,11 +636,11 @@ public class HousekeepingController {
         task.setStatus(previous);
         syncRoomState(task);
         persistTaskLog();
-        System.out.println("🔄 Task " + taskId + " rolled back: " + current + " -> " + previous);
+        System.out.println("[UNDO] Task " + taskId + " rolled back: " + current + " -> " + previous);
         return true;
     }
 
-    // ── Status helpers ─────────────────────────────────────────────────────
+    // -- Status helpers -----------------------------------------------------
 
     private String getPreviousStatus(String current) {
         switch (current) {
@@ -676,10 +676,10 @@ public class HousekeepingController {
         }
     }
 
-    // ── Search ─────────────────────────────────────────────────────────────
+    // -- Search -------------------------------------------------------------
 
     public void searchByRoom(String roomNumber) {
-        System.out.println("🔍 Tasks for Room " + roomNumber + ":");
+        System.out.println("[SEARCH] Tasks for Room " + roomNumber + ":");
         boolean found = false;
         for (int i = 0; i < taskLog.size(); i++) {
             TaskLogEntry task = taskLog.get(i);
@@ -692,7 +692,7 @@ public class HousekeepingController {
         if (!found) System.out.println("No tasks found for this room.");
     }
 
-    // ── Display ────────────────────────────────────────────────────────────
+    // -- Display ------------------------------------------------------------
 
     public void displayRoomStatus() {
         refreshRooms();
@@ -711,7 +711,7 @@ public class HousekeepingController {
                 TaskLogEntry latest = findLatestTaskForRoom(room.getRoomNumber());
                 if (latest != null && latest.isCleaningCountdownActive()) {
                     long mins = latest.getRemainingCleaningMinutes();
-                    countdown = mins == 0 ? "⚠ Overdue" : mins + " min left";
+                    countdown = mins == 0 ? "[!] Overdue" : mins + " min left";
                 }
             }
 
@@ -776,7 +776,7 @@ public class HousekeepingController {
             String statusLabel = s.isBusy() ? "BUSY" : "FREE";
             String roomLabel   = s.isBusy() ? s.getAssignedRoom() : "-";
             String timerLabel  = s.isBusy() && timeLeft >= 0
-                    ? (timeLeft == 0 ? " ⚠ Overdue" : " (" + timeLeft + " min left)") : "";
+                    ? (timeLeft == 0 ? " [!] Overdue" : " (" + timeLeft + " min left)") : "";
 
             System.out.printf("%-5s %-12s %-6s %-12s%s%n",
                     s.getStaffId(), s.getName(), statusLabel, roomLabel, timerLabel);
@@ -800,7 +800,7 @@ public class HousekeepingController {
     public void showTasksForRoom(String roomNumber) {
         Room room = findRoomByNumber(roomNumber);
         if (room == null) {
-            System.out.println("❌ Room not found: " + roomNumber);
+            System.out.println("[X] Room not found: " + roomNumber);
             return;
         }
         System.out.println("\nRoom " + roomNumber + " status: " + describeRoomStatus(room.getRoomStatus()));
@@ -811,7 +811,7 @@ public class HousekeepingController {
         taskLog.display();
     }
 
-    // ── Misc ───────────────────────────────────────────────────────────────
+    // -- Misc ---------------------------------------------------------------
 
     private String describeRoomStatus(RoomStatus status) {
         return status == null ? "Unknown" : status.getDisplayName();
@@ -827,11 +827,11 @@ public class HousekeepingController {
             HousekeepingStaff s = staffPool.get(i);
             if (s != null) s.markFree();
         }
-        System.out.println("✅ Housekeeping data reset to default rooms with Ready status.");
+        System.out.println("[OK] Housekeeping data reset to default rooms with Ready status.");
         return true;
     }
 
-    // ── Boundary display helpers (ECB: Boundary does not access Entity/ADT) ──
+    // -- Boundary display helpers (ECB: Boundary does not access Entity/ADT) --
 
     public Room[] getRooms() {
         refreshRooms();
@@ -878,7 +878,7 @@ public class HousekeepingController {
             String countdown = "-";
             if (task.isCleaningCountdownActive()) {
                 long mins = task.getRemainingCleaningMinutes();
-                countdown = mins == 0 ? "⚠ Overdue" : mins + " min left";
+                countdown = mins == 0 ? "[!] Overdue" : mins + " min left";
             }
             temp[count][0] = task.getTaskId();
             temp[count][1] = task.getRoomNumber();
@@ -907,7 +907,7 @@ public class HousekeepingController {
         return rows;
     }
 
-    // ── Getters ────────────────────────────────────────────────────────────
+    // -- Getters ------------------------------------------------------------
 
     public LinearADT<TaskLogEntry> getTaskLog() {
         return taskLog;
@@ -917,7 +917,7 @@ public class HousekeepingController {
         return dirtyRoomQueue;
     }
 
-    // ── Report generators ──────────────────────────────────────────────────
+    // -- Report generators --------------------------------------------------
 
     public void generateCleaningStatusReport() {
         new control.report.CleaningStatusFlowRP().generateReport(taskLog);

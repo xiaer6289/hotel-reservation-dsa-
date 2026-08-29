@@ -26,14 +26,14 @@ public class HousekeepingStaff implements Serializable {
         this.assignedRoom = null;
     }
 
-    // ── Getters ────────────────────────────────────────────────────────────
+    // -- Getters ------------------------------------------------------------
 
     public String getStaffId()      { return staffId; }
     public String getName()         { return name; }
     public boolean isBusy()         { return busy; }
     public String getAssignedRoom() { return assignedRoom; }
 
-    // ── Setters ────────────────────────────────────────────────────────────
+    // -- Setters ------------------------------------------------------------
 
     public void assignTo(String roomNumber) {
         this.busy         = true;
@@ -45,7 +45,7 @@ public class HousekeepingStaff implements Serializable {
         this.assignedRoom = null;
     }
 
-    // ── Display ────────────────────────────────────────────────────────────
+    // -- Display ------------------------------------------------------------
 
     @Override
     public String toString() {
