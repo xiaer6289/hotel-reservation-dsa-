@@ -6,7 +6,7 @@ package entity;
 
 /**
  *
- * @author User
+ * @author Lai Jen Feng
  */
 public enum RoomStatus {
     AVAILABLE('A', "Available", true),
