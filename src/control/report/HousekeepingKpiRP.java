@@ -31,14 +31,14 @@ public class HousekeepingKpiRP {
     private static final DateTimeFormatter GENERATED_FORMAT =
             DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
 
-    // ── Known staff (matching the staff pool in HousekeepingController) ────
+    // -- Known staff (matching the staff pool in HousekeepingController) ----
     private static final String[][] STAFF_INFO = {
         { "S001", "Tan"      },
         { "S002", "Choo"     },
         { "S003", "Michelle" }
     };
 
-    // ── Inner record for per-staff stats ───────────────────────────────────
+    // -- Inner record for per-staff stats -----------------------------------
 
     private static class StaffStat {
         final String staffId;
@@ -63,7 +63,7 @@ public class HousekeepingKpiRP {
         }
     }
 
-    // ── Public entry points ────────────────────────────────────────────────
+    // -- Public entry points ------------------------------------------------
 
     /** Generates the KPI report for today with all staff. */
     public void generateReport(LinearADT<TaskLogEntry> taskLog) {
@@ -79,13 +79,13 @@ public class HousekeepingKpiRP {
     public void generateReport(LinearADT<TaskLogEntry> taskLog, LocalDate date) {
         if (date == null) date = LocalDate.now();
 
-        // ── Build per-staff stat objects in a DoublyLinkedList ─────────────
+        // -- Build per-staff stat objects in a DoublyLinkedList -------------
         DoublyLinkedList<StaffStat> statList = new DoublyLinkedList<>();
         for (String[] info : STAFF_INFO) {
             statList.addLast(new StaffStat(info[0], info[1]));
         }
 
-        // ── Linear scan: accumulate stats for tasks on the report date ──────
+        // -- Linear scan: accumulate stats for tasks on the report date ------
         int totalCompleted = 0;
         int totalOnTime    = 0;
 
@@ -115,18 +115,18 @@ public class HousekeepingKpiRP {
             }
         }
 
-        // ── Sort stat list by roomsCleaned ascending (Selection Sort) ───────
+        // -- Sort stat list by roomsCleaned ascending (Selection Sort) -------
         // So the KPI-failure section is ordered worst -> best
         selectionSortByRoomsCleaned(statList);
 
-        // ── Print report ───────────────────────────────────────────────────
+        // -- Print report ---------------------------------------------------
         printHeader(date);
         printStaffTable(statList);
         printKpiFailureSection(statList);
         printOverallSummary(totalCompleted, totalOnTime);
     }
 
-    // ── Sorting ────────────────────────────────────────────────────────────
+    // -- Sorting ------------------------------------------------------------
 
     /**
      * Selection Sort (ascending by roomsCleaned).
@@ -162,7 +162,7 @@ public class HousekeepingKpiRP {
         list.addAt(j, b);
     }
 
-    // ── Print helpers ──────────────────────────────────────────────────────
+    // -- Print helpers ------------------------------------------------------
 
     private void printHeader(LocalDate date) {
         System.out.println("\n================================================================================");
@@ -182,11 +182,11 @@ public class HousekeepingKpiRP {
 
     private void printStaffTable(DoublyLinkedList<StaffStat> statList) {
         System.out.printf("%-6s %-12s %-14s %-16s %-12s %-10s%n",
-                "Staff", "Name", "Rooms Cleaned", "On-Time (≤30min)", "Avg Time", "KPI Met?");
+                "Staff", "Name", "Rooms Cleaned", "On-Time (<=30min)", "Avg Time", "KPI Met?");
         System.out.println("--------------------------------------------------------------------------------");
         for (int i = 0; i < statList.size(); i++) {
             StaffStat s = statList.get(i);
-            String kpiMet = s.meetsKpi() ? "✅ YES" : "❌ NO";
+            String kpiMet = s.meetsKpi() ? "[OK] YES" : "[X] NO";
             System.out.printf("%-6s %-12s %-14d %-16s %-12s %-10s%n",
                     s.staffId,
                     s.name,
@@ -205,11 +205,11 @@ public class HousekeepingKpiRP {
             if (!statList.get(i).meetsKpi()) failures++;
         }
 
-        System.out.println("\n⚠  KPI FAILURE LIST (staff who did NOT clean ≥ " + KPI_MIN_ROOMS + " rooms today)");
+        System.out.println("\n[!]  KPI FAILURE LIST (staff who did NOT clean >= " + KPI_MIN_ROOMS + " rooms today)");
         System.out.println("--------------------------------------------------------------------------------");
 
         if (failures == 0) {
-            System.out.println("   ✅ All staff met the KPI target today!");
+            System.out.println("   [OK] All staff met the KPI target today!");
         } else {
             System.out.printf("   %-6s %-12s %-14s %-10s%n", "Staff", "Name", "Rooms Cleaned", "Short By");
             for (int i = 0; i < statList.size(); i++) {

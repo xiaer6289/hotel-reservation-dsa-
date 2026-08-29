@@ -160,7 +160,7 @@ public class HousekeepingUI {
                         return rooms[choice - 1][0];
                 }
 
-                System.out.println("❌ Invalid choice.");
+                System.out.println("[X] Invalid choice.");
                 return null;
         }
 
@@ -179,7 +179,7 @@ public class HousekeepingUI {
                         if (staff[i] != null && staff[i][0] != null) {
                                 displayedCount++;
                                 indexMap[displayedCount - 1] = i;
-                                System.out.printf("%d. %s (%s) – %s%n",
+                                System.out.printf("%d. %s (%s) - %s%n",
                                         displayedCount, staff[i][1], staff[i][0], staff[i][2]);
                         }
                 }
@@ -197,7 +197,7 @@ public class HousekeepingUI {
                         return staff[realIdx][0];
                 }
 
-                System.out.println("❌ Invalid selection.");
+                System.out.println("[X] Invalid selection.");
                 return null;
         }
 
@@ -235,7 +235,7 @@ public class HousekeepingUI {
                         }
                 }
 
-                System.out.println("❌ Invalid task selection.");
+                System.out.println("[X] Invalid task selection.");
                 return null;
         }
 
@@ -270,7 +270,7 @@ public class HousekeepingUI {
 
         private void markStaffReady() {
 
-                Utility.printSectionTitle("STAFF – EARLY FINISH (MARK READY)");
+                Utility.printSectionTitle("STAFF - EARLY FINISH (MARK READY)");
                 System.out.println("Select the staff member who has finished cleaning.");
                 System.out.println("If the 30-minute countdown has not expired, this counts as an early finish.");
                 System.out.println("The next queued room (if any) will be auto-assigned.");
@@ -328,7 +328,7 @@ public class HousekeepingUI {
                                 break;
 
                         default:
-                                System.out.println("❌ Invalid status selection.");
+                                System.out.println("[X] Invalid status selection.");
                                 return;
                 }
 
@@ -530,7 +530,7 @@ public class HousekeepingUI {
         private void generateKpiReport() {
 
                 System.out.println("\n===== KPI REPORT OPTIONS =====");
-                System.out.println("KPI Target: each staff must clean ≥ 5 rooms per day.");
+                System.out.println("KPI Target: each staff must clean >= 5 rooms per day.");
                 System.out.println("On-Time Target: each room cleaned within 30 minutes.");
                 System.out.println();
 
@@ -599,7 +599,7 @@ public class HousekeepingUI {
                                 // Validation message below.
                         }
 
-                        System.out.println("❌ Invalid input. Please enter a number from "
+                        System.out.println("[X] Invalid input. Please enter a number from "
                                 + minimum + " to " + maximum + ".");
                 }
         }
@@ -627,7 +627,7 @@ public class HousekeepingUI {
 
                         } catch (DateTimeParseException ex) {
 
-                                System.out.println("❌ Invalid date. Please use YYYY-MM-DD.");
+                                System.out.println("[X] Invalid date. Please use YYYY-MM-DD.");
                         }
                 }
         }
@@ -656,7 +656,7 @@ public class HousekeepingUI {
                                 // Validation message below.
                         }
 
-                        System.out.println("❌ Invalid input. Please enter 0 or a positive number.");
+                        System.out.println("[X] Invalid input. Please enter 0 or a positive number.");
                 }
         }
 

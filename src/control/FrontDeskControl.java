@@ -708,7 +708,17 @@ public class FrontDeskControl implements RoomAvailabilityNotifier.RoomReadyListe
                     && booking.getGuest().getName().equalsIgnoreCase(guestIdOrName);
 
             if (matchesId || matchesName) {
-                temp[count[0]++] = booking;
+                boolean exist = false;
+                for (int i = 0; i < count[0]; i++) {
+                    if (temp[i].getGuest().getGuestId().equalsIgnoreCase(booking.getGuest().getGuestId())) {
+                        exist = true;
+                        break;
+                    }
+                }
+                
+                if (!exist) {
+                    temp[count[0]++] = booking;
+                }                
             }
         });
 
