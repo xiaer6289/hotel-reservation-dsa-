@@ -22,6 +22,8 @@ public class VipAllocationUI {
     private static final int MAX_STAY_NIGHTS = 30;
     private static final LocalTime STANDARD_CHECKOUT_TIME = LocalTime.NOON;
     private static final DateTimeFormatter DATE_TIME_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+    private static final String FILTER_BACK = "__FILTER_BACK__";
+    private static final int FILTER_BACK_INTEGER = -1;
     private final VipPriorityController controller;
     private final Scanner scanner;
 
@@ -630,88 +632,297 @@ public class VipAllocationUI {
     }
 
     private void generateRoomAllocationWaitingTimeReport() {
-        displayScreenHeader("VIP ROOM ALLOCATION & WAITING TIME REPORT - FILTER SETUP", "Generate a management report from current and historical VIP registration and booking records.");
+        String keyword = "";
+        String tierFilter = null;
+        String roomTypeFilter = null;
+        String statusFilter = "ALL";
+        LocalDate startDate = null;
+        LocalDate endDate = null;
+        int minimumGuests = 0;
+        int sortOption = 1;
+        int step = 1;
 
-        System.out.println("REPORT SCOPE");
-        System.out.println("  - Uses saved VIP registration history, booking/check-in records and current loyalty tiers.");
-        System.out.println("  - The report can be generated even when no VIP is currently waiting.");
-        System.out.println("  - Press Enter for ALL where indicated.");
-        System.out.println("-".repeat(104));
-        System.out.println("REPORT ACTION");
-        System.out.println("  1. Continue to Report Filter Setup");
-        System.out.println("  0. Return to VIP Menu");
+        while (step >= 1 && step <= 7) {
+            switch (step) {
+                case 1:
+                    showReportFilterStep(
+                            "VIP ROOM ALLOCATION & WAITING TIME REPORT",
+                            1, 7, "SEARCH RECORDS");
+                    System.out.println(" Search by Registration ID, Guest ID, Guest Name or Phone Number.");
+                    System.out.println(" Example: R0001 / G0012 / Ali / 76996648");
+                    System.out.println(" Press Enter for ALL records, or enter B to return to the VIP menu.");
+                    keyword = readOptionalFilterString("\nEnter keyword: ");
+                    if (isBackSelection(keyword)) {
+                        printActionCancelled("VIP Room Allocation & Waiting Time Report filter setup cancelled.");
+                        return;
+                    }
+                    step++;
+                    break;
 
-        int reportAction = readMenuChoice("Select action (0-1): ", 0, 1);
-        if (reportAction == 0) {
-            printActionCancelled("VIP Room Allocation & Waiting Time Report generation cancelled.");
-            return;
+                case 2:
+                    showReportFilterStep(
+                            "VIP ROOM ALLOCATION & WAITING TIME REPORT",
+                            2, 7, "LOYALTY TIER");
+                    System.out.println(" Select the VIP loyalty tier to include in this report.");
+                    tierFilter = readTierFilterWithBack();
+                    if (isBackSelection(tierFilter)) {
+                        step--;
+                    } else {
+                        step++;
+                    }
+                    break;
+
+                case 3:
+                    showReportFilterStep(
+                            "VIP ROOM ALLOCATION & WAITING TIME REPORT",
+                            3, 7, "REQUESTED ROOM TYPE");
+                    System.out.println(" Select the requested room type to include in this report.");
+                    roomTypeFilter = readRoomTypeFilterWithBack();
+                    if (isBackSelection(roomTypeFilter)) {
+                        step--;
+                    } else {
+                        step++;
+                    }
+                    break;
+
+                case 4:
+                    showReportFilterStep(
+                            "VIP ROOM ALLOCATION & WAITING TIME REPORT",
+                            4, 7, "REGISTRATION STATUS");
+                    System.out.println(" Select the registration status to include in this report.");
+                    statusFilter = readVipRegistrationStatusFilterWithBack();
+                    if (isBackSelection(statusFilter)) {
+                        step--;
+                    } else {
+                        step++;
+                    }
+                    break;
+
+                case 5:
+                    showReportFilterStep(
+                            "VIP ROOM ALLOCATION & WAITING TIME REPORT",
+                            5, 7, "REGISTRATION DATE RANGE");
+                    System.out.println(" Set an optional registration date range.");
+                    System.out.println(" Use YYYY-MM-DD (e.g. 2026-08-15). Press Enter for no limit.");
+                    System.out.println(" Enter B to return to the previous filter.");
+                    FilterDateInput startInput = readOptionalFilterDate("\nStart date: ");
+                    if (startInput.back) {
+                        step--;
+                        break;
+                    }
+
+                    FilterDateInput endInput = readOptionalFilterDate("End date  : ");
+                    if (endInput.back) {
+                        step--;
+                        break;
+                    }
+
+                    startDate = startInput.value;
+                    endDate = endInput.value;
+
+                    while (startDate != null && endDate != null && endDate.isBefore(startDate)) {
+                        Utility.printError("End Date cannot be earlier than Start Date.");
+                        endInput = readOptionalFilterDate("Re-enter end date: ");
+                        if (endInput.back) {
+                            step--;
+                            break;
+                        }
+                        endDate = endInput.value;
+                    }
+
+                    if (step == 4) {
+                        break;
+                    }
+                    step++;
+                    break;
+
+                case 6:
+                    showReportFilterStep(
+                            "VIP ROOM ALLOCATION & WAITING TIME REPORT",
+                            6, 7, "MINIMUM PARTY SIZE");
+                    System.out.println(" Enter the minimum party size to include in this report.");
+                    System.out.println(" Enter 0 for ALL party sizes, or B to return to the previous filter.");
+                    minimumGuests = readNonNegativeFilterInteger("\nMinimum party size: ");
+                    if (minimumGuests == FILTER_BACK_INTEGER) {
+                        step--;
+                    } else {
+                        step++;
+                    }
+                    break;
+
+                case 7:
+                    showReportFilterStep(
+                            "VIP ROOM ALLOCATION & WAITING TIME REPORT",
+                            7, 7, "SORT REPORT");
+                    System.out.println(" Select how the matching records should be sorted.");
+                    System.out.println();
+                    System.out.println("  [1] VIP Tier Priority, then Earliest Registration");
+                    System.out.println("  [2] Allocation Waiting Time - Longest First");
+                    System.out.println("  [3] Registration Time - Latest First");
+                    System.out.println("  [4] Requested Room Type - A to Z");
+                    printBackOption();
+                    sortOption = readFilterMenuChoice("\nEnter choice [1-4 or B]: ", 1, 4);
+                    if (sortOption == FILTER_BACK_INTEGER) {
+                        step--;
+                    } else {
+                        step++;
+                    }
+                    break;
+
+                default:
+                    break;
+            }
         }
-
-        String keyword = readOptionalString("Search keyword (Reg ID / Guest ID / Name / Confirmation No.; Enter = ALL): ");
-        String tierFilter = readTierFilter();
-        String roomTypeFilter = readRoomTypeFilter();
-        String statusFilter = readVipRegistrationStatusFilter();
-
-        System.out.println("\nFilter by Registration Date Range (format YYYY-MM-DD):");
-        LocalDate startDate = readOptionalDate("Start Date (Enter = No Start Date): ");
-        LocalDate endDate = readOptionalDate("End Date (Enter = No End Date): ");
-        while (startDate != null && endDate != null && endDate.isBefore(startDate)) {
-            Utility.printError("End Date cannot be earlier than Start Date.");
-            endDate = readOptionalDate("Re-enter End Date (Enter = No End Date): ");
-        }
-
-        int minimumGuests = readNonNegativeInteger("Minimum party size (0 = ALL): ");
-
-        System.out.println("\nSort Report Display By:");
-        System.out.println("1. VIP Tier Priority, then Earliest Registration");
-        System.out.println("2. Allocation Waiting Time (Longest First)");
-        System.out.println("3. Registration Time (Latest First)");
-        System.out.println("4. Requested Room Type (A-Z)");
-        int sortOption = readMenuChoice("Select sort option (1-4): ", 1, 4);
 
         Utility.clearScreen();
-        controller.generateRoomAllocationWaitingTimeReport(keyword, tierFilter, roomTypeFilter, statusFilter, startDate, endDate, minimumGuests, sortOption);
+        controller.generateRoomAllocationWaitingTimeReport(
+                keyword, tierFilter, roomTypeFilter, statusFilter,
+                startDate, endDate, minimumGuests, sortOption);
     }
 
     private void generateLoyaltyEngagementReport() {
-        displayScreenHeader("VIP LOYALTY ENGAGEMENT REPORT - FILTER SETUP", "Generate a management report from VIP loyalty profiles, booking history and current guest activity.");
+        String keyword = "";
+        String tierFilter = null;
+        String activityFilter = "ALL";
+        int minimumCompletedStays = 0;
+        String roomTypeFilter = null;
+        LocalDate startDate = null;
+        LocalDate endDate = null;
+        int sortOption = 1;
+        int step = 1;
 
-        System.out.println("REPORT SCOPE");
-        System.out.println("  - Uses all current VIP profiles, completed-stay totals and saved booking history.");
-        System.out.println("  - Current activity can be used as an optional report filter.");
-        System.out.println("  - The report does not depend on the current VIP waiting queue.");
-        System.out.println("-".repeat(104));
-        System.out.println("REPORT ACTION");
-        System.out.println("  1. Continue to Report Filter Setup");
-        System.out.println("  0. Return to VIP Menu");
+        while (step >= 1 && step <= 7) {
+            switch (step) {
+                case 1:
+                    showReportFilterStep(
+                            "VIP LOYALTY ENGAGEMENT REPORT",
+                            1, 7, "SEARCH VIP GUESTS");
+                    System.out.println(" Search by Guest ID, Guest Name or Phone Number.");
+                    System.out.println(" Example: G0012 / Ali / 76996648");
+                    System.out.println(" Press Enter for ALL VIP guests, or enter B to return to the VIP menu.");
+                    keyword = readOptionalFilterString("\nEnter keyword: ");
+                    if (isBackSelection(keyword)) {
+                        printActionCancelled("VIP Loyalty Engagement Report filter setup cancelled.");
+                        return;
+                    }
+                    step++;
+                    break;
 
-        int reportAction = readMenuChoice("Select action (0-1): ", 0, 1);
-        if (reportAction == 0) {
-            printActionCancelled("VIP Loyalty Engagement Report generation cancelled.");
-            return;
+                case 2:
+                    showReportFilterStep(
+                            "VIP LOYALTY ENGAGEMENT REPORT",
+                            2, 7, "LOYALTY TIER");
+                    System.out.println(" Select the VIP loyalty tier to include in this report.");
+                    tierFilter = readTierFilterWithBack();
+                    if (isBackSelection(tierFilter)) {
+                        step--;
+                    } else {
+                        step++;
+                    }
+                    break;
+
+                case 3:
+                    showReportFilterStep(
+                            "VIP LOYALTY ENGAGEMENT REPORT",
+                            3, 7, "CURRENT VIP ACTIVITY");
+                    System.out.println(" Select the VIP guest's current activity.");
+                    activityFilter = readVipActivityFilterWithBack();
+                    if (isBackSelection(activityFilter)) {
+                        step--;
+                    } else {
+                        step++;
+                    }
+                    break;
+
+                case 4:
+                    showReportFilterStep(
+                            "VIP LOYALTY ENGAGEMENT REPORT",
+                            4, 7, "MINIMUM COMPLETED STAYS");
+                    System.out.println(" Enter the minimum number of completed VIP stays to include.");
+                    System.out.println(" Enter 0 for ALL VIP guests, or B to return to the previous filter.");
+                    minimumCompletedStays = readNonNegativeFilterInteger("\nMinimum completed stays: ");
+                    if (minimumCompletedStays == FILTER_BACK_INTEGER) {
+                        step--;
+                    } else {
+                        step++;
+                    }
+                    break;
+
+                case 5:
+                    showReportFilterStep(
+                            "VIP LOYALTY ENGAGEMENT REPORT",
+                            5, 7, "STAY ROOM TYPE");
+                    System.out.println(" Select the room type from the VIP guest's stay history.");
+                    roomTypeFilter = readRoomTypeFilterWithBack();
+                    if (isBackSelection(roomTypeFilter)) {
+                        step--;
+                    } else {
+                        step++;
+                    }
+                    break;
+
+                case 6:
+                    showReportFilterStep(
+                            "VIP LOYALTY ENGAGEMENT REPORT",
+                            6, 7, "CHECK-IN DATE RANGE");
+                    System.out.println(" Set an optional check-in date range for VIP stay history.");
+                    System.out.println(" Use YYYY-MM-DD (e.g. 2026-08-15). Press Enter for no limit.");
+                    System.out.println(" Enter B to return to the previous filter.");
+                    FilterDateInput startInput = readOptionalFilterDate("\nStart date: ");
+                    if (startInput.back) {
+                        step--;
+                        break;
+                    }
+
+                    FilterDateInput endInput = readOptionalFilterDate("End date  : ");
+                    if (endInput.back) {
+                        step--;
+                        break;
+                    }
+
+                    startDate = startInput.value;
+                    endDate = endInput.value;
+
+                    while (startDate != null && endDate != null && endDate.isBefore(startDate)) {
+                        Utility.printError("End Date cannot be earlier than Start Date.");
+                        endInput = readOptionalFilterDate("Re-enter end date: ");
+                        if (endInput.back) {
+                            step--;
+                            break;
+                        }
+                        endDate = endInput.value;
+                    }
+
+                    if (step == 5) {
+                        break;
+                    }
+                    step++;
+                    break;
+
+                case 7:
+                    showReportFilterStep(
+                            "VIP LOYALTY ENGAGEMENT REPORT",
+                            7, 7, "SORT REPORT");
+                    System.out.println(" Select how the matching VIP guests should be sorted.");
+                    System.out.println();
+                    System.out.println("  [1] Loyalty Tier Priority - DIAMOND > PLATINUM > ELITE");
+                    System.out.println("  [2] Completed Stays - Highest First");
+                    System.out.println("  [3] Most Recent Stay - Latest First");
+                    System.out.println("  [4] Guest Name - A to Z");
+                    System.out.println("  [5] Closest to Next Loyalty Tier");
+                    printBackOption();
+                    sortOption = readFilterMenuChoice("\nEnter choice [1-5 or B]: ", 1, 5);
+                    if (sortOption == FILTER_BACK_INTEGER) {
+                        step--;
+                    } else {
+                        step++;
+                    }
+                    break;
+
+                default:
+                    break;
+            }
         }
-
-        String keyword = readOptionalString("Search keyword (Guest ID / Name / Confirmation No.; Enter = ALL): ");
-        String tierFilter = readTierFilter();
-        String activityFilter = readVipActivityFilter();
-        int minimumCompletedStays = readNonNegativeInteger("Minimum completed stays (0 = ALL): ");
-        String roomTypeFilter = readRoomTypeFilter("Filter by Stay Room Type");
-
-        System.out.println("\nFilter Booking/Stay History by Check-In Date (format YYYY-MM-DD):");
-        LocalDate startDate = readOptionalDate("Start Date (Enter = No Start Date): ");
-        LocalDate endDate = readOptionalDate("End Date (Enter = No End Date): ");
-        while (startDate != null && endDate != null && endDate.isBefore(startDate)) {
-            Utility.printError("End Date cannot be earlier than Start Date.");
-            endDate = readOptionalDate("Re-enter End Date (Enter = No End Date): ");
-        }
-
-        System.out.println("\nSort Report Display By:");
-        System.out.println("1. Loyalty Tier Priority (DIAMOND > PLATINUM > ELITE)");
-        System.out.println("2. Completed Stays (Highest First)");
-        System.out.println("3. Most Recent Stay (Latest First)");
-        System.out.println("4. Guest Name (A-Z)");
-        System.out.println("5. Closest to Next Loyalty Tier");
-        int sortOption = readMenuChoice("Select sort option (1-5): ", 1, 5);
 
         Utility.clearScreen();
         controller.generateLoyaltyEngagementReport(
@@ -826,110 +1037,242 @@ public class VipAllocationUI {
         return "PROFILE ONLY";
     }
 
-    private String readTierFilter() {
+    private String readTierFilterWithBack() {
         String[] tiers = controller.getVipTierNames();
 
         while (true) {
-            System.out.println("\nFilter by Loyalty Tier:");
-            System.out.println("0. ALL");
+            System.out.println("  [0] ALL VIP Tiers");
 
             for (int i = 0; i < tiers.length; i++) {
-                System.out.println((i + 1) + ". " + tiers[i]);
+                System.out.println("  [" + (i + 1) + "] " + tiers[i]);
             }
 
-            int choice = readInteger("Enter tier filter choice (0-" + tiers.length + "): ");
+            printBackOption();
+            System.out.print("\nEnter choice [0-" + tiers.length + " or B]: ");
+            String input = scanner.nextLine().trim();
 
-            if (choice == 0) {
-                return null;
+            if (isBackInput(input)) {
+                return FILTER_BACK;
             }
 
-            if (choice >= 1 && choice <= tiers.length) {
-                return tiers[choice - 1];
+            try {
+                int choice = Integer.parseInt(input);
+                if (choice == 0) {
+                    return null;
+                }
+                if (choice >= 1 && choice <= tiers.length) {
+                    return tiers[choice - 1];
+                }
+            } catch (NumberFormatException exception) {
+                // A clear validation message is shown below.
             }
 
-            Utility.printError("Invalid loyalty tier filter. Choose a listed number.");
+            Utility.printError("Invalid loyalty tier filter. Enter a number from 0 to " + tiers.length + ", or B to go back.");
         }
     }
 
-    private String readRoomTypeFilter() {
-        return readRoomTypeFilter("Filter by Requested Room Type");
-    }
-
-    private String readRoomTypeFilter(String heading) {
+    private String readRoomTypeFilterWithBack() {
         String[] roomTypes = controller.getRoomTypeNames();
 
         while (true) {
-            System.out.println("\n" + heading + ":");
-            System.out.println("0. ALL");
+            System.out.println("  [0] ALL Room Types");
 
             for (int i = 0; i < roomTypes.length; i++) {
-                System.out.println((i + 1) + ". " + formatRoomType(roomTypes[i]));
+                System.out.println("  [" + (i + 1) + "] " + formatRoomType(roomTypes[i]));
             }
 
-            int choice = readInteger("Enter room type filter choice (0-" + roomTypes.length + "): ");
+            printBackOption();
+            System.out.print("\nEnter choice [0-" + roomTypes.length + " or B]: ");
+            String input = scanner.nextLine().trim();
 
-            if (choice == 0) {
-                return null;
+            if (isBackInput(input)) {
+                return FILTER_BACK;
             }
 
-            if (choice >= 1 && choice <= roomTypes.length) {
-                return roomTypes[choice - 1];
+            try {
+                int choice = Integer.parseInt(input);
+                if (choice == 0) {
+                    return null;
+                }
+                if (choice >= 1 && choice <= roomTypes.length) {
+                    return roomTypes[choice - 1];
+                }
+            } catch (NumberFormatException exception) {
+                // A clear validation message is shown below.
             }
 
-            Utility.printError("Invalid room type filter. Choose a listed number.");
+            Utility.printError("Invalid room type filter. Enter a listed number, or B to go back.");
         }
     }
 
-    private String readVipRegistrationStatusFilter() {
+    private String readVipRegistrationStatusFilterWithBack() {
         while (true) {
-            System.out.println("\nFilter by VIP Registration Status:");
-            System.out.println("0. ALL");
-            System.out.println("1. VIP WAITING");
-            System.out.println("2. CHECKED IN");
-            System.out.println("3. CHECKED OUT");
-            System.out.println("4. CANCELLED");
+            System.out.println("  [0] ALL Statuses");
+            System.out.println("  [1] VIP WAITING  - Waiting for room allocation");
+            System.out.println("  [2] CHECKED IN   - Currently staying in the hotel");
+            System.out.println("  [3] CHECKED OUT  - Stay completed");
+            System.out.println("  [4] CANCELLED    - Registration cancelled");
+            printBackOption();
 
-            int choice = readInteger("Enter status filter choice (0-4): ");
-            switch (choice) {
-                case 0:
+            System.out.print("\nEnter choice [0-4 or B]: ");
+            String input = scanner.nextLine().trim();
+
+            if (isBackInput(input)) {
+                return FILTER_BACK;
+            }
+
+            switch (input) {
+                case "0":
                     return "ALL";
-                case 1:
+                case "1":
                     return "VIP_WAITING";
-                case 2:
+                case "2":
                     return "CHECKED_IN";
-                case 3:
+                case "3":
                     return "CHECKED_OUT";
-                case 4:
+                case "4":
                     return "CANCELLED";
                 default:
-                    Utility.printError("Invalid status filter. Enter a number from 0 to 4.");
+                    Utility.printError("Invalid status filter. Enter a number from 0 to 4, or B to go back.");
                     break;
             }
         }
     }
 
-    private String readVipActivityFilter() {
+    private String readVipActivityFilterWithBack() {
         while (true) {
-            System.out.println("\nFilter by Current VIP Activity:");
-            System.out.println("0. ALL");
-            System.out.println("1. WAITING");
-            System.out.println("2. IN HOUSE");
-            System.out.println("3. PROFILE ONLY");
+            System.out.println("  [0] ALL Activities");
+            System.out.println("  [1] WAITING      - Waiting for room allocation");
+            System.out.println("  [2] IN HOUSE     - Currently checked in");
+            System.out.println("  [3] PROFILE ONLY - No active waiting or stay");
+            printBackOption();
 
-            int choice = readInteger("Enter activity filter choice (0-3): ");
-            switch (choice) {
-                case 0:
+            System.out.print("\nEnter choice [0-3 or B]: ");
+            String input = scanner.nextLine().trim();
+
+            if (isBackInput(input)) {
+                return FILTER_BACK;
+            }
+
+            switch (input) {
+                case "0":
                     return "ALL";
-                case 1:
+                case "1":
                     return "WAITING";
-                case 2:
+                case "2":
                     return "IN HOUSE";
-                case 3:
+                case "3":
                     return "PROFILE ONLY";
                 default:
-                    Utility.printError("Invalid activity filter. Enter a number from 0 to 3.");
+                    Utility.printError("Invalid activity filter. Enter a number from 0 to 3, or B to go back.");
                     break;
             }
+        }
+    }
+
+    private void showReportFilterStep(
+            String reportTitle,
+            int currentStep,
+            int totalSteps,
+            String title) {
+        Utility.clearScreen();
+        System.out.println("=".repeat(104));
+        System.out.println(" " + reportTitle);
+        System.out.println("=".repeat(104));
+        System.out.println(" FILTER " + currentStep + "/" + totalSteps + " - " + title);
+        System.out.println("-".repeat(104));
+    }
+
+    private void printBackOption() {
+        System.out.println("  [B] Back to Previous Filter");
+    }
+
+    private String readOptionalFilterString(String message) {
+        System.out.print(message);
+        String input = scanner.nextLine().trim();
+        return isBackInput(input) ? FILTER_BACK : input;
+    }
+
+    private FilterDateInput readOptionalFilterDate(String message) {
+        while (true) {
+            System.out.print(message);
+            String input = scanner.nextLine().trim();
+
+            if (isBackInput(input)) {
+                return new FilterDateInput(true, null);
+            }
+
+            if (input.isEmpty()) {
+                return new FilterDateInput(false, null);
+            }
+
+            try {
+                return new FilterDateInput(false, LocalDate.parse(input));
+            } catch (DateTimeParseException exception) {
+                Utility.printError("Invalid date. Use YYYY-MM-DD (e.g. 2026-08-15), press Enter for no limit, or B to go back.");
+            }
+        }
+    }
+
+    private int readNonNegativeFilterInteger(String message) {
+        while (true) {
+            System.out.print(message);
+            String input = scanner.nextLine().trim();
+
+            if (isBackInput(input)) {
+                return FILTER_BACK_INTEGER;
+            }
+
+            try {
+                int value = Integer.parseInt(input);
+                if (value >= 0) {
+                    return value;
+                }
+            } catch (NumberFormatException exception) {
+                // A clear validation message is shown below.
+            }
+
+            Utility.printError("Enter 0 or a positive whole number, or B to go back.");
+        }
+    }
+
+    private int readFilterMenuChoice(String message, int minimum, int maximum) {
+        while (true) {
+            System.out.print(message);
+            String input = scanner.nextLine().trim();
+
+            if (isBackInput(input)) {
+                return FILTER_BACK_INTEGER;
+            }
+
+            try {
+                int value = Integer.parseInt(input);
+                if (value >= minimum && value <= maximum) {
+                    return value;
+                }
+            } catch (NumberFormatException exception) {
+                // A clear validation message is shown below.
+            }
+
+            Utility.printError("Invalid choice. Enter a number from " + minimum + " to " + maximum + ", or B to go back.");
+        }
+    }
+
+    private boolean isBackInput(String input) {
+        return input != null && input.equalsIgnoreCase("B");
+    }
+
+    private boolean isBackSelection(String value) {
+        return FILTER_BACK.equals(value);
+    }
+
+    private static final class FilterDateInput {
+        private final boolean back;
+        private final LocalDate value;
+
+        private FilterDateInput(boolean back, LocalDate value) {
+            this.back = back;
+            this.value = value;
         }
     }
 
